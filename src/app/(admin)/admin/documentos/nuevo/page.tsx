@@ -65,7 +65,25 @@ export default async function PaginaNuevoDocumento({
       documento={doc}
       lineas={lineas ?? []}
       plantillas={plantillas ?? []}
-      recientes={(recientes ?? []).filter((r) => r.producto_id)}
+      recientes={(recientes ?? []).flatMap((r) =>
+        r.producto_id != null &&
+        r.producto != null &&
+        r.alcance != null &&
+        r.ultimo_precio != null &&
+        r.usado_en != null
+          ? [
+              {
+                producto_id: r.producto_id,
+                producto: r.producto,
+                formato_id: r.formato_id,
+                formato: r.formato,
+                alcance: r.alcance,
+                ultimo_precio: r.ultimo_precio,
+                usado_en: r.usado_en,
+              },
+            ]
+          : [],
+      )}
     />
   );
 }

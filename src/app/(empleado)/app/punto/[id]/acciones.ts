@@ -24,7 +24,10 @@ export async function subirFotoPunto(formData: FormData) {
   const archivo = formData.get("archivo") as File;
   const puntoId = Number(formData.get("puntoId"));
   const asignacionId = Number(formData.get("asignacionId")) || null;
-  const tipo = String(formData.get("tipo") ?? "instalacion");
+  const tipo =
+    (["antes", "instalacion", "despues", "incidencia"] as const).find(
+      (t) => t === formData.get("tipo"),
+    ) ?? "instalacion";
   const latitud = formData.get("latitud") ? Number(formData.get("latitud")) : null;
   const longitud = formData.get("longitud") ? Number(formData.get("longitud")) : null;
 

@@ -127,7 +127,7 @@ export default async function PaginaPanel() {
                     tono={
                       Number(c.puntos_con_incidencia) > 0
                         ? "peligro"
-                        : TONO_POR_ESTADO[c.estado_campana] ?? "neutro"
+                        : TONO_POR_ESTADO[c.estado_campana ?? ""] ?? "neutro"
                     }
                   >
                     {Number(c.puntos_con_incidencia) > 0 ? "Incidencia" : "En curso"}

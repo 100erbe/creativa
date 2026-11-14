@@ -57,9 +57,10 @@ export function MapaLeaflet({
     );
   }
 
+  const unico = puntos[0];
   const centro: [number, number] =
-    puntos.length === 1
-      ? [puntos[0].latitud, puntos[0].longitud]
+    puntos.length === 1 && unico
+      ? [unico.latitud, unico.longitud]
       : [
           puntos.reduce((suma, p) => suma + p.latitud, 0) / puntos.length,
           puntos.reduce((suma, p) => suma + p.longitud, 0) / puntos.length,

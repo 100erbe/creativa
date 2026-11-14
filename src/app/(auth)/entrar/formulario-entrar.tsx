@@ -67,7 +67,7 @@ export function FormularioEntrar({
         onCambio={setPassword}
         requerido
       />
-      <Boton tipo="submit" cargando={cargando} className="mt-esp2 w-full">
+      <Boton type="submit" cargando={cargando} className="mt-esp2 w-full">
         Entrar
       </Boton>
     </form>

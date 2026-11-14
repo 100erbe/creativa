@@ -54,14 +54,16 @@ export async function anadirLineaRapida(args: {
   const { error } = await supabase.rpc("anadir_linea_rapida", {
     p_documento: args.documentoId,
     p_producto: args.productoId,
-    p_formato: args.formatoId,
+    // La función SQL admite NULL en p_formato, pero los tipos generados lo
+    // marcan como obligatorio; el cast evita falsear el valor.
+    p_formato: args.formatoId as number,
     p_cliente: args.clienteId,
     p_alcance: args.alcance,
     p_piezas: args.piezas ?? 1,
-    p_ancho_cm: args.anchoCm ?? null,
-    p_alto_cm: args.altoCm ?? null,
-    p_acabados: args.acabados ?? null,
-    p_descripcion: args.descripcion ?? null,
+    p_ancho_cm: args.anchoCm,
+    p_alto_cm: args.altoCm,
+    p_acabados: args.acabados,
+    p_descripcion: args.descripcion,
   });
 
   if (error) throw new Error(error.message);

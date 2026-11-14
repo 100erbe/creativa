@@ -37,6 +37,7 @@ export default async function PaginaPublicaCliente({
   supabase.rpc("registrar_vista_enlace", { p_token: token }).then(() => {});
 
   const cabecera = filas[0];
+  if (!cabecera) notFound();
   const fotosPorPunto = new Map<number, typeof fotos>();
   for (const f of fotos ?? []) {
     const lista = fotosPorPunto.get(f.punto_id) ?? [];

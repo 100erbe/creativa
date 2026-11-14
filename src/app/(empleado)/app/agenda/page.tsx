@@ -25,7 +25,7 @@ export default async function PaginaAgenda() {
   const { data: agenda } = await supabase
     .from("v_agenda_empleado")
     .select("*")
-    .eq("usuario_id", usuario?.id)
+    .eq("usuario_id", usuario?.id ?? "")
     .in("estado_asignacion", ["pendiente", "en_curso"])
     .order("fecha_programada");
 
@@ -67,10 +67,10 @@ export default async function PaginaAgenda() {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-texto-primario">{p.punto}</p>
               <p className="truncate text-xs text-texto-terciario">
-                {ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte} · {p.campana}
+                {ETIQUETA_SOPORTE[p.tipo_soporte ?? ""] ?? p.tipo_soporte} · {p.campana}
               </p>
             </div>
-            <Insignia tono={TONO_POR_ESTADO[p.estado_punto] ?? "neutro"}>
+            <Insignia tono={TONO_POR_ESTADO[p.estado_punto ?? ""] ?? "neutro"}>
               {p.estado_punto}
             </Insignia>
           </Link>
