@@ -78,10 +78,24 @@ Los colores, tipografía y espaciados de `tailwind.config.ts` reproducen
 página "Sistema"). Si cambias un token en Figma, actualiza también
 `tailwind.config.ts` para que no se desincronicen.
 
+## Mapas
+
+Los mapas son **Leaflet + OpenStreetMap** (`leaflet`, `react-leaflet`) — sin
+clave de API ni coste. El componente reutilizable está en
+`src/components/mapa/`:
+
+- `mapa-leaflet.tsx` — el mapa real (marcadores de color según el estado del
+  punto: ámbar = pendiente, verde = instalado/verificado, rojo = incidencia).
+- `mapa-puntos.tsx` — envoltorio que lo carga solo en el navegador
+  (`next/dynamic`, `ssr: false`), porque Leaflet necesita `window`.
+
+Se usa en el mapa de agenda del empleado (`/app/mapa`), en la ficha de cada
+punto (`/app/punto/[id]`) y en la página pública del cliente (`/c/[token]`).
+Al no requerir API key, el enlace a Google Maps por punto se mantiene como
+alternativa rápida para abrir la navegación, pero ya no es el único mapa.
+
 ## Pendiente
 
-- [ ] Conectar un proveedor de mapas real (Google Maps o Mapbox) en
-      `/app/mapa` — de momento solo enlaza a Google Maps por punto.
 - [ ] Política de Storage para que el empleado pueda subir a `fotos-puntos`.
 - [ ] Mostrar las fotos en la página pública del cliente (`/c/[token]`):
       necesita un Route Handler con la `service_role` key o un bucket público

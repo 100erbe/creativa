@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
+import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 
 type Punto = {
   punto_id: number;
@@ -11,19 +12,20 @@ type Punto = {
   estado_punto: string;
 };
 
-/**
- * Mapa simplificado: hasta que se integre un proveedor real (Google Maps o
- * Mapbox — requiere clave de API y por tanto una decisión aparte), mostramos
- * un enlace directo a Google Maps por punto. El layout ya deja sitio para
- * sustituir este bloque por un mapa interactivo real sin tocar el resto.
- */
 export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
   return (
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
       <h1 className="text-xl font-semibold text-texto-primario">Mapa de puntos</h1>
-      <div className="flex h-48 items-center justify-center rounded-lg border border-dashed border-borde-fuerte bg-fondo-sutil text-sm text-texto-terciario">
-        Mapa interactivo pendiente de conectar (Google Maps / Mapbox)
-      </div>
+      <MapaPuntos
+        puntos={puntos.map((p) => ({
+          id: p.punto_id,
+          nombre: p.punto,
+          latitud: p.latitud,
+          longitud: p.longitud,
+          estado: p.estado_punto,
+        }))}
+        altura={240}
+      />
       <div className="flex flex-col gap-esp2">
         {puntos.map((p) => (
           <a

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
+import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,19 @@ export default async function PaginaPublicaCliente({
           {cabecera.fecha_inicio} — {cabecera.fecha_fin}
         </p>
       </div>
+
+      <MapaPuntos
+        puntos={filas
+          .filter((p) => p.punto_id !== null)
+          .map((p) => ({
+            id: p.punto_id!,
+            nombre: p.punto_nombre ?? "Punto",
+            latitud: p.latitud!,
+            longitud: p.longitud!,
+            estado: p.punto_estado ?? undefined,
+          }))}
+        altura={240}
+      />
 
       <div className="flex flex-col gap-esp4">
         {filas.map((p) => (

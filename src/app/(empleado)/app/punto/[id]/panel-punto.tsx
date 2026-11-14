@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
+import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { subirFotoPunto, marcarPuntoInstalado, reportarIncidencia } from "./acciones";
 
 const ETIQUETA_SOPORTE: Record<string, string> = {
@@ -113,6 +114,19 @@ export function PanelPunto({
         <Insignia tono={TONO_POR_ESTADO[punto.estado] ?? "neutro"}>{punto.estado}</Insignia>
       </div>
 
+      <MapaPuntos
+        puntos={[
+          {
+            id: punto.id,
+            nombre: punto.nombre,
+            latitud: punto.latitud,
+            longitud: punto.longitud,
+            estado: punto.estado,
+          },
+        ]}
+        altura={180}
+      />
+
       {punto.direccion && (
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${punto.latitud},${punto.longitud}`}
@@ -122,6 +136,7 @@ export function PanelPunto({
         >
           <Icono nombre="ubicacion" size={18} className="text-icono-marca" />
           {punto.direccion}
+          <span className="ml-auto text-xs text-texto-terciario">Abrir en Google Maps</span>
         </a>
       )}
 
