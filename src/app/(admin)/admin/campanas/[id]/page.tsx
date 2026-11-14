@@ -97,7 +97,7 @@ export default async function PaginaCampana({
           .neq("estado", "cancelada"),
         supabase
           .from("fotos_punto")
-          .select("id, punto_id, usuario_id, tipo, url_foto, latitud, longitud, tomada_en")
+          .select("id, punto_id, usuario_id, tipo, url_foto, latitud, longitud, tomada_en, origen_foto, origen_ubicacion")
           .in("punto_id", idsPuntos)
           .order("tomada_en", { ascending: false }),
       ])
@@ -273,7 +273,10 @@ export default async function PaginaCampana({
                           <p className="truncate text-xs text-texto-secundario">
                             {autor ? nombreCompleto(autor) : "—"}
                           </p>
-                          <p className="text-xs text-texto-terciario">{fechaHora(f.tomada_en)}</p>
+                          <p className="text-xs text-texto-terciario">
+                            {fechaHora(f.tomada_en)}
+                            {f.origen_foto === "galeria" ? " · 🖼 galería" : ""}
+                          </p>
                           {f.latitud != null && f.longitud != null ? (
                             <a
                               href={`https://www.google.com/maps/search/?api=1&query=${f.latitud},${f.longitud}`}
@@ -282,7 +285,11 @@ export default async function PaginaCampana({
                               className="flex items-center gap-1 text-xs text-texto-exito"
                             >
                               <Icono nombre="ubicacion" size={12} />
-                              Geolocalizada
+                              {f.origen_ubicacion === "gps_al_subir"
+                                ? "Ubicación al subir"
+                                : f.origen_ubicacion === "exif"
+                                  ? "Ubicación de la foto"
+                                  : "Geolocalizada"}
                             </a>
                           ) : (
                             <p className="text-xs text-texto-aviso">Sin ubicación</p>

@@ -127,7 +127,9 @@ export default async function PaginaPublicaCliente({
                           rel="noreferrer"
                           className="text-xs font-medium text-texto-exito"
                         >
-                          📍 Ver ubicación de la foto
+                          {f.origen_ubicacion === "gps_al_subir"
+                            ? "📍 Ubicación al subir la foto"
+                            : "📍 Ver ubicación de la foto"}
                         </a>
                       )}
                     </div>

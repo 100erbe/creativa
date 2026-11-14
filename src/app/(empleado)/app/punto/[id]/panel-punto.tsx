@@ -1,18 +1,22 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { comprimirImagen } from "@/lib/comprimir-imagen";
+import { leerExifFoto } from "@/lib/exif-foto";
+import type { OrigenFoto, OrigenUbicacion } from "@/lib/foto-metadatos";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
 import {
   subirFotoPunto,
   eliminarFotoPunto,
   marcarPuntoInstalado,
+  reabrirPunto,
   reportarIncidencia,
+  type EstadosAnteriores,
 } from "./acciones";
 
 const ETIQUETA_SOPORTE: Record<string, string> = {
@@ -25,6 +29,10 @@ const ETIQUETA_SOPORTE: Record<string, string> = {
   pantalla: "Pantalla",
   otro: "Soporte",
 };
+
+const MAX_FOTOS_GALERIA = 10;
+const SEGUNDOS_DESHACER = 8;
+const CLAVE_UBICACION = "creativa.incluirUbicacion";
 
 type Punto = {
   id: number;
@@ -46,7 +54,28 @@ type Foto = {
   usuario_id: string | null;
   latitud: number | null;
   longitud: number | null;
+  origen_foto: string;
+  origen_ubicacion: string | null;
 };
+
+type DatosFoto = {
+  origenFoto: OrigenFoto;
+  ubicacion: { latitud: number; longitud: number; origen: OrigenUbicacion } | null;
+  tomadaEn?: string;
+};
+
+function etiquetaUbicacion(f: Foto): { texto: string; ayuda: string } {
+  switch (f.origen_ubicacion) {
+    case "gps_camara":
+      return { texto: "📍 GPS", ayuda: "Ubicación del GPS al hacer la foto" };
+    case "exif":
+      return { texto: "📍 Foto", ayuda: "Ubicación guardada dentro de la propia foto" };
+    case "gps_al_subir":
+      return { texto: "📍 Al subir", ayuda: "Ubicación del móvil al subir la foto (pudo hacerse antes)" };
+    default:
+      return { texto: "Sin ubicación", ayuda: "Esta foto no lleva ubicación" };
+  }
+}
 
 export function PanelPunto({
   punto,
@@ -62,64 +91,199 @@ export function PanelPunto({
   esAdmin: boolean;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputCamaraRef = useRef<HTMLInputElement>(null);
+  const inputGaleriaRef = useRef<HTMLInputElement>(null);
+  const ubicacionRef = useRef<{ promesa: Promise<ResultadoUbicacion>; en: number } | null>(null);
   const [pendiente, iniciar] = useTransition();
   const [mostrarIncidencia, setMostrarIncidencia] = useState(false);
   const [notaIncidencia, setNotaIncidencia] = useState("");
-  const [subiendo, setSubiendo] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
-  const ubicacionRef = useRef<{ promesa: Promise<ResultadoUbicacion>; en: number } | null>(null);
+
+  // Añadir fotos
+  const [panelAbierto, setPanelAbierto] = useState(false);
+  const [incluirUbicacion, setIncluirUbicacion] = useState(true);
+  const [subiendo, setSubiendo] = useState(false);
+  const [progreso, setProgreso] = useState<{ hecho: number; total: number } | null>(null);
+  const [aviso, setAviso] = useState<{ tono: "ok" | "aviso"; texto: string } | null>(null);
+
+  // Deshacer "marcar como instalado"
+  const [deshacer, setDeshacer] = useState<{ anteriores: EstadosAnteriores; restantes: number } | null>(null);
 
   const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
 
-  // Se pide la ubicación al tocar "Añadir" (dentro del gesto del usuario y antes de
-  // que la cámara tome el control); al volver de la cámara ya suele estar resuelta.
-  function anadirFoto() {
-    ubicacionRef.current = { promesa: obtenerUbicacion(), en: Date.now() };
-    inputRef.current?.click();
+  // Se recuerda la última elección de ubicación en este móvil (si el navegador lo permite).
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CLAVE_UBICACION) === "no") setIncluirUbicacion(false);
+    } catch {
+      /* sin almacenamiento: se queda en "sí" */
+    }
+  }, []);
+
+  function cambiarIncluirUbicacion(valor: boolean) {
+    setIncluirUbicacion(valor);
+    try {
+      localStorage.setItem(CLAVE_UBICACION, valor ? "si" : "no");
+    } catch {
+      /* ignorar */
+    }
   }
 
-  async function onArchivoSeleccionado(e: React.ChangeEvent<HTMLInputElement>) {
+  // Cuenta atrás del aviso "Deshacer".
+  useEffect(() => {
+    if (!deshacer) return;
+    if (deshacer.restantes <= 0) {
+      setDeshacer(null);
+      return;
+    }
+    const t = setTimeout(
+      () => setDeshacer((d) => (d ? { ...d, restantes: d.restantes - 1 } : d)),
+      1000,
+    );
+    return () => clearTimeout(t);
+  }, [deshacer]);
+
+  /** Comprime y sube una foto con sus metadatos. */
+  async function subirUna(archivo: File, datos: DatosFoto) {
+    const comprimida = await comprimirImagen(archivo);
+    const formData = new FormData();
+    formData.set("archivo", comprimida);
+    formData.set("puntoId", String(punto.id));
+    if (asignacion) formData.set("asignacionId", String(asignacion.id));
+    formData.set("tipo", "instalacion");
+    formData.set("origenFoto", datos.origenFoto);
+    if (datos.ubicacion) {
+      formData.set("latitud", String(datos.ubicacion.latitud));
+      formData.set("longitud", String(datos.ubicacion.longitud));
+      formData.set("origenUbicacion", datos.ubicacion.origen);
+    }
+    if (datos.tomadaEn) formData.set("tomadaEn", datos.tomadaEn);
+    await subirFotoPunto(formData);
+  }
+
+  // ── Cámara ────────────────────────────────────────────────────────────────
+  // La ubicación se pide al tocar el botón (dentro del gesto del usuario y antes de que la
+  // cámara tome el control); al volver de la cámara ya suele estar resuelta.
+  function hacerFoto() {
+    ubicacionRef.current = incluirUbicacion ? { promesa: obtenerUbicacion(), en: Date.now() } : null;
+    inputCamaraRef.current?.click();
+  }
+
+  async function onFotoCamara(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
+    e.target.value = ""; // permite volver a elegir la misma foto
     if (!archivo) return;
     setSubiendo(true);
+    setAviso(null);
 
     try {
-      const compresion = comprimirImagen(archivo); // en paralelo mientras se resuelve el GPS
+      let ubicacion: DatosFoto["ubicacion"] = null;
 
-      const pedido = ubicacionRef.current;
-      ubicacionRef.current = null;
-      const reciente = pedido && Date.now() - pedido.en < 2 * 60 * 1000;
-      let ubicacion = await (reciente ? pedido.promesa : obtenerUbicacion());
-      // Si falló (no por permisos), se reintenta ahora que la cámara ya se cerró.
-      if (!ubicacion.posicion && ubicacion.motivo !== "denegado") ubicacion = await obtenerUbicacion();
+      if (incluirUbicacion) {
+        const pedido = ubicacionRef.current;
+        ubicacionRef.current = null;
+        const reciente = pedido && Date.now() - pedido.en < 2 * 60 * 1000;
+        let resultado = await (reciente ? pedido.promesa : obtenerUbicacion());
+        // Si falló (no por permisos), se reintenta ahora que la cámara ya se cerró.
+        if (!resultado.posicion && resultado.motivo !== "denegado") resultado = await obtenerUbicacion();
 
-      if (!ubicacion.posicion) {
-        const seguir = confirm(
-          `${mensajeSinUbicacion(ubicacion.motivo)}\n\n¿Subir la foto igualmente, sin ubicación? (El cliente no podrá ver dónde se hizo.)`,
-        );
-        if (!seguir) return;
+        if (resultado.posicion) {
+          ubicacion = {
+            latitud: resultado.posicion.coords.latitude,
+            longitud: resultado.posicion.coords.longitude,
+            origen: "gps_camara",
+          };
+        } else {
+          const seguir = confirm(
+            `${mensajeSinUbicacion(resultado.motivo)}\n\n¿Subir la foto igualmente, sin ubicación? (El cliente no podrá ver dónde se hizo.)`,
+          );
+          if (!seguir) return;
+        }
       }
 
-      const comprimida = await compresion;
-      const posicion = ubicacion.posicion;
-      const formData = new FormData();
-      formData.set("archivo", comprimida);
-      formData.set("puntoId", String(punto.id));
-      if (asignacion) formData.set("asignacionId", String(asignacion.id));
-      formData.set("tipo", "instalacion");
-      if (posicion) {
-        formData.set("latitud", String(posicion.coords.latitude));
-        formData.set("longitud", String(posicion.coords.longitude));
-      }
-
-      await subirFotoPunto(formData);
+      await subirUna(archivo, { origenFoto: "camara", ubicacion });
+      setAviso(
+        ubicacion || !incluirUbicacion
+          ? { tono: "ok", texto: "Foto subida." }
+          : { tono: "aviso", texto: "Foto subida sin ubicación." },
+      );
       router.refresh();
     } catch (err) {
       alert(err instanceof Error ? err.message : "No se pudo subir la foto.");
     } finally {
       setSubiendo(false);
-      e.target.value = ""; // permite volver a elegir la misma foto
+    }
+  }
+
+  // ── Galería ───────────────────────────────────────────────────────────────
+  async function onFotosGaleria(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivos = Array.from(e.target.files ?? []).slice(0, MAX_FOTOS_GALERIA);
+    e.target.value = "";
+    if (archivos.length === 0) return;
+    setSubiendo(true);
+    setAviso(null);
+
+    try {
+      // El EXIF se lee antes de comprimir (la compresión lo elimina). Aunque no se quiera
+      // ubicación, la fecha en que se hizo la foto sigue siendo útil.
+      const exifs = await Promise.all(archivos.map(leerExifFoto));
+
+      let actual: { latitud: number; longitud: number } | null = null;
+      const sinGps = incluirUbicacion ? exifs.filter((x) => x.latitud === null).length : 0;
+      if (sinGps > 0) {
+        const usarActual = confirm(
+          `${sinGps === 1 ? "Esta foto no incluye ubicación" : `${sinGps} fotos no incluyen ubicación`} (algunos móviles la quitan al elegir de la galería).\n\n` +
+            "Aceptar: usar tu ubicación ACTUAL. El cliente verá que es la ubicación del momento de subirla, no necesariamente la de donde se hizo.\n" +
+            "Cancelar: subirla sin ubicación.",
+        );
+        if (usarActual) {
+          const r = await obtenerUbicacion();
+          if (r.posicion) {
+            actual = { latitud: r.posicion.coords.latitude, longitud: r.posicion.coords.longitude };
+          } else if (!confirm(`${mensajeSinUbicacion(r.motivo)}\n\n¿Subirla igualmente, sin ubicación?`)) {
+            return;
+          }
+        }
+      }
+
+      let subidas = 0;
+      let sinUbicacion = 0;
+      const fallos: string[] = [];
+
+      for (const [i, archivo] of archivos.entries()) {
+        setProgreso({ hecho: i, total: archivos.length });
+        const exif = exifs[i] ?? { latitud: null, longitud: null, fecha: null };
+        let ubicacion: DatosFoto["ubicacion"] = null;
+        if (incluirUbicacion && exif.latitud !== null && exif.longitud !== null) {
+          ubicacion = { latitud: exif.latitud, longitud: exif.longitud, origen: "exif" };
+        } else if (incluirUbicacion && actual) {
+          ubicacion = { ...actual, origen: "gps_al_subir" };
+        }
+
+        try {
+          await subirUna(archivo, {
+            origenFoto: "galeria",
+            ubicacion,
+            tomadaEn: exif.fecha?.toISOString(),
+          });
+          subidas++;
+          if (!ubicacion) sinUbicacion++;
+        } catch (err) {
+          fallos.push(`${archivo.name}: ${err instanceof Error ? err.message : "error"}`);
+        }
+      }
+
+      const partes = [`${subidas} foto${subidas === 1 ? "" : "s"} subida${subidas === 1 ? "" : "s"}`];
+      if (incluirUbicacion && sinUbicacion > 0) partes.push(`${sinUbicacion} sin ubicación`);
+      if (fallos.length > 0) partes.push(`${fallos.length} con error`);
+      setAviso({ tono: fallos.length > 0 || (incluirUbicacion && sinUbicacion > 0) ? "aviso" : "ok", texto: partes.join(" · ") + "." });
+      if (fallos.length > 0) alert(`No se pudieron subir:\n${fallos.join("\n")}`);
+      if (subidas > 0) router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudieron subir las fotos.");
+    } finally {
+      setProgreso(null);
+      setSubiendo(false);
     }
   }
 
@@ -136,26 +300,67 @@ export function PanelPunto({
     }
   }
 
+  // ── Instalado / deshacer ──────────────────────────────────────────────────
   function completar() {
     if (!asignacion) return;
     iniciar(async () => {
-      await marcarPuntoInstalado(punto.id, asignacion.id);
-      router.refresh();
+      try {
+        const anteriores = await marcarPuntoInstalado(punto.id, asignacion.id);
+        setDeshacer({ anteriores, restantes: SEGUNDOS_DESHACER });
+        router.refresh();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo marcar el punto.");
+      }
+    });
+  }
+
+  function deshacerAhora() {
+    if (!asignacion || !deshacer) return;
+    const anteriores = deshacer.anteriores;
+    setDeshacer(null);
+    iniciar(async () => {
+      try {
+        await reabrirPunto(punto.id, asignacion.id, anteriores);
+        router.refresh();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo deshacer.");
+      }
+    });
+  }
+
+  function reabrir() {
+    if (!asignacion) return;
+    if (!confirm("¿Volver a dejar este punto como pendiente? Hazlo solo si lo marcaste como instalado por error.")) return;
+    iniciar(async () => {
+      try {
+        await reabrirPunto(punto.id, asignacion.id);
+        setDeshacer(null);
+        router.refresh();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo reabrir el punto.");
+      }
     });
   }
 
   function enviarIncidencia() {
     iniciar(async () => {
-      await reportarIncidencia(punto.id, notaIncidencia);
-      setMostrarIncidencia(false);
-      router.refresh();
+      try {
+        await reportarIncidencia(punto.id, notaIncidencia);
+        setMostrarIncidencia(false);
+        router.refresh();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo enviar la incidencia.");
+      }
     });
   }
+
+  const instalado = asignacion?.estado === "completada" && punto.estado === "instalado";
+  const verificado = punto.estado === "verificado";
 
   return (
     <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
       <div className="flex items-start gap-esp3">
-        <button onClick={() => router.back()} className="mt-1 text-icono-secundario">
+        <button onClick={() => router.back()} className="mt-1 text-icono-secundario" aria-label="Volver">
           <Icono nombre="atras" size={22} />
         </button>
         <div className="flex-1">
@@ -203,28 +408,27 @@ export function PanelPunto({
       {/* Fotos */}
       <div className="flex flex-col gap-esp3">
         <div className="flex items-center">
-          <h2 className="flex-1 text-sm font-medium text-texto-secundario">
-            Fotos · {fotos.length}
-          </h2>
+          <h2 className="flex-1 text-sm font-medium text-texto-secundario">Fotos · {fotos.length}</h2>
         </div>
         <div className="grid grid-cols-3 gap-esp2">
-          {fotos.map((f) =>
-            f.url ? (
+          {fotos.map((f) => {
+            if (!f.url) return null;
+            const ubic = etiquetaUbicacion(f);
+            const conUbicacion = f.latitud != null && f.longitud != null;
+            return (
               <div key={f.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={f.url}
-                  alt={f.tipo}
-                  className="aspect-square w-full rounded-md object-cover"
-                />
+                <img src={f.url} alt={f.tipo} className="aspect-square w-full rounded-md object-cover" />
                 <span
+                  title={ubic.ayuda}
                   className={
-                    f.latitud != null && f.longitud != null
+                    conUbicacion
                       ? "absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
                       : "absolute bottom-1 left-1 rounded-full bg-fondo-aviso px-1.5 py-0.5 text-[10px] font-medium text-texto-primario"
                   }
                 >
-                  {f.latitud != null && f.longitud != null ? "📍 GPS" : "Sin ubicación"}
+                  {f.origen_foto === "galeria" ? "🖼 " : ""}
+                  {ubic.texto}
                 </span>
                 {(esAdmin || f.usuario_id === usuarioId) && (
                   <button
@@ -237,27 +441,78 @@ export function PanelPunto({
                   </button>
                 )}
               </div>
-            ) : null,
-          )}
+            );
+          })}
           <button
-            onClick={anadirFoto}
+            onClick={() => setPanelAbierto((v) => !v)}
             disabled={subiendo}
+            aria-expanded={panelAbierto}
             className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-borde-fuerte text-texto-terciario disabled:opacity-50"
           >
             <Icono nombre="camara" size={22} />
-            <span className="text-xs">{subiendo ? "Subiendo…" : "Añadir"}</span>
+            <span className="text-xs">
+              {progreso ? `Subiendo ${progreso.hecho + 1}/${progreso.total}…` : subiendo ? "Subiendo…" : "Añadir"}
+            </span>
           </button>
         </div>
-        <p className="text-xs text-texto-terciario">
-          Cada foto se guarda con su ubicación GPS: acepta el permiso de ubicación cuando el navegador lo pida.
-        </p>
+
+        {panelAbierto && (
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4">
+            <label className="flex items-start gap-esp3">
+              <input
+                type="checkbox"
+                checked={incluirUbicacion}
+                onChange={(e) => cambiarIncluirUbicacion(e.target.checked)}
+                disabled={subiendo}
+                className="mt-0.5 h-5 w-5 shrink-0"
+              />
+              <span className="flex flex-col">
+                <span className="text-sm font-medium text-texto-primario">Incluir la ubicación en la foto</span>
+                <span className="text-xs text-texto-terciario">
+                  {incluirUbicacion
+                    ? "El cliente podrá ver dónde se hizo. En las fotos de la galería se usa la ubicación guardada en la foto, si la tiene."
+                    : "La foto se sube sin ubicación y no se guarda ninguna."}
+                </span>
+              </span>
+            </label>
+            <div className="flex gap-esp2">
+              <Boton className="flex-1" onClick={hacerFoto} disabled={subiendo}>
+                <Icono nombre="camara" size={16} />
+                Hacer foto
+              </Boton>
+              <Boton className="flex-1" variante="secundario" onClick={() => inputGaleriaRef.current?.click()} disabled={subiendo}>
+                <Icono nombre="imagen" size={16} />
+                Galería
+              </Boton>
+            </div>
+            <p className="text-xs text-texto-terciario">
+              ¿Olvidaste hacer una foto desde la app? Elige hasta {MAX_FOTOS_GALERIA} de la galería: se guardará la fecha
+              en que se hicieron.
+            </p>
+          </div>
+        )}
+
+        {aviso && (
+          <p className={aviso.tono === "ok" ? "text-xs text-texto-exito" : "text-xs text-texto-aviso"} role="status">
+            {aviso.texto}
+          </p>
+        )}
+
         <input
-          ref={inputRef}
+          ref={inputCamaraRef}
           type="file"
           accept="image/*"
           capture="environment"
           className="hidden"
-          onChange={onArchivoSeleccionado}
+          onChange={onFotoCamara}
+        />
+        <input
+          ref={inputGaleriaRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={onFotosGaleria}
         />
       </div>
 
@@ -278,6 +533,24 @@ export function PanelPunto({
         </div>
       )}
 
+      {instalado && (
+        <div className="flex flex-col gap-esp2 rounded-lg border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3">
+          <p className="flex items-center gap-esp2 text-sm font-medium text-texto-exito">
+            <Icono nombre="check" size={16} />
+            Punto marcado como instalado
+          </p>
+          <Boton variante="fantasma" tamano="s" onClick={reabrir} cargando={pendiente}>
+            ¿Marcado por error? Reabrir punto
+          </Boton>
+        </div>
+      )}
+
+      {verificado && (
+        <p className="rounded-lg border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3 text-sm text-texto-exito">
+          Verificado por el administrador. Ya no se puede modificar.
+        </p>
+      )}
+
       {mostrarIncidencia && (
         <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp4">
           <textarea
@@ -290,6 +563,20 @@ export function PanelPunto({
           <Boton variante="peligro" onClick={enviarIncidencia} cargando={pendiente} disabled={!notaIncidencia}>
             Enviar incidencia
           </Boton>
+        </div>
+      )}
+
+      {/* Aviso "Deshacer" de unos segundos tras marcar como instalado */}
+      {deshacer && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-esp4 bottom-24 z-30 mx-auto flex max-w-sm items-center gap-esp3 rounded-lg bg-fondo-inverso px-esp4 py-esp3 text-sm text-texto-inverso shadow-lg"
+        >
+          <span className="flex-1">Punto marcado como instalado</span>
+          <button onClick={deshacerAhora} className="font-semibold underline underline-offset-2">
+            Deshacer ({deshacer.restantes})
+          </button>
         </div>
       )}
     </div>

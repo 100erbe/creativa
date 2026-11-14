@@ -941,6 +941,8 @@ export type Database = {
           latitud: number | null
           longitud: number | null
           notas: string | null
+          origen_foto: string
+          origen_ubicacion: string | null
           punto_id: number
           tipo: Database["public"]["Enums"]["tipo_foto"]
           tomada_en: string
@@ -953,6 +955,8 @@ export type Database = {
           latitud?: number | null
           longitud?: number | null
           notas?: string | null
+          origen_foto?: string
+          origen_ubicacion?: string | null
           punto_id: number
           tipo?: Database["public"]["Enums"]["tipo_foto"]
           tomada_en?: string
@@ -965,6 +969,8 @@ export type Database = {
           latitud?: number | null
           longitud?: number | null
           notas?: string | null
+          origen_foto?: string
+          origen_ubicacion?: string | null
           punto_id?: number
           tipo?: Database["public"]["Enums"]["tipo_foto"]
           tomada_en?: string
@@ -1798,6 +1804,7 @@ export type Database = {
         Returns: {
           latitud: number | null
           longitud: number | null
+          origen_ubicacion: string | null
           punto_id: number
           punto_nombre: string
           tipo: Database["public"]["Enums"]["tipo_foto"]
