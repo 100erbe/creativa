@@ -1,6 +1,0 @@
-Faltan los iconos reales de la PWA en este tamaño:
-  icon-192.png (192x192)
-  icon-512.png (512x512)
-
-Genera ambos a partir del logo de Creativa (fondo #C2410C, letra "C" o el
-logo definitivo) y colócalos en esta carpeta con esos nombres exactos.
