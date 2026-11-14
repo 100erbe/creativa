@@ -100,7 +100,7 @@ export default async function PaginaCliente({
         </Link>
         <div className="flex flex-wrap items-center gap-esp3">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold text-texto-primario">{cliente.razon_social}</h1>
+            <h1 className="break-words text-2xl font-semibold text-texto-primario">{cliente.razon_social}</h1>
             <p className="text-sm text-texto-secundario">
               {cliente.codigo} · {ETIQUETA_TIPO_CLIENTE[cliente.tipo_cliente] ?? cliente.tipo_cliente}
               {grupo ? ` · ${grupo.nombre}` : ""}
@@ -130,20 +130,20 @@ export default async function PaginaCliente({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Documentos recientes</h2>
             <div className="flex flex-col divide-y divide-fondo-hover">
               {(documentos ?? []).map((d) => (
                 <Link key={d.id} href={`/admin/documentos/${d.id}`} className="flex items-center gap-esp3 py-esp3">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-texto-primario">
+                    <p className="truncate text-sm font-medium text-texto-primario">
                       {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
                     </p>
                     <p className="text-xs text-texto-terciario">
                       {ETIQUETA_TIPO[d.tipo] ?? d.tipo} · {fechaMedia(d.fecha)}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-texto-primario">{euros(Number(d.total))}</span>
+                  <span className="whitespace-nowrap text-sm font-medium text-texto-primario">{euros(Number(d.total))}</span>
                   <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
                     {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
                   </Insignia>
@@ -162,12 +162,12 @@ export default async function PaginaCliente({
           </div>
 
           {(campanas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Campañas</h2>
               <div className="flex flex-col divide-y divide-fondo-hover">
                 {(campanas ?? []).map((c) => (
                   <Link key={c.id} href={`/admin/campanas/${c.id}`} className="flex items-center gap-esp3 py-esp3">
-                    <span className="flex-1 text-sm font-medium text-texto-primario">{c.nombre}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-texto-primario">{c.nombre}</span>
                     <Insignia tono={TONO_POR_ESTADO[c.estado] ?? "neutro"}>{c.estado.replace("_", " ")}</Insignia>
                   </Link>
                 ))}
@@ -176,7 +176,7 @@ export default async function PaginaCliente({
           )}
 
           {(tarifas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Tarifas especiales</h2>
               <div className="flex flex-col divide-y divide-fondo-hover">
                 {(tarifas ?? []).map((t) => {
@@ -202,7 +202,7 @@ export default async function PaginaCliente({
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Datos</h2>
             <Dato etiqueta="Documento" valor={cliente.numero_documento ? `${cliente.tipo_documento} ${cliente.numero_documento}` : null} />
             <Dato etiqueta="Dirección" valor={direccion || null} />
@@ -223,12 +223,12 @@ export default async function PaginaCliente({
             )}
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Contactos</h2>
             <Contactos clienteId={clienteId} contactos={contactos ?? []} />
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Estado</h2>
             <BotonActivo clienteId={clienteId} activo={cliente.activo} />
             <p className="text-xs text-texto-terciario">
@@ -246,7 +246,7 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null | un
   if (!valor) return null;
   return (
     <div className="flex gap-esp3 text-sm">
-      <span className="w-[110px] shrink-0 text-texto-terciario">{etiqueta}</span>
+      <span className="w-[96px] shrink-0 text-texto-terciario sm:w-[110px]">{etiqueta}</span>
       <span className="min-w-0 flex-1 break-words text-texto-primario">{valor}</span>
     </div>
   );

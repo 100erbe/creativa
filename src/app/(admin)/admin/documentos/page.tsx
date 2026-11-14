@@ -93,42 +93,42 @@ export default async function PaginaDocumentos({
   return (
     <div className="flex flex-col gap-esp6">
       <div className="flex items-center gap-esp3">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-texto-primario">Documentos</h1>
           <p className="text-sm text-texto-secundario">
             Presupuestos, albaranes y facturas · {total} resultado{total === 1 ? "" : "s"}
           </p>
         </div>
-        <Link href="/admin/documentos/nuevo">
+        <Link href="/admin/documentos/nuevo" className="shrink-0" aria-label="Nuevo documento">
           <Boton>
             <Icono nombre="mas" size={16} />
-            Nuevo documento
+            <span className="hidden sm:inline">Nuevo documento</span>
           </Boton>
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="flex flex-wrap gap-esp2">
+      <div className="flex flex-col gap-esp3 md:flex-row md:flex-wrap md:items-center">
+        <div className="-mx-esp4 flex gap-esp2 overflow-x-auto px-esp4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
           {TIPOS.map((t) => (
             <Link
               key={t.valor}
               href={enlace(actual, { tipo: t.valor, pagina: "" })}
               className={
                 tipo === t.valor
-                  ? "rounded-completo bg-fondo-marca px-esp3 py-esp1 text-sm font-medium text-texto-sobre-marca"
-                  : "rounded-completo border border-borde-default bg-fondo-superficie px-esp3 py-esp1 text-sm text-texto-secundario hover:bg-fondo-sutil"
+                  ? "inline-flex min-h-10 shrink-0 items-center rounded-completo bg-fondo-marca px-esp3 text-sm font-medium text-texto-sobre-marca md:min-h-0 md:py-esp1"
+                  : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
               }
             >
               {t.etiqueta}
             </Link>
           ))}
         </div>
-        <form action="/admin/documentos" className="ml-auto flex items-center gap-esp2">
+        <form action="/admin/documentos" className="flex flex-wrap items-center gap-esp2 md:ml-auto md:flex-nowrap">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           <select
             name="estado"
             defaultValue={estado}
-            className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-sm text-texto-primario"
+            className="h-10 min-w-0 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 md:flex-none text-base text-texto-primario md:h-9 md:text-sm"
           >
             {ESTADOS.map((e) => (
               <option key={e.valor} value={e.valor}>
@@ -137,10 +137,11 @@ export default async function PaginaDocumentos({
             ))}
           </select>
           <input
+            type="search"
             name="q"
             defaultValue={q}
             placeholder="Número o cliente…"
-            className="h-9 w-[200px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="order-first h-10 w-full min-w-0 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco md:order-none md:h-9 md:w-[200px] md:text-sm"
           />
           <Boton type="submit" variante="secundario">
             Buscar
@@ -148,41 +149,46 @@ export default async function PaginaDocumentos({
         </form>
       </div>
 
-      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp6">
+      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
         {filas.map((d) => {
           const cliente = Array.isArray(d.clientes) ? d.clientes[0] : d.clientes;
           const cobro = cobroPorId.get(d.id);
           return (
-            <Link key={d.id} href={`/admin/documentos/${d.id}`} className="flex items-center gap-esp4 py-esp3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil">
+            <Link
+              key={d.id}
+              href={`/admin/documentos/${d.id}`}
+              className="grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1 py-esp3 lg:flex lg:gap-esp4"
+            >
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil lg:flex">
                 <Icono nombre="documentos" size={18} className="text-icono-default" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-texto-primario">
+              <div className="min-w-0 lg:flex-1">
+                <p className="truncate text-sm font-medium text-texto-primario">
                   {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
                 </p>
                 <p className="truncate text-xs text-texto-terciario">
                   {d.cliente_razon_social ?? cliente?.razon_social ?? "Sin cliente"}
+                  <span className="lg:hidden"> · {fechaMedia(d.fecha)}</span>
                 </p>
               </div>
-              <span className="hidden w-[110px] text-xs text-texto-terciario md:block">
+              <span className="hidden w-[110px] text-xs text-texto-terciario lg:block">
                 {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
               </span>
-              <span className="hidden w-[100px] text-xs text-texto-terciario md:block">
+              <span className="hidden w-[100px] text-xs text-texto-terciario lg:block">
                 {fechaMedia(d.fecha)}
               </span>
               <span
-                className="hidden w-[130px] text-xs text-texto-terciario md:block"
+                className="hidden w-[130px] text-xs text-texto-terciario lg:block"
                 title="Fecha de creación del documento"
               >
                 <span className="block text-[10px] uppercase tracking-wide">Creado</span>
                 {fechaMedia(d.creado_en)}{" "}
                 {new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(d.creado_en))}
               </span>
-              <span className="w-[100px] text-right text-sm font-medium text-texto-primario">
+              <span className="whitespace-nowrap text-right text-sm font-medium text-texto-primario lg:w-[100px]">
                 {euros(Number(d.total))}
               </span>
-              <div className="flex w-[150px] flex-col items-end gap-1">
+              <div className="col-span-2 flex flex-wrap items-center gap-1 lg:col-span-1 lg:w-[150px] lg:flex-col lg:items-end">
                 <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
                   {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
                 </Insignia>
@@ -201,7 +207,7 @@ export default async function PaginaDocumentos({
       </div>
 
       {paginas > 1 && (
-        <div className="flex items-center justify-center gap-esp4 text-sm text-texto-secundario">
+        <div className="flex flex-wrap items-center justify-center gap-x-esp4 gap-y-esp2 text-sm text-texto-secundario [&_a]:inline-flex [&_a]:min-h-10 [&_a]:items-center">
           {pagina > 1 ? (
             <Link href={enlace(actual, { pagina: String(pagina - 1) })} className="font-medium text-texto-marca">
               ← Anterior

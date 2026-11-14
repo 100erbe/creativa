@@ -51,7 +51,7 @@ export default async function PaginaPanel() {
   return (
     <div className="flex flex-col gap-esp6">
       <div className="flex items-center gap-esp3">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-texto-primario">
             Buenos días, {usuario?.nombre}
           </h1>
@@ -59,10 +59,10 @@ export default async function PaginaPanel() {
             {fechaLarga(hoy)}
           </p>
         </div>
-        <Link href="/admin/documentos/nuevo">
+        <Link href="/admin/documentos/nuevo" className="shrink-0" aria-label="Nuevo documento">
           <Boton>
             <Icono nombre="mas" size={16} />
-            Nuevo documento
+            <span className="hidden sm:inline">Nuevo documento</span>
           </Boton>
         </Link>
       </div>
@@ -91,7 +91,7 @@ export default async function PaginaPanel() {
       </div>
 
       <div className="flex flex-1 flex-col gap-esp6 xl:flex-row">
-        <div className="flex min-w-0 flex-1 flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+        <div className="flex min-w-0 flex-1 flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
           <div className="flex items-center">
             <h2 className="flex-1 text-base font-semibold text-texto-primario">
               Campañas en curso
@@ -110,9 +110,9 @@ export default async function PaginaPanel() {
                   href={`/admin/campanas/${c.campana_id}`}
                   className="flex items-center gap-esp4 py-esp3"
                 >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-texto-primario">{c.campana}</p>
-                    <p className="text-xs text-texto-terciario">{c.cliente}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-texto-primario">{c.campana}</p>
+                    <p className="truncate text-xs text-texto-terciario">{c.cliente}</p>
                   </div>
                   <div className="hidden w-[160px] items-center gap-esp3 sm:flex">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
@@ -143,7 +143,7 @@ export default async function PaginaPanel() {
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-esp4 xl:w-[420px] rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+        <div className="flex w-full flex-col gap-esp4 xl:w-[420px] rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
           <div className="flex items-center">
             <h2 className="flex-1 text-base font-semibold text-texto-primario">
               Documentos recientes
@@ -159,20 +159,20 @@ export default async function PaginaPanel() {
                 href={`/admin/documentos/${d.id}`}
                 className="flex items-center gap-esp3 py-esp3"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-fondo-sutil">
+                <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
                   <Icono nombre="documentos" size={18} className="text-icono-default" />
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-texto-primario">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-texto-primario">
                     {d.numero_completo ?? "Borrador"}
                   </p>
-                  <p className="text-xs text-texto-terciario">
+                  <p className="truncate text-xs text-texto-terciario">
                     {d.cliente_razon_social ??
                       (Array.isArray(d.clientes) ? d.clientes[0] : d.clientes)?.razon_social}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <p className="text-sm font-medium text-texto-primario">{euros(Number(d.total))}</p>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <p className="whitespace-nowrap text-sm font-medium text-texto-primario">{euros(Number(d.total))}</p>
                   <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
                     {d.estado}
                   </Insignia>
