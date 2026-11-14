@@ -113,8 +113,8 @@ export function PasoLineas({
 
       <PasosDocumento actual={2} />
 
-      <div className="flex gap-esp6">
-        <div className="flex flex-1 flex-col gap-esp4">
+      <div className="flex flex-col gap-esp6 xl:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-esp4">
           {/* Cliente (compacto) */}
           <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-fondo-marca-sutil text-sm font-medium text-texto-marca">
@@ -193,11 +193,11 @@ export function PasoLineas({
           </div>
 
           {/* Líneas */}
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 overflow-x-auto rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-base font-semibold text-texto-primario">
               Líneas del presupuesto · {lineas.length}
             </h2>
-            <div className="grid grid-cols-[1fr_60px_100px_60px_110px_20px] gap-esp4 text-xs font-medium text-texto-terciario">
+            <div className="grid min-w-[560px] grid-cols-[1fr_60px_100px_60px_110px_20px] gap-esp4 text-xs font-medium text-texto-terciario">
               <span>CONCEPTO</span>
               <span className="text-right">CANT.</span>
               <span className="text-right">PRECIO</span>
@@ -205,7 +205,7 @@ export function PasoLineas({
               <span className="text-right">IMPORTE</span>
               <span />
             </div>
-            <div className="flex flex-col divide-y divide-fondo-hover">
+            <div className="flex min-w-[560px] flex-col divide-y divide-fondo-hover">
               {lineas.map((l) => (
                 <div
                   key={l.id}
@@ -244,7 +244,7 @@ export function PasoLineas({
         </div>
 
         {/* Resumen */}
-        <div className="flex w-[360px] shrink-0 flex-col gap-esp4">
+        <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
           <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-base font-semibold text-texto-primario">Resumen</h2>
             <Fila etiqueta="Base imponible" valor={euros(Number(documento.base_imponible))} />

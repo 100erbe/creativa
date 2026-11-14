@@ -16,13 +16,13 @@ export default async function LayoutAdmin({
   const iniciales = `${usuario.nombre[0] ?? ""}${usuario.apellidos?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <div className="flex min-h-dvh bg-fondo-lienzo">
+    <div className="flex min-h-dvh flex-col bg-fondo-lienzo md:flex-row">
       <BarraLateral
         nombre={`${usuario.nombre} ${usuario.apellidos ?? ""}`.trim()}
         rolEtiqueta="Administradora"
         iniciales={iniciales}
       />
-      <div className="flex-1 overflow-y-auto px-esp8 py-esp6">{children}</div>
+      <div className="min-w-0 flex-1 px-esp4 py-esp5 md:px-esp8 md:py-esp6">{children}</div>
     </div>
   );
 }

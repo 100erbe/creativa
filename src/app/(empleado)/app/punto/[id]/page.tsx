@@ -31,7 +31,7 @@ export default async function PaginaPunto({
       .maybeSingle(),
     supabase
       .from("fotos_punto")
-      .select("id, tipo, url_foto, tomada_en, usuario_id")
+      .select("id, tipo, url_foto, tomada_en, usuario_id, latitud, longitud")
       .eq("punto_id", puntoId)
       .order("tomada_en", { ascending: false }),
   ]);

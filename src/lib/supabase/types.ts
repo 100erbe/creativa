@@ -1796,6 +1796,8 @@ export type Database = {
       obtener_fotos_publicas: {
         Args: { p_token: string }
         Returns: {
+          latitud: number | null
+          longitud: number | null
           punto_id: number
           punto_nombre: string
           tipo: Database["public"]["Enums"]["tipo_foto"]

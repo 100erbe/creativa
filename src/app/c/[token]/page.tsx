@@ -89,24 +89,45 @@ export default async function PaginaPublicaCliente({
               </Insignia>
             </div>
             {(fotosPorPunto.get(p.punto_id) ?? []).length > 0 && (
-              // PENDIENTE: f.url_foto es la ruta dentro del bucket privado
-              // "fotos-puntos" (p. ej. "punto_12/foto.jpg"), no una URL.
-              // Como esta página es pública (rol anon, sin sesión), no puede
-              // pedir una URL firmada igual que /app/punto/[id]. Dos opciones:
-              //  1) mover las fotos ya aprobadas a un bucket público aparte, o
-              //  2) generar aquí la URL firmada dentro de un Route Handler que
-              //     use la service_role key (nunca en el cliente).
-              // Hasta entonces esta cuadrícula no mostrará las imágenes.
-              <div className="grid grid-cols-3 gap-esp2">
-                {(fotosPorPunto.get(p.punto_id) ?? []).map((f) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={f.url_foto}
-                    src={f.url_foto}
-                    alt={f.tipo}
-                    className="aspect-square w-full rounded-md bg-fondo-sutil object-cover"
-                  />
-                ))}
+              // f.url_foto es la ruta dentro del bucket privado "fotos-puntos".
+              // Se sirve a través de /c/[token]/foto, que comprueba el token y
+              // firma la URL en el servidor (ver foto/route.ts).
+              <div className="grid grid-cols-2 gap-esp3 sm:grid-cols-3">
+                {(fotosPorPunto.get(p.punto_id) ?? []).map((f) => {
+                  const src = `/c/${encodeURIComponent(token)}/foto?ruta=${encodeURIComponent(f.url_foto)}`;
+                  const conUbicacion = f.latitud != null && f.longitud != null;
+                  return (
+                    <div key={f.url_foto} className="flex flex-col gap-1">
+                      <a href={src} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={`Foto de ${p.punto_nombre ?? "punto"}`}
+                          loading="lazy"
+                          className="aspect-square w-full rounded-md bg-fondo-sutil object-cover"
+                        />
+                      </a>
+                      <p className="text-xs text-texto-terciario">
+                        {new Intl.DateTimeFormat("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }).format(new Date(f.tomada_en))}
+                      </p>
+                      {conUbicacion && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${f.latitud},${f.longitud}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-medium text-texto-exito"
+                        >
+                          📍 Ver ubicación de la foto
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

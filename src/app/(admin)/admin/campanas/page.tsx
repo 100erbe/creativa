@@ -85,7 +85,7 @@ export default async function PaginaCampanas({
                     : ""}
                 </p>
               </div>
-              <div className="flex w-[160px] items-center gap-esp3">
+              <div className="hidden w-[160px] items-center gap-esp3 sm:flex">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                   <div
                     className="h-full rounded-completo bg-fondo-marca"
@@ -96,7 +96,7 @@ export default async function PaginaCampanas({
                   {hechos}/{total}
                 </span>
               </div>
-              <span className="w-[70px] text-xs text-texto-terciario">
+              <span className="hidden w-[70px] text-xs text-texto-terciario md:block">
                 {Number(p?.fotos_subidas ?? 0)} fotos
               </span>
               <Insignia tono={incidencias > 0 ? "peligro" : (TONO_POR_ESTADO[c.estado] ?? "neutro")}>

@@ -67,7 +67,7 @@ export default async function PaginaPanel() {
         </Link>
       </div>
 
-      <div className="flex gap-esp4">
+      <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[150px]">
         <TarjetaKpi
           etiqueta="Facturado este mes"
           valor={euros(totalFacturado)}
@@ -90,8 +90,8 @@ export default async function PaginaPanel() {
         />
       </div>
 
-      <div className="flex flex-1 gap-esp6">
-        <div className="flex flex-1 flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+      <div className="flex flex-1 flex-col gap-esp6 xl:flex-row">
+        <div className="flex min-w-0 flex-1 flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
           <div className="flex items-center">
             <h2 className="flex-1 text-base font-semibold text-texto-primario">
               Campañas en curso
@@ -114,7 +114,7 @@ export default async function PaginaPanel() {
                     <p className="text-sm font-medium text-texto-primario">{c.campana}</p>
                     <p className="text-xs text-texto-terciario">{c.cliente}</p>
                   </div>
-                  <div className="flex w-[160px] items-center gap-esp3">
+                  <div className="hidden w-[160px] items-center gap-esp3 sm:flex">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                       <div
                         className="h-full rounded-completo bg-fondo-marca"
@@ -143,7 +143,7 @@ export default async function PaginaPanel() {
           </div>
         </div>
 
-        <div className="flex w-[420px] flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+        <div className="flex w-full flex-col gap-esp4 xl:w-[420px] rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
           <div className="flex items-center">
             <h2 className="flex-1 text-base font-semibold text-texto-primario">
               Documentos recientes

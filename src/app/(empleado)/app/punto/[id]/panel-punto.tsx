@@ -7,6 +7,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { comprimirImagen } from "@/lib/comprimir-imagen";
+import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
 import {
   subirFotoPunto,
   eliminarFotoPunto,
@@ -43,6 +44,8 @@ type Foto = {
   url: string | null;
   tomada_en: string;
   usuario_id: string | null;
+  latitud: number | null;
+  longitud: number | null;
 };
 
 export function PanelPunto({
@@ -65,18 +68,15 @@ export function PanelPunto({
   const [notaIncidencia, setNotaIncidencia] = useState("");
   const [subiendo, setSubiendo] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
+  const ubicacionRef = useRef<{ promesa: Promise<ResultadoUbicacion>; en: number } | null>(null);
 
   const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
 
-  function obtenerUbicacion(): Promise<GeolocationPosition | null> {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(pos),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 8000 },
-      );
-    });
+  // Se pide la ubicación al tocar "Añadir" (dentro del gesto del usuario y antes de
+  // que la cámara tome el control); al volver de la cámara ya suele estar resuelta.
+  function anadirFoto() {
+    ubicacionRef.current = { promesa: obtenerUbicacion(), en: Date.now() };
+    inputRef.current?.click();
   }
 
   async function onArchivoSeleccionado(e: React.ChangeEvent<HTMLInputElement>) {
@@ -85,10 +85,24 @@ export function PanelPunto({
     setSubiendo(true);
 
     try {
-      const [posicion, comprimida] = await Promise.all([
-        obtenerUbicacion(),
-        comprimirImagen(archivo),
-      ]);
+      const compresion = comprimirImagen(archivo); // en paralelo mientras se resuelve el GPS
+
+      const pedido = ubicacionRef.current;
+      ubicacionRef.current = null;
+      const reciente = pedido && Date.now() - pedido.en < 2 * 60 * 1000;
+      let ubicacion = await (reciente ? pedido.promesa : obtenerUbicacion());
+      // Si falló (no por permisos), se reintenta ahora que la cámara ya se cerró.
+      if (!ubicacion.posicion && ubicacion.motivo !== "denegado") ubicacion = await obtenerUbicacion();
+
+      if (!ubicacion.posicion) {
+        const seguir = confirm(
+          `${mensajeSinUbicacion(ubicacion.motivo)}\n\n¿Subir la foto igualmente, sin ubicación? (El cliente no podrá ver dónde se hizo.)`,
+        );
+        if (!seguir) return;
+      }
+
+      const comprimida = await compresion;
+      const posicion = ubicacion.posicion;
       const formData = new FormData();
       formData.set("archivo", comprimida);
       formData.set("puntoId", String(punto.id));
@@ -203,6 +217,15 @@ export function PanelPunto({
                   alt={f.tipo}
                   className="aspect-square w-full rounded-md object-cover"
                 />
+                <span
+                  className={
+                    f.latitud != null && f.longitud != null
+                      ? "absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
+                      : "absolute bottom-1 left-1 rounded-full bg-fondo-aviso px-1.5 py-0.5 text-[10px] font-medium text-texto-primario"
+                  }
+                >
+                  {f.latitud != null && f.longitud != null ? "📍 GPS" : "Sin ubicación"}
+                </span>
                 {(esAdmin || f.usuario_id === usuarioId) && (
                   <button
                     onClick={() => eliminarFoto(f.id)}
@@ -217,7 +240,7 @@ export function PanelPunto({
             ) : null,
           )}
           <button
-            onClick={() => inputRef.current?.click()}
+            onClick={anadirFoto}
             disabled={subiendo}
             className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-borde-fuerte text-texto-terciario disabled:opacity-50"
           >
@@ -225,6 +248,9 @@ export function PanelPunto({
             <span className="text-xs">{subiendo ? "Subiendo…" : "Añadir"}</span>
           </button>
         </div>
+        <p className="text-xs text-texto-terciario">
+          Cada foto se guarda con su ubicación GPS: acepta el permiso de ubicación cuando el navegador lo pida.
+        </p>
         <input
           ref={inputRef}
           type="file"

@@ -44,6 +44,8 @@ const PATHS: Record<string, string> = {
     "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3",
   opciones: "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
   enviar: "M22 2 11 13 M22 2 15 22 11 13 2 9z",
+  menu: "M3 6h18 M3 12h18 M3 18h18",
+  cerrar: "M18 6 6 18 M6 6l12 12",
 };
 
 export function Icono({
