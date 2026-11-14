@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
-import { Campo } from "@/components/ui/campo";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
@@ -43,8 +42,30 @@ export function PasoCliente({
     clientesIniciales.find((c) => c.id === documento?.cliente_id) ?? null,
   );
   const [creando, setCreando] = useState(false);
+  const [abierto, setAbierto] = useState(false);
+  const contenedor = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
+
+  function cerrar() {
+    setAbierto(false);
+    setBusqueda("");
+  }
+
+  function elegir(c: Cliente) {
+    setSeleccionado(c);
+    cerrar();
+  }
+
+  // Cierra la lista al hacer clic fuera.
+  useEffect(() => {
+    if (!abierto) return;
+    function fuera(e: PointerEvent) {
+      if (!contenedor.current?.contains(e.target as Node)) cerrar();
+    }
+    document.addEventListener("pointerdown", fuera);
+    return () => document.removeEventListener("pointerdown", fuera);
+  }, [abierto]);
 
   const filtrados = clientes.filter((c) =>
     `${c.razon_social} ${c.nombre_comercial ?? ""} ${c.numero_documento ?? ""}`
@@ -84,40 +105,146 @@ export function PasoCliente({
 
       {!documento && (
         <div className="flex flex-col gap-esp2">
-          <span className="text-xs font-medium text-texto-secundario">Tipo de documento</span>
-          <div className="grid grid-cols-1 gap-esp2 sm:grid-cols-3">
+          <label htmlFor="tipo-documento" className="text-xs font-medium text-texto-secundario">
+            Tipo de documento
+          </label>
+          <select
+            id="tipo-documento"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoNuevoDocumento)}
+            className="h-12 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-10 md:text-sm"
+          >
             {TIPOS.map((t) => (
-              <button
-                key={t.valor}
-                type="button"
-                onClick={() => setTipo(t.valor)}
-                className={cn(
-                  "flex flex-col rounded-lg border px-esp4 py-esp3 text-left",
-                  tipo === t.valor
-                    ? "border-borde-foco bg-fondo-marca-sutil"
-                    : "border-borde-default bg-fondo-superficie hover:bg-fondo-sutil",
-                )}
-              >
-                <span className="text-sm font-medium text-texto-primario">{ETIQUETA_TIPO[t.valor]}</span>
-                <span className="text-xs text-texto-terciario">{t.descripcion}</span>
-              </button>
+              <option key={t.valor} value={t.valor}>
+                {ETIQUETA_TIPO[t.valor]}
+              </option>
             ))}
-          </div>
+          </select>
+          <p className="text-xs text-texto-terciario">
+            {TIPOS.find((t) => t.valor === tipo)?.descripcion}
+          </p>
         </div>
       )}
 
-      <div className="flex items-end gap-esp3">
-        <Campo
-          etiqueta="Buscar cliente"
-          valor={busqueda}
-          onCambio={setBusqueda}
-          placeholder="Nombre o CIF…"
-          className="flex-1"
-        />
-        <Boton variante="secundario" onClick={() => setCreando((v) => !v)}>
-          <Icono nombre={creando ? "cerrar" : "mas"} size={16} />
-          {creando ? "Cerrar" : "Nuevo cliente"}
-        </Boton>
+      <div className="flex flex-col gap-esp2">
+        <span className="text-xs font-medium text-texto-secundario">Cliente</span>
+        <div className="flex items-start gap-esp3">
+          <div ref={contenedor} className="relative min-w-0 flex-1">
+            {abierto ? (
+              <input
+                autoFocus
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") cerrar();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const primero = filtrados[0];
+                    if (primero) elegir(primero);
+                  }
+                }}
+                placeholder="Nombre o CIF…"
+                role="combobox"
+                aria-expanded="true"
+                aria-label="Buscar cliente"
+                className="h-12 w-full rounded-md border border-borde-foco bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none ring-2 ring-borde-foco/20 placeholder:text-texto-terciario md:h-10 md:text-sm"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAbierto(true)}
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                className={cn(
+                  "flex min-h-12 w-full items-center gap-esp3 rounded-md border px-esp3 py-esp2 text-left md:min-h-10",
+                  seleccionado
+                    ? "border-borde-foco bg-fondo-marca-sutil"
+                    : "border-borde-fuerte bg-fondo-superficie hover:bg-fondo-sutil",
+                )}
+              >
+                {seleccionado ? (
+                  <>
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-fondo-marca text-texto-sobre-marca">
+                      <Icono nombre="check" size={14} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-semibold text-texto-primario">
+                        {seleccionado.nombre_comercial || seleccionado.razon_social}
+                      </span>
+                      <span className="truncate text-xs text-texto-secundario">
+                        {seleccionado.razon_social}
+                        {seleccionado.numero_documento ? ` · ${seleccionado.numero_documento}` : ""}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-texto-marca">Cambiar</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-texto-terciario">Seleccionar cliente…</span>
+                )}
+              </button>
+            )}
+
+            {abierto && (
+              <div
+                role="listbox"
+                className="absolute left-0 right-0 top-full z-20 mt-1 flex max-h-72 flex-col gap-1 overflow-y-auto rounded-lg border border-borde-default bg-fondo-superficie p-esp2 shadow-lg"
+              >
+                {filtrados.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="option"
+                    aria-selected={seleccionado?.id === c.id}
+                    onClick={() => elegir(c)}
+                    className={cn(
+                      "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-left",
+                      seleccionado?.id === c.id ? "bg-fondo-marca-sutil" : "hover:bg-fondo-sutil",
+                    )}
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate text-sm font-medium text-texto-primario">
+                        {c.nombre_comercial || c.razon_social}
+                      </span>
+                      <span className="truncate text-xs text-texto-terciario">
+                        {c.razon_social} {c.numero_documento ? `· ${c.numero_documento}` : ""}
+                      </span>
+                    </span>
+                    {seleccionado?.id === c.id && <Icono nombre="check" size={16} className="text-icono-marca" />}
+                  </button>
+                ))}
+                {filtrados.length === 0 && (
+                  <div className="flex flex-col items-start gap-esp2 px-esp3 py-esp3">
+                    <p className="text-sm text-texto-terciario">Sin resultados.</p>
+                    {busqueda.trim() && (
+                      <Boton
+                        tamano="s"
+                        variante="fantasma"
+                        onClick={() => {
+                          setAbierto(false);
+                          setCreando(true);
+                        }}
+                      >
+                        <Icono nombre="mas" size={14} />
+                        Crear «{busqueda}» como cliente nuevo
+                      </Boton>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <Boton
+            variante="secundario"
+            onClick={() => {
+              setAbierto(false);
+              setCreando((v) => !v);
+            }}
+          >
+            <Icono nombre={creando ? "cerrar" : "mas"} size={16} />
+            <span className="hidden sm:inline">{creando ? "Cerrar" : "Nuevo cliente"}</span>
+          </Boton>
+        </div>
       </div>
 
       {creando && (
@@ -132,48 +259,9 @@ export function PasoCliente({
         />
       )}
 
-      <div className="flex max-h-80 flex-col gap-1 overflow-y-auto rounded-lg border border-borde-default bg-fondo-superficie p-esp2">
-        {filtrados.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setSeleccionado(c)}
-            className={cn(
-              "flex items-center gap-esp3 rounded-md px-esp3 py-esp2 text-left",
-              seleccionado?.id === c.id ? "bg-fondo-marca-sutil" : "hover:bg-fondo-sutil",
-            )}
-          >
-            <span className="flex flex-1 flex-col">
-              <span className="text-sm font-medium text-texto-primario">
-                {c.nombre_comercial || c.razon_social}
-              </span>
-              <span className="text-xs text-texto-terciario">
-                {c.razon_social} {c.numero_documento ? `· ${c.numero_documento}` : ""}
-              </span>
-            </span>
-            {seleccionado?.id === c.id && <Icono nombre="check" size={16} className="text-icono-marca" />}
-          </button>
-        ))}
-        {filtrados.length === 0 && (
-          <div className="flex flex-col items-start gap-esp2 px-esp3 py-esp4">
-            <p className="text-sm text-texto-terciario">Sin resultados.</p>
-            {!creando && (
-              <Boton tamano="s" variante="fantasma" onClick={() => setCreando(true)}>
-                <Icono nombre="mas" size={14} />
-                Crear «{busqueda}» como cliente nuevo
-              </Boton>
-            )}
-          </div>
-        )}
-      </div>
-
       {error && <p className="text-sm text-texto-peligro">{error}</p>}
 
       <div className="flex items-center gap-esp3">
-        {seleccionado && (
-          <p className="flex-1 text-sm text-texto-secundario">
-            Cliente: <strong className="text-texto-primario">{seleccionado.nombre_comercial || seleccionado.razon_social}</strong>
-          </p>
-        )}
         <Boton
           disabled={!seleccionado || pendiente}
           cargando={pendiente}
