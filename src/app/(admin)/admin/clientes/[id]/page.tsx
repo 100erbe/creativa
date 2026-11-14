@@ -8,6 +8,7 @@ import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE } from "@/lib/clientes";
+import { componerDireccion } from "@/lib/direccion";
 import { BotonActivo, Contactos } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -80,9 +81,12 @@ export default async function PaginaCliente({
   const pendiente = (cobros ?? []).reduce((s, c) => s + Number(c.pendiente), 0);
   const vencidas = (cobros ?? []).filter((c) => c.estado_cobro === "vencida").length;
 
-  const direccion = [cliente.direccion, [cliente.codigo_postal, cliente.municipio].filter(Boolean).join(" "), cliente.provincia]
-    .filter(Boolean)
-    .join(", ");
+  const direccion = componerDireccion({
+    direccion: cliente.direccion,
+    codigoPostal: cliente.codigo_postal,
+    municipio: cliente.municipio,
+    provincia: cliente.provincia,
+  });
 
   return (
     <div className="flex flex-col gap-esp6">

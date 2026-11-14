@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
@@ -56,6 +57,13 @@ export function AccionesDocumento({
 
   return (
     <div className="flex flex-col gap-esp3">
+      <Link href={`/admin/documentos/${documentoId}/imprimir`} className="contents">
+        <Boton variante="secundario">
+          <Icono nombre="descargar" size={16} />
+          Imprimir / PDF
+        </Boton>
+      </Link>
+
       {esBorrador && (
         <>
           <label className="flex flex-col gap-1 text-xs text-texto-secundario">

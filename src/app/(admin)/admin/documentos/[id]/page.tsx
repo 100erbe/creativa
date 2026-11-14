@@ -6,6 +6,7 @@ import { Icono } from "@/components/ui/iconos";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { componerDireccion } from "@/lib/direccion";
 import { AccionesDocumento, Cobros } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -79,10 +80,12 @@ export default async function PaginaDocumento({
   // En un borrador los datos del cliente salen de la ficha; al emitir se congelan en el documento.
   const razonSocial = doc.cliente_razon_social ?? cliente?.razon_social ?? "Sin cliente";
   const nif = doc.cliente_documento ?? cliente?.numero_documento;
-  const direccion =
-    doc.cliente_direccion ??
-    cliente?.direccion ??
-    [cliente?.codigo_postal, cliente?.municipio, cliente?.provincia].filter(Boolean).join(", ");
+  const direccion = componerDireccion({
+    direccion: doc.cliente_direccion ?? cliente?.direccion,
+    codigoPostal: doc.cliente_cp ?? cliente?.codigo_postal,
+    municipio: doc.cliente_municipio ?? cliente?.municipio,
+    provincia: doc.cliente_provincia ?? cliente?.provincia,
+  });
 
   const etiquetaTipo = ETIQUETA_TIPO[doc.tipo] ?? doc.tipo;
   const titulo = doc.numero_completo ?? `${etiquetaTipo} en borrador`;

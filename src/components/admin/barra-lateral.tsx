@@ -105,14 +105,14 @@ export function BarraLateral({
   return (
     <>
       {/* Escritorio */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-esp6 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:flex">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-esp6 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:flex print:hidden">
         <Marca />
         {navegacion}
         {usuario}
       </aside>
 
       {/* Móvil: cabecera + cajón */}
-      <header className="sticky top-0 z-30 flex items-center gap-esp3 border-b border-borde-default bg-fondo-superficie px-esp4 py-esp3 md:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-esp3 border-b border-borde-default bg-fondo-superficie px-esp4 py-esp3 md:hidden print:hidden">
         <button
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
