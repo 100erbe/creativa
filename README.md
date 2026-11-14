@@ -17,25 +17,30 @@ Tailwind CSS**. Una sola app sirve tanto el panel de administración
 npm install
 ```
 
-### 2. Crear el proyecto en Supabase
+### 2. Proyecto Supabase
 
-1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. Copia `.env.example` a `.env.local` y rellena `NEXT_PUBLIC_SUPABASE_URL`
-   y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API).
-3. Aplica las migraciones, en orden, desde el SQL Editor de Supabase o con
-   la CLI (`supabase db push`):
-   - `supabase/migrations/0001_schema.sql`
-   - `supabase/migrations/0002_schema_documentos.sql`
-   - `supabase/migrations/0003_schema_campanas.sql`
-   - `supabase/migrations/0004_mejoras_documentos.sql`
-4. Crea el primer usuario administrador:
+Ya existe un proyecto real para esta app: **"Creativa - App"**
+(`yltbnwhipqtrsufgsmyd`, región `eu-central-1`), con las 5 migraciones de
+`supabase/migrations/` ya aplicadas (esquema completo + RLS). Para
+desarrollar en local:
+
+1. Copia `.env.example` a `.env.local` (o usa el `.env.local` ya presente,
+   que **no** está en git) y rellena `NEXT_PUBLIC_SUPABASE_URL` y
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API del proyecto
+   `yltbnwhipqtrsufgsmyd`, o pide las claves a quien lo administre).
+2. Crea el primer usuario administrador:
    - Authentication → Users → **Add user** (email + contraseña).
    - En el SQL Editor: `insert into usuarios (id, nombre, apellidos, email, rol) values ('<uuid del usuario creado>', 'Tu nombre', 'Apellidos', 'tu@email.com', 'admin');`
-5. Storage → crea un bucket **privado** llamado `fotos-puntos` (fotos del
+3. Storage → crea un bucket **privado** llamado `fotos-puntos` (fotos del
    trabajo instalado). Falta añadir su política de subida para el rol
    empleado — ver nota en `supabase/LEEME.txt`.
-6. Marca una serie como `por_defecto = true` para `tipo = 'presupuesto'`
+4. Marca una serie como `por_defecto = true` para `tipo = 'presupuesto'`
    en la tabla `series` (la necesita el asistente de "Nuevo documento").
+
+Si en cambio partes de cero con tu propio proyecto Supabase, aplica las
+migraciones en orden desde el SQL Editor o con la CLI (`supabase db push`):
+`0001_schema.sql` → `0002_schema_documentos.sql` → `0003_schema_campanas.sql`
+→ `0004_mejoras_documentos.sql` → `0005_rls_y_seguridad.sql`.
 
 ### 3. Arrancar en local
 
@@ -84,6 +89,10 @@ página "Sistema"). Si cambias un token en Figma, actualiza también
 - [ ] Paso 3 del asistente de documentos (revisar y emitir número definitivo).
 - [ ] Pantallas de Clientes y Contabilidad (libro registro, ya existe la
       vista `v_libro_registro` en la base de datos).
-- [ ] Generar `src/lib/supabase/types.ts` con
-      `npx supabase gen types typescript --project-id TU_PROYECTO` en cuanto
-      el proyecto esté creado, y sustituir los `any` de las consultas.
+- [x] ~~Generar `src/lib/supabase/types.ts` con `npx supabase gen types
+      typescript`~~ — hecho: ya contiene los tipos reales del proyecto
+      `yltbnwhipqtrsufgsmyd`. Si cambias el esquema, regenera con
+      `npx supabase gen types typescript --project-id yltbnwhipqtrsufgsmyd > src/lib/supabase/types.ts`.
+- [ ] `npm install` y arrancar `npm run dev` al menos una vez para comprobar
+      que el proyecto compila (no se ha podido ejecutar en este entorno por
+      falta de acceso a red para instalar paquetes).
