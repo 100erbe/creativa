@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 const BUCKET_FOTOS = "fotos-puntos";
+const MAX_BYTES_FOTO = 512 * 1024; // mismo límite que el bucket
+const TIPOS_FOTO: Record<string, string> = { "image/webp": "webp", "image/jpeg": "jpg" };
 
 /**
  * Sube una foto tomada en el punto a Supabase Storage y registra la fila en
@@ -28,10 +30,15 @@ export async function subirFotoPunto(formData: FormData) {
 
   if (!archivo || !puntoId) throw new Error("Faltan datos de la foto.");
 
-  const ruta = `punto_${puntoId}/${Date.now()}_${archivo.name}`;
+  // La app comprime antes de subir; aquí se rechaza cualquier cosa que no lo esté.
+  if (archivo.size > MAX_BYTES_FOTO) throw new Error("La foto es demasiado grande.");
+  const extension = TIPOS_FOTO[archivo.type];
+  if (!extension) throw new Error("Formato de foto no permitido.");
+
+  const ruta = `punto_${puntoId}/${Date.now()}.${extension}`;
   const { error: errorSubida } = await supabase.storage
     .from(BUCKET_FOTOS)
-    .upload(ruta, archivo);
+    .upload(ruta, archivo, { contentType: archivo.type });
   if (errorSubida) throw new Error(errorSubida.message);
 
   const { error: errorInsert } = await supabase.from("fotos_punto").insert({
@@ -44,6 +51,31 @@ export async function subirFotoPunto(formData: FormData) {
     longitud,
   });
   if (errorInsert) throw new Error(errorInsert.message);
+
+  revalidatePath(`/app/punto/${puntoId}`);
+}
+
+/**
+ * Borra una foto (fila + archivo). Solo la puede borrar quien la subió o un
+ * admin: lo garantizan las políticas RLS de fotos_punto y de storage.objects,
+ * no esta función. Si la fila no se borra (no es suya), no se toca el archivo.
+ */
+export async function eliminarFotoPunto(fotoId: number, puntoId: number) {
+  const supabase = await createClient();
+
+  const { data: borradas, error } = await supabase
+    .from("fotos_punto")
+    .delete()
+    .eq("id", fotoId)
+    .select("url_foto");
+  if (error) throw new Error(error.message);
+  const borrada = borradas?.[0];
+  if (!borrada) throw new Error("No puedes eliminar esta foto.");
+
+  const { error: errorArchivo } = await supabase.storage
+    .from(BUCKET_FOTOS)
+    .remove([borrada.url_foto]);
+  if (errorArchivo) throw new Error(errorArchivo.message);
 
   revalidatePath(`/app/punto/${puntoId}`);
 }

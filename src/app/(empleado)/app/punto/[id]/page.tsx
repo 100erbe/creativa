@@ -31,7 +31,7 @@ export default async function PaginaPunto({
       .maybeSingle(),
     supabase
       .from("fotos_punto")
-      .select("id, tipo, url_foto, tomada_en")
+      .select("id, tipo, url_foto, tomada_en, usuario_id")
       .eq("punto_id", puntoId)
       .order("tomada_en", { ascending: false }),
   ]);
@@ -48,5 +48,13 @@ export default async function PaginaPunto({
     }),
   );
 
-  return <PanelPunto punto={punto} asignacion={asignacion} fotos={fotosConUrl} />;
+  return (
+    <PanelPunto
+      punto={punto}
+      asignacion={asignacion}
+      fotos={fotosConUrl}
+      usuarioId={usuario?.id ?? null}
+      esAdmin={usuario?.rol === "admin"}
+    />
+  );
 }

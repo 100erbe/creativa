@@ -6,7 +6,13 @@ import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
-import { subirFotoPunto, marcarPuntoInstalado, reportarIncidencia } from "./acciones";
+import { comprimirImagen } from "@/lib/comprimir-imagen";
+import {
+  subirFotoPunto,
+  eliminarFotoPunto,
+  marcarPuntoInstalado,
+  reportarIncidencia,
+} from "./acciones";
 
 const ETIQUETA_SOPORTE: Record<string, string> = {
   valla: "Valla",
@@ -31,16 +37,26 @@ type Punto = {
   campanas: { nombre: string } | { nombre: string }[] | null;
 };
 
-type Foto = { id: number; tipo: string; url: string | null; tomada_en: string };
+type Foto = {
+  id: number;
+  tipo: string;
+  url: string | null;
+  tomada_en: string;
+  usuario_id: string | null;
+};
 
 export function PanelPunto({
   punto,
   asignacion,
   fotos,
+  usuarioId,
+  esAdmin,
 }: {
   punto: Punto;
   asignacion: { id: number; estado: string } | null;
   fotos: Foto[];
+  usuarioId: string | null;
+  esAdmin: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +64,7 @@ export function PanelPunto({
   const [mostrarIncidencia, setMostrarIncidencia] = useState(false);
   const [notaIncidencia, setNotaIncidencia] = useState("");
   const [subiendo, setSubiendo] = useState(false);
+  const [eliminando, setEliminando] = useState<number | null>(null);
 
   const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
 
@@ -67,20 +84,42 @@ export function PanelPunto({
     if (!archivo) return;
     setSubiendo(true);
 
-    const posicion = await obtenerUbicacion();
-    const formData = new FormData();
-    formData.set("archivo", archivo);
-    formData.set("puntoId", String(punto.id));
-    if (asignacion) formData.set("asignacionId", String(asignacion.id));
-    formData.set("tipo", "instalacion");
-    if (posicion) {
-      formData.set("latitud", String(posicion.coords.latitude));
-      formData.set("longitud", String(posicion.coords.longitude));
-    }
+    try {
+      const [posicion, comprimida] = await Promise.all([
+        obtenerUbicacion(),
+        comprimirImagen(archivo),
+      ]);
+      const formData = new FormData();
+      formData.set("archivo", comprimida);
+      formData.set("puntoId", String(punto.id));
+      if (asignacion) formData.set("asignacionId", String(asignacion.id));
+      formData.set("tipo", "instalacion");
+      if (posicion) {
+        formData.set("latitud", String(posicion.coords.latitude));
+        formData.set("longitud", String(posicion.coords.longitude));
+      }
 
-    await subirFotoPunto(formData);
-    setSubiendo(false);
-    router.refresh();
+      await subirFotoPunto(formData);
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo subir la foto.");
+    } finally {
+      setSubiendo(false);
+      e.target.value = ""; // permite volver a elegir la misma foto
+    }
+  }
+
+  async function eliminarFoto(fotoId: number) {
+    if (!confirm("¿Eliminar esta foto?")) return;
+    setEliminando(fotoId);
+    try {
+      await eliminarFotoPunto(fotoId, punto.id);
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo eliminar la foto.");
+    } finally {
+      setEliminando(null);
+    }
   }
 
   function completar() {
@@ -157,13 +196,24 @@ export function PanelPunto({
         <div className="grid grid-cols-3 gap-esp2">
           {fotos.map((f) =>
             f.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={f.id}
-                src={f.url}
-                alt={f.tipo}
-                className="aspect-square w-full rounded-md object-cover"
-              />
+              <div key={f.id} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={f.url}
+                  alt={f.tipo}
+                  className="aspect-square w-full rounded-md object-cover"
+                />
+                {(esAdmin || f.usuario_id === usuarioId) && (
+                  <button
+                    onClick={() => eliminarFoto(f.id)}
+                    disabled={eliminando === f.id}
+                    aria-label="Eliminar foto"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm text-white disabled:opacity-50"
+                  >
+                    {eliminando === f.id ? "…" : "✕"}
+                  </button>
+                )}
+              </div>
             ) : null,
           )}
           <button
