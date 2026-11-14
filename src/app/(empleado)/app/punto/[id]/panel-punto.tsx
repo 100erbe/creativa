@@ -519,12 +519,12 @@ export function PanelPunto({
       {/* Acciones */}
       {asignacion && asignacion.estado !== "completada" && (
         <div className="flex flex-col gap-esp2">
-          <Boton onClick={completar} cargando={pendiente} disabled={fotos.length === 0}>
+          <Boton onClick={completar} cargando={pendiente}>
             Marcar como instalado
           </Boton>
           {fotos.length === 0 && (
             <p className="text-center text-xs text-texto-terciario">
-              Sube al menos una foto antes de marcarlo como instalado.
+              Este punto no tiene fotos. Puedes marcarlo igualmente si el cliente no las requiere.
             </p>
           )}
           <Boton variante="fantasma" onClick={() => setMostrarIncidencia((v) => !v)}>
