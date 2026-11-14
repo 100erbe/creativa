@@ -142,7 +142,16 @@ export default async function PaginaImprimirDocumento({
 
         <header className="flex flex-col gap-4 border-b border-neutral-300 pb-4 sm:flex-row sm:justify-between">
           <div className="flex flex-col gap-0.5">
-            <p className="text-lg font-bold">{empresa?.nombre_comercial ?? "—"}</p>
+            {empresa?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={empresa.logo_url}
+                alt={empresa.nombre_comercial ?? "Logo"}
+                className="mb-1 h-14 w-auto self-start"
+              />
+            ) : (
+              <p className="text-lg font-bold">{empresa?.nombre_comercial ?? "—"}</p>
+            )}
             {empresa?.razon_social && <p>{empresa.razon_social}</p>}
             {empresa?.nif && <p>NIF {empresa.nif}</p>}
             {direccionEmpresa && <p>{direccionEmpresa}</p>}

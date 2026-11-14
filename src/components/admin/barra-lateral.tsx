@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
+import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 
@@ -16,13 +17,10 @@ const ENLACES = [
   { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
 ] as const;
 
-function Marca() {
+function Marca({ alto = 36 }: { alto?: number }) {
   return (
-    <div className="flex items-center gap-esp2 pl-esp2">
-      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-fondo-marca text-sm font-semibold text-texto-sobre-marca">
-        C
-      </div>
-      <span className="text-base font-semibold text-texto-primario">Creativa</span>
+    <div className="flex items-center pl-esp2">
+      <Logo alto={alto} />
     </div>
   );
 }
@@ -121,7 +119,7 @@ export function BarraLateral({
         >
           <Icono nombre="menu" size={22} />
         </button>
-        <Marca />
+        <Marca alto={30} />
       </header>
 
       {abierto && (

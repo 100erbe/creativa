@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { Logo } from "@/components/ui/logo";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,8 @@ export default async function PaginaPublicaCliente({
 
   const cabecera = filas[0];
   if (!cabecera) notFound();
+  // La función SQL no garantiza orden: se muestran siempre en el mismo orden de alta.
+  filas.sort((a, b) => (a.punto_id ?? 0) - (b.punto_id ?? 0));
   const fotosPorPunto = new Map<number, typeof fotos>();
   for (const f of fotos ?? []) {
     const lista = fotosPorPunto.get(f.punto_id) ?? [];
@@ -47,6 +50,8 @@ export default async function PaginaPublicaCliente({
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-esp6 bg-fondo-lienzo px-esp4 py-esp8">
+      <Logo alto={44} className="self-start" />
+
       <div>
         <p className="text-sm text-texto-secundario">{cabecera.cliente_nombre}</p>
         <h1 className="text-2xl font-semibold text-texto-primario">

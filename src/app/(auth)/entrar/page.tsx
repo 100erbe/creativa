@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Logo } from "@/components/ui/logo";
 import { FormularioEntrar } from "./formulario-entrar";
 
 export default async function PaginaEntrar({
@@ -29,12 +30,8 @@ export default async function PaginaEntrar({
     <main className="flex min-h-dvh items-center justify-center bg-fondo-lienzo px-esp4">
       <div className="w-full max-w-sm">
         <div className="mb-esp8 flex flex-col items-center gap-esp3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-fondo-marca text-xl font-semibold text-texto-sobre-marca">
-            C
-          </div>
-          <h1 className="text-xl font-semibold text-texto-primario">
-            Creativa
-          </h1>
+          <Logo alto={64} />
+          <h1 className="sr-only">Creativa · acceso</h1>
         </div>
         <FormularioEntrar
           cuentaInactiva={error === "cuenta-inactiva"}
