@@ -25,6 +25,7 @@ const UNIDAD: Record<string, string> = {
 export type LineaHoja = {
   id: number | string;
   descripcion: string;
+  artista?: string | null;
   alcance: string | null;
   unidad: string;
   piezas: number | string;
@@ -236,6 +237,7 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
                 <tr key={l.id} className="border-b border-neutral-200 align-top [break-inside:avoid]">
                   <td className="px-[2.5mm] py-[2mm]">
                     <p>{l.descripcion}</p>
+                    {l.artista && <p className="text-[8.5pt] font-medium text-neutral-700">{l.artista}</p>}
                     {conMedidas && (
                       <p className="text-[8pt] text-neutral-500">
                         {formatoCantidad(l.piezas)} ud

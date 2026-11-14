@@ -38,7 +38,7 @@ export default async function PaginaDocumento({
       .maybeSingle(),
     supabase
       .from("lineas_documento")
-      .select("id, descripcion, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe")
+      .select("id, descripcion, artista, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe")
       .eq("documento_id", documentoId)
       .order("orden"),
     supabase
@@ -55,6 +55,16 @@ export default async function PaginaDocumento({
           .from("documentos")
           .select("id, tipo, numero_completo")
           .eq("id", doc.documento_origen_id)
+          .maybeSingle()
+      ).data
+    : null;
+
+  const campanaVinculada = doc.campana_id
+    ? (
+        await supabase
+          .from("v_progreso_campana")
+          .select("campana_id, campana, puntos_totales")
+          .eq("campana_id", doc.campana_id)
           .maybeSingle()
       ).data
     : null;
@@ -104,7 +114,7 @@ export default async function PaginaDocumento({
         </Link>
         {esBorrador && (
           <div className="py-esp2">
-            <PasosDocumento actual={3} />
+            <PasosDocumento actual={4} documentoId={doc.id} />
           </div>
         )}
         <div className="flex flex-wrap items-center gap-esp3">
@@ -160,6 +170,40 @@ export default async function PaginaDocumento({
             {direccion && <p className="text-xs text-texto-secundario">{direccion}</p>}
           </div>
 
+          {(campanaVinculada || esBorrador) && (
+            <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
+              <div className="flex-1">
+                <p className="text-xs text-texto-terciario">Campaña</p>
+                {campanaVinculada ? (
+                  <p className="text-sm font-medium text-texto-primario">
+                    {campanaVinculada.campana} ·{" "}
+                    <span className="font-normal text-texto-secundario">
+                      {campanaVinculada.puntos_totales} puntos
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-texto-secundario">Sin campaña vinculada</p>
+                )}
+              </div>
+              {esBorrador && (
+                <Link
+                  href={`/admin/documentos/nuevo?documento=${doc.id}&paso=campana`}
+                  className="text-sm font-medium text-texto-marca"
+                >
+                  {campanaVinculada ? "Editar puntos" : "Añadir campaña"}
+                </Link>
+              )}
+              {campanaVinculada && (
+                <Link
+                  href={`/admin/campanas/${campanaVinculada.campana_id}`}
+                  className="text-sm font-medium text-texto-marca"
+                >
+                  Abrir
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-base font-semibold text-texto-primario">Líneas</h2>
             <div className="flex flex-col divide-y divide-fondo-hover">
@@ -175,7 +219,10 @@ export default async function PaginaDocumento({
                   key={l.id}
                   className="grid grid-cols-[1fr_auto] gap-x-esp3 gap-y-1 py-esp3 md:grid-cols-[1fr_90px_90px_60px_100px]"
                 >
-                  <span className="text-sm text-texto-primario">{l.descripcion}</span>
+                  <span className="text-sm text-texto-primario">
+                    {l.descripcion}
+                    {l.artista && <span className="block text-xs text-texto-secundario">{l.artista}</span>}
+                  </span>
                   <span className="text-right text-sm font-medium text-texto-primario md:order-last">
                     {euros(Number(l.importe))}
                   </span>

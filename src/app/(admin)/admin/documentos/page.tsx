@@ -66,7 +66,7 @@ export default async function PaginaDocumentos({
   let consulta = supabase
     .from("documentos")
     .select(
-      "id, tipo, estado, numero_completo, fecha, total, cliente_razon_social, clientes(razon_social)",
+      "id, tipo, estado, numero_completo, fecha, creado_en, total, cliente_razon_social, clientes(razon_social)",
       { count: "exact" },
     )
     .order("fecha", { ascending: false })
@@ -170,6 +170,14 @@ export default async function PaginaDocumentos({
               </span>
               <span className="hidden w-[100px] text-xs text-texto-terciario md:block">
                 {fechaMedia(d.fecha)}
+              </span>
+              <span
+                className="hidden w-[130px] text-xs text-texto-terciario md:block"
+                title="Fecha de creación del documento"
+              >
+                <span className="block text-[10px] uppercase tracking-wide">Creado</span>
+                {fechaMedia(d.creado_en)}{" "}
+                {new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(d.creado_en))}
               </span>
               <span className="w-[100px] text-right text-sm font-medium text-texto-primario">
                 {euros(Number(d.total))}

@@ -105,31 +105,83 @@ export async function guardarCliente(
     if (error) return { error: mensajeError(error) };
     destino = id;
   } else {
-    // El código (CLI-061…) no tiene valor por defecto en la base: se calcula aquí.
-    let creado: number | null = null;
-    for (let intento = 0; intento < 3 && creado === null; intento++) {
-      const { data: codigos } = await supabase.from("clientes").select("codigo").like("codigo", "CLI-%");
-      const mayor = (codigos ?? []).reduce((m, c) => Math.max(m, Number(c.codigo.slice(4)) || 0), 0);
-      const codigo = `CLI-${String(mayor + 1).padStart(3, "0")}`;
-
-      const { data, error } = await supabase
-        .from("clientes")
-        .insert({ ...datos, codigo })
-        .select("id")
-        .single();
-      if (!error && data) {
-        creado = data.id;
-      } else if (error && !(error.code === "23505" && error.message.includes("clientes_codigo_key"))) {
-        return { error: mensajeError(error) }; // otro error: no tiene sentido reintentar
-      }
-    }
-    if (creado === null) return { error: "No se pudo asignar un código de cliente. Inténtalo de nuevo." };
-    destino = creado;
+    const r = await insertarConCodigo(supabase, datos);
+    if ("error" in r) return { error: r.error };
+    destino = r.id;
   }
 
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${destino}`);
   redirect(`/admin/clientes/${destino}`);
+}
+
+type DatosCliente = z.infer<typeof esquema>;
+
+/** El código (CLI-061…) no tiene valor por defecto en la base: se calcula aquí. */
+async function insertarConCodigo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  datos: DatosCliente,
+): Promise<{ id: number } | { error: string }> {
+  for (let intento = 0; intento < 3; intento++) {
+    const { data: codigos } = await supabase.from("clientes").select("codigo").like("codigo", "CLI-%");
+    const mayor = (codigos ?? []).reduce((m, c) => Math.max(m, Number(c.codigo.slice(4)) || 0), 0);
+    const codigo = `CLI-${String(mayor + 1).padStart(3, "0")}`;
+
+    const { data, error } = await supabase
+      .from("clientes")
+      .insert({ ...datos, codigo })
+      .select("id")
+      .single();
+    if (!error && data) return { id: data.id };
+    if (error && !(error.code === "23505" && error.message.includes("clientes_codigo_key"))) {
+      return { error: mensajeError(error) }; // otro error: no tiene sentido reintentar
+    }
+  }
+  return { error: "No se pudo asignar un código de cliente. Inténtalo de nuevo." };
+}
+
+/**
+ * Alta rápida desde el asistente de documentos: solo los datos fiscales
+ * básicos; el resto se completa luego en la ficha del cliente.
+ */
+export async function crearClienteRapido(campos: {
+  razon_social: string;
+  nombre_comercial?: string;
+  tipo_persona?: string;
+  tipo_documento?: string;
+  numero_documento?: string;
+  direccion?: string;
+  codigo_postal?: string;
+  municipio?: string;
+  provincia?: string;
+  email_facturacion?: string;
+  telefono?: string;
+  tipo_cliente?: string;
+}): Promise<
+  | { cliente: { id: number; razon_social: string; nombre_comercial: string | null; numero_documento: string | null } }
+  | { error: string }
+> {
+  await exigirAdmin();
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(campos)) if (v) fd.set(k, v);
+  const analisis = esquema.safeParse(leer(fd));
+  if (!analisis.success) {
+    return { error: analisis.error.issues[0]?.message ?? "Revisa los datos del cliente." };
+  }
+
+  const supabase = await createClient();
+  const r = await insertarConCodigo(supabase, analisis.data);
+  if ("error" in r) return r;
+
+  revalidatePath("/admin/clientes");
+  return {
+    cliente: {
+      id: r.id,
+      razon_social: analisis.data.razon_social,
+      nombre_comercial: analisis.data.nombre_comercial,
+      numero_documento: analisis.data.numero_documento,
+    },
+  };
 }
 
 function mensajeError(error: { code?: string; message: string }) {

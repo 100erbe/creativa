@@ -1047,6 +1047,7 @@ export type Database = {
           alto_cm: number | null
           ancho_cm: number | null
           articulo: string | null
+          artista: string | null
           cantidad: number
           descripcion: string
           descuento_pct: number
@@ -1071,6 +1072,7 @@ export type Database = {
           alto_cm?: number | null
           ancho_cm?: number | null
           articulo?: string | null
+          artista?: string | null
           cantidad?: number
           descripcion: string
           descuento_pct?: number
@@ -1095,6 +1097,7 @@ export type Database = {
           alto_cm?: number | null
           ancho_cm?: number | null
           articulo?: string | null
+          artista?: string | null
           cantidad?: number
           descripcion?: string
           descuento_pct?: number
@@ -1316,6 +1319,8 @@ export type Database = {
           fecha_colocacion_prevista: string | null
           fecha_retirada_prevista: string | null
           id: number
+          linea_id: number | null
+          piezas: number | null
           latitud: number
           longitud: number
           nombre: string
@@ -1331,6 +1336,8 @@ export type Database = {
           fecha_colocacion_prevista?: string | null
           fecha_retirada_prevista?: string | null
           id?: number
+          linea_id?: number | null
+          piezas?: number | null
           latitud: number
           longitud: number
           nombre: string
@@ -1346,6 +1353,8 @@ export type Database = {
           fecha_colocacion_prevista?: string | null
           fecha_retirada_prevista?: string | null
           id?: number
+          linea_id?: number | null
+          piezas?: number | null
           latitud?: number
           longitud?: number
           nombre?: string
@@ -1736,6 +1745,38 @@ export type Database = {
       }
     }
     Functions: {
+      anadir_linea: {
+        Args: {
+          p_alcance: Database["public"]["Enums"]["alcance_servicio"]
+          p_alto_cm?: number | null
+          p_ancho_cm?: number | null
+          p_descripcion?: string | null
+          p_descuento?: number
+          p_artista?: string | null
+          p_documento: number
+          p_formato: number | null
+          p_piezas?: number
+          p_precio?: number | null
+          p_producto: number
+        }
+        Returns: number
+      }
+      previsualizar_precio: {
+        Args: {
+          p_alcance: Database["public"]["Enums"]["alcance_servicio"]
+          p_alto_cm?: number | null
+          p_ancho_cm?: number | null
+          p_cliente: number
+          p_formato: number | null
+          p_piezas?: number
+          p_producto: number
+        }
+        Returns: {
+          precio: number
+          cantidad: number
+          unidad: Database["public"]["Enums"]["unidad_venta"]
+        }[]
+      }
       anadir_linea_rapida: {
         Args: {
           p_acabados?: number[]

@@ -59,7 +59,7 @@ export default async function PaginaImprimirDocumento({
     supabase
       .from("lineas_documento")
       .select(
-        "id, descripcion, alcance, unidad, piezas, cantidad, ancho_cm, alto_cm, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe",
+        "id, descripcion, artista, alcance, unidad, piezas, cantidad, ancho_cm, alto_cm, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe",
       )
       .eq("documento_id", documentoId)
       .order("orden"),
