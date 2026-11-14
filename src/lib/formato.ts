@@ -12,6 +12,15 @@ export function fechaCorta(fecha: string | Date) {
   }).format(new Date(fecha));
 }
 
+/** "03/11/2026" — formato habitual en facturas y documentos oficiales. */
+export function fechaNumerica(fecha: string | Date) {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(fecha));
+}
+
 /** "14 nov 2026" — para listados donde el año importa. */
 export function fechaMedia(fecha: string | Date) {
   return new Intl.DateTimeFormat("es-ES", {

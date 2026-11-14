@@ -7,6 +7,7 @@ import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { componerDireccion } from "@/lib/direccion";
+import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
 import { AccionesDocumento, Cobros } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ export default async function PaginaDocumento({
       .maybeSingle(),
     supabase
       .from("lineas_documento")
-      .select("id, descripcion, piezas, unidad, precio_unitario, descuento_pct, iva_pct, importe")
+      .select("id, descripcion, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe")
       .eq("documento_id", documentoId)
       .order("orden"),
     supabase
@@ -179,10 +180,10 @@ export default async function PaginaDocumento({
                     {euros(Number(l.importe))}
                   </span>
                   <span className="text-xs text-texto-terciario md:text-right md:text-sm md:text-texto-primario">
-                    {Number(l.piezas)} {l.unidad}
+                    {formatoCantidad(l.cantidad)} {l.unidad}
                   </span>
                   <span className="hidden text-right text-sm text-texto-primario md:block">
-                    {euros(Number(l.precio_unitario))}
+                    {euros(precioUnitarioImpreso(l))}
                   </span>
                   <span className="hidden text-right text-sm text-texto-secundario md:block">
                     {Number(l.descuento_pct) > 0 ? `${Number(l.descuento_pct)}%` : "—"}
