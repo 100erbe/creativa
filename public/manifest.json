@@ -1,0 +1,14 @@
+{
+  "name": "Creativa",
+  "short_name": "Creativa",
+  "description": "Gestión de campañas de street marketing",
+  "start_url": "/app/agenda",
+  "display": "standalone",
+  "background_color": "#FAFAF9",
+  "theme_color": "#C2410C",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

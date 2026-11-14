@@ -1,0 +1,135 @@
+CREATIVA — Base de datos (PostgreSQL / Supabase)
+==================================================
+
+ORDEN DE CARGA (obligatorio, cada archivo depende del anterior):
+
+  1. schema.sql              Clientes y Catálogo de productos/tarifas
+  2. seed.sql                 Datos: 57 clientes, catálogo de 27 productos, tarifas
+  3. schema_documentos.sql    Presupuestos, albaranes, facturas, rectificativas, recibos
+  4. seed_documentos.sql      Importación de las 147 facturas/abonos de 2026 + cobros
+  5. schema_campanas.sql      Campañas, puntos geolocalizados, usuarios y permisos
+  6. mejoras_documentos.sql   Atajos para crear presupuestos/albaranes/facturas más rápido
+
+En Supabase: pegar cada archivo, en este orden, en el SQL Editor y ejecutar.
+
+
+1-4. CLIENTES, CATÁLOGO Y DOCUMENTOS
+-------------------------------------
+Ver las notas de la entrega anterior. Resumen de funciones y vistas clave:
+  - precio_unitario(...)        resuelve el precio según cliente > tipo_cliente > volumen > formato > producto
+  - emitir_documento(id, fecha) asigna número definitivo y bloquea la factura
+  - convertir_documento(...)    presupuesto/albarán → factura, o factura → rectificativa
+  - v_libro_registro            libro registro de facturas estilo AEAT
+  - v_resumen_iva_trimestral    base y cuota de IVA por trimestre, para el modelo 303
+  - v_estado_cobro              cobrado / pendiente / vencida por documento
+  - v_pendiente_facturar        presupuestos y albaranes aún no facturados
+
+
+5. CAMPAÑAS, GEOLOCALIZACIÓN Y USUARIOS (schema_campanas.sql)
+---------------------------------------------------------------
+Requiere Supabase Auth activado. Pensado para dos tipos de acceso:
+
+  ADMIN     — ve y edita todo: campañas, puntos, asignaciones, fotos, enlaces.
+  EMPLEADO  — solo ve lo que tiene asignado; puede marcar su trabajo como
+              hecho y subir fotos de SUS puntos, nada más.
+  CLIENTE   — no tiene usuario ni login: recibe un enlace con un token y ve
+              el estado de su campaña y las fotos, nada más.
+
+Tablas:
+  usuarios            perfil + rol (admin/empleado). id = auth.users.id en Supabase.
+  campanas            una campaña por cliente (ligada opcionalmente a un presupuesto/factura)
+  puntos_campana      cada ubicación física con latitud/longitud y su estado
+  asignaciones_punto  qué empleado trabaja en qué punto
+  fotos_punto         fotos subidas desde el móvil (la ruta, la imagen va en Supabase Storage)
+  enlaces_cliente     token aleatorio por campaña para el enlace que se manda al cliente
+
+Cómo se protege el acceso (Row Level Security, ya activado en el script):
+  - es_admin()                        true si el usuario logueado es admin
+  - Políticas en cada tabla           admin ve todo; empleado solo lo suyo
+  - Un empleado NUNCA puede subirse el rol a admin ni ver el trabajo de otro
+  - La tabla enlaces_cliente solo la toca el admin
+
+Acceso del cliente SIN login (funciones públicas, para el botón "ver mi campaña"):
+  - obtener_campana_publica(token)    datos de la campaña + lista de puntos
+  - obtener_fotos_publicas(token)     fotos subidas de esa campaña
+  - registrar_vista_enlace(token)     cuenta cuántas veces se abrió el enlace
+  Hay que dar permiso EXECUTE sobre estas 3 funciones al rol "anon" de Supabase:
+    GRANT EXECUTE ON FUNCTION obtener_campana_publica(TEXT) TO anon;
+    GRANT EXECUTE ON FUNCTION obtener_fotos_publicas(TEXT) TO anon;
+    GRANT EXECUTE ON FUNCTION registrar_vista_enlace(TEXT) TO anon;
+
+Vistas de apoyo para la app:
+  - v_progreso_campana   resumen por campaña: puntos instalados/pendientes/con incidencia, fotos
+  - v_agenda_empleado    el trabajo de cada empleado con coordenadas, listo para el mapa
+
+Dar de alta un usuario nuevo (en Supabase):
+  1. Crear el usuario en Authentication → Users (o por invitación), copiar su UUID.
+  2. INSERT INTO usuarios (id, nombre, email, rol) VALUES ('<uuid>', 'Nombre', 'email', 'empleado');
+
+Pendiente para una próxima fase:
+  - Conectar el bucket de Supabase Storage donde van las fotos (fotos_punto.url_foto
+    guarda solo la ruta, no el archivo).
+  - Enlazar fotos_punto con asignaciones_punto de forma obligatoria si se quiere
+    exigir que cada foto esté siempre atada a una asignación concreta.
+  - Columnas para notificaciones push al empleado cuando se le asigna un punto nuevo.
+
+
+6. CREAR UN ALBARÁN/FACTURA MÁS RÁPIDO (mejoras_documentos.sql)
+-----------------------------------------------------------------
+Antes, cada línea exigía elegir a mano producto, formato, medidas, alcance,
+acabados, descuento e IVA. Esto añade atajos para que la app pueda convertir
+eso en "elegir y tocar" en vez de "rellenar un formulario":
+
+  anadir_linea_rapida(documento, producto, formato, cliente, alcance,
+                       piezas, ancho_cm, alto_cm, acabados)
+      Añade la línea calculando sola la cantidad (m²/ml) y el precio con
+      precio_unitario(). La app solo manda qué y cuánto; el precio no se
+      escribe a mano ni se puede escribir mal.
+
+  duplicar_documento(id_origen, fecha)
+      Copia un presupuesto/albarán/factura entero (mismo tipo, en borrador)
+      con todas sus líneas. Para trabajos que se repiten (el tótem mensual,
+      una campaña por fases): un botón "duplicar" en vez de rehacer todo.
+
+  plantillas_linea
+      Tabla de "paquetes" con nombre amigable (ej. "Tótem mensual", "Lona
+      2x1 con ollaos") que el admin prepara una vez. En la app se muestran
+      como botones grandes; tocar uno ya trae producto+formato+acabados
+      puestos, solo falta la cantidad.
+
+  v_lineas_recientes_cliente
+      Lo último que se le facturó a cada cliente (producto, formato, precio).
+      Útil para sugerir "¿lo mismo de la última vez?" al abrir un documento nuevo.
+
+  documentos.campana_id ahora es una FK real a campanas(id) (antes estaba
+  prevista pero sin cerrar). Una campaña puede tener varios documentos:
+  por ejemplo, un albarán por cada fase de instalación.
+
+Flujo recomendado para la app (más simple, pensado para el móvil):
+  1. Elegir cliente (o campaña, si el documento viene de una campaña ya creada).
+  2. Añadir líneas tocando una plantilla, un "reciente de este cliente", o
+     buscando en el catálogo — nunca escribiendo el precio a mano.
+  3. Revisar el total (ya calculado) y emitir, o convertir desde un
+     presupuesto/albarán ya existente con convertir_documento().
+  Un albarán creado en el campo por un empleado puede heredar cliente y
+  campaña directamente del punto de trabajo que tiene asignado.
+
+
+VALIDACIÓN REALIZADA
+--------------------
+Los 5 archivos se cargaron en una base de prueba (PostgreSQL 16 local) con un
+usuario sin privilegios de superusuario, simulando Supabase Auth, y se comprobó:
+  - Un empleado asignado ve su campaña, su punto y su asignación; nada más.
+  - Un empleado sin asignaciones no ve ninguna campaña ni punto.
+  - El admin ve todo.
+  - Un empleado puede subir una foto de su propio punto; falla al intentarlo
+    en un punto que no tiene asignado.
+  - Un empleado no puede subirse el rol a admin, ni crear enlaces de cliente.
+  - El enlace público (sin login) devuelve correctamente la campaña, sus
+    puntos y sus fotos a partir del token, y cuenta las vistas.
+  - Las restricciones de coordenadas válidas, fechas coherentes, y el borrado
+    en cascada de una campaña (puntos, fotos, asignaciones) funcionan.
+  - anadir_linea_rapida() calculó sola la cantidad (2 m²) y el precio
+    (12+4 €/m² = 16 €/m²) y el total con IVA salió correcto (38,72 € sobre 32 €).
+  - duplicar_documento() copió un presupuesto con su línea en un borrador nuevo.
+  - La FK real de documentos.campana_id rechaza una campaña inexistente.
