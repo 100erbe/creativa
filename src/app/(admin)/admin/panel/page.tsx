@@ -39,7 +39,7 @@ export default async function PaginaPanel() {
       .eq("estado_campana", "en_curso"),
     supabase
       .from("documentos")
-      .select("id, numero_completo, tipo, estado, total, cliente_razon_social, fecha")
+      .select("id, numero_completo, tipo, estado, total, cliente_razon_social, fecha, clientes(razon_social)")
       .order("fecha", { ascending: false })
       .limit(5),
   ]);
@@ -166,7 +166,10 @@ export default async function PaginaPanel() {
                   <p className="text-sm font-medium text-texto-primario">
                     {d.numero_completo ?? "Borrador"}
                   </p>
-                  <p className="text-xs text-texto-terciario">{d.cliente_razon_social}</p>
+                  <p className="text-xs text-texto-terciario">
+                    {d.cliente_razon_social ??
+                      (Array.isArray(d.clientes) ? d.clientes[0] : d.clientes)?.razon_social}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <p className="text-sm font-medium text-texto-primario">{euros(Number(d.total))}</p>
