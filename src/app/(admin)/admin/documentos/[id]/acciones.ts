@@ -164,6 +164,8 @@ export const cambiarEstadoPresupuesto = accion(async (documentoId: number, estad
 
 export type DatosCabecera = {
   fechaVencimiento: string;
+  /** Plazo elegido entre los de la forma de pago (cuenta desde la fecha de emisión); anula la fecha de vencimiento. */
+  plazoDias: number | null;
   validoHasta: string;
   formaPagoId: number | null;
   descuentoGlobalPct: number;
@@ -189,6 +191,13 @@ export const guardarCabecera = accion(async (documentoId: number, d: DatosCabece
   }
   const supabase = await createClient();
 
+  // Solo vale un plazo que la forma de pago elegida ofrezca.
+  let plazo: number | null = null;
+  if (d.plazoDias && d.formaPagoId) {
+    const { data: forma } = await supabase.from("formas_pago").select("plazos_dias").eq("id", d.formaPagoId).maybeSingle();
+    if (forma?.plazos_dias.includes(d.plazoDias)) plazo = d.plazoDias;
+  }
+
   const { data: doc } = await supabase.from("documentos").select("fecha, estado").eq("id", documentoId).maybeSingle();
   if (!doc) throw new Error("No se ha encontrado el documento.");
   if (doc.estado !== "borrador") throw new Error("Solo se pueden editar los documentos en borrador.");
@@ -202,7 +211,8 @@ export const guardarCabecera = accion(async (documentoId: number, d: DatosCabece
   const { error } = await supabase
     .from("documentos")
     .update({
-      fecha_vencimiento: d.fechaVencimiento || null,
+      fecha_vencimiento: plazo ? null : d.fechaVencimiento || null,
+      plazo_dias: plazo,
       valido_hasta: d.validoHasta || null,
       forma_pago_id: d.formaPagoId,
       // Al emitir, el texto de pago se copia de la forma de pago elegida.

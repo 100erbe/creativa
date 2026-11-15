@@ -1,3 +1,4 @@
+import { sumarDias, textoFormaPago } from "@/lib/documentos";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -86,6 +87,22 @@ export default async function PaginaImprimirDocumento({
       : null,
   ]);
 
+  // Un borrador aún no tiene el texto de pago (se fija al emitir): se muestra cómo quedará.
+  let textoPago = doc.texto_forma_pago;
+  if (!textoPago && doc.estado === "borrador" && doc.forma_pago_id) {
+    const { data: forma } = await supabase
+      .from("formas_pago")
+      .select("texto_factura, dias_vencimiento")
+      .eq("id", doc.forma_pago_id)
+      .maybeSingle();
+    if (forma?.texto_factura) {
+      const vencimiento = doc.plazo_dias
+        ? sumarDias(doc.fecha, doc.plazo_dias)
+        : (doc.fecha_vencimiento ?? sumarDias(doc.fecha, forma.dias_vencimiento));
+      textoPago = textoFormaPago(forma.texto_factura, doc.plazo_dias, vencimiento);
+    }
+  }
+
   const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
   // Un documento emitido lleva los datos del cliente congelados; un borrador, los de la ficha.
   const numeroDocumentoCliente = doc.cliente_documento ?? cliente?.numero_documento ?? null;
@@ -96,7 +113,7 @@ export default async function PaginaImprimirDocumento({
     numero: doc.numero_completo,
     fecha: doc.fecha,
     fechaOperacion: doc.fecha_operacion,
-    fechaVencimiento: doc.fecha_vencimiento,
+    fechaVencimiento: doc.plazo_dias && doc.estado === "borrador" ? sumarDias(doc.fecha, doc.plazo_dias) : doc.fecha_vencimiento,
     validoHasta: doc.valido_hasta,
     empresa: {
       nombreComercial: empresa?.nombre_comercial ?? null,
@@ -150,7 +167,7 @@ export default async function PaginaImprimirDocumento({
     },
     regimenIva: doc.regimen_iva,
     motivoExencion: doc.motivo_exencion,
-    pago: { texto: doc.texto_forma_pago, banco: cuenta?.banco ?? null, iban: doc.iban_cobro },
+    pago: { texto: textoPago, banco: cuenta?.banco ?? null, iban: doc.iban_cobro },
     notasCliente: doc.notas_cliente,
   };
 

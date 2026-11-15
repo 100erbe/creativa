@@ -74,7 +74,7 @@ export default async function PaginaDocumento({
 
   const esBorrador = doc.estado === "borrador";
   const { data: formasPago } = esBorrador
-    ? await supabase.from("formas_pago").select("id, nombre, dias_vencimiento").order("nombre")
+    ? await supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre")
     : { data: [] };
   const cobrable = doc.tipo === "factura" && !esBorrador;
 
@@ -125,13 +125,12 @@ export default async function PaginaDocumento({
     : `mailto:${destinatarios.join(",")}?subject=${encodeURIComponent(`${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim())}&body=${encodeURIComponent(
         `Hola,\n\nTe adjunto ${doc.tipo === "factura" || doc.tipo === "rectificativa" ? "la" : "el"} ${etiquetaTipo.toLowerCase()} ${doc.numero_completo ?? ""} por importe de ${euros(Number(doc.total))}.\n\nUn saludo,\n${empresa?.nombre_comercial ?? ""}`,
       )}`;
-  const compartir = esBorrador
-    ? null
-    : {
-        archivo: `${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim(),
-        titulo: `${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim(),
-        texto: `${etiquetaTipo} ${doc.numero_completo ?? ""} por importe de ${euros(Number(doc.total))}.`,
-      };
+  const nombreDocumento = `${etiquetaTipo} ${doc.numero_completo ?? "(borrador)"}`.trim();
+  const compartir = {
+    archivo: nombreDocumento,
+    titulo: nombreDocumento,
+    texto: `${nombreDocumento} por importe de ${euros(Number(doc.total))}.`,
+  };
   const filasLineas = lineas ?? [];
 
   return (
@@ -327,6 +326,7 @@ export default async function PaginaDocumento({
                 formasPago={formasPago ?? []}
                 inicial={{
                   fechaVencimiento: doc.fecha_vencimiento,
+                  plazoDias: doc.plazo_dias,
                   validoHasta: doc.valido_hasta,
                   formaPagoId: doc.forma_pago_id,
                   descuentoGlobalPct: Number(doc.descuento_global_pct),

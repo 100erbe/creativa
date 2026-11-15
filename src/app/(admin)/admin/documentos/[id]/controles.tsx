@@ -24,6 +24,45 @@ import { BotonCompartir } from "./boton-compartir";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
+/** Plazos que ofrece la forma de pago aplazada (p. ej. 30, 60, 90 días); el selector de fecha sigue disponible. */
+function PlazosRapidos({
+  plazos,
+  elegido,
+  alElegir,
+}: {
+  plazos: number[];
+  elegido: number | null;
+  alElegir: (dias: number | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-1" role="group" aria-label="Plazo del resto">
+        {plazos.map((dias) => {
+          const activo = elegido === dias;
+          return (
+            <button
+              key={dias}
+              type="button"
+              onClick={() => alElegir(activo ? null : dias)}
+              aria-pressed={activo}
+              className={
+                activo
+                  ? "h-8 rounded-md border border-borde-marca bg-fondo-marca-sutil px-esp2 text-xs font-medium text-texto-marca"
+                  : "h-8 rounded-md border border-borde-default px-esp2 text-xs text-texto-secundario hover:bg-fondo-sutil"
+              }
+            >
+              {dias} d
+            </button>
+          );
+        })}
+      </div>
+      <span className="text-xs text-texto-terciario">
+        {elegido ? `Resto a ${elegido} días desde la emisión.` : "Plazo del resto, o elige una fecha."}
+      </span>
+    </div>
+  );
+}
+
 const ESTADOS_SEGUIMIENTO: string[] = ["emitido", "enviado", "aceptado", "rechazado", "caducado"];
 
 /** Botones de la ficha: emitir (borrador), convertir, duplicar y eliminar. */
@@ -43,8 +82,8 @@ export function AccionesDocumento({
   /** Enlace mailto: ya preparado (null en los borradores). */
   mailto: string | null;
   hayDestinatario: boolean;
-  /** Datos para compartir el PDF (null en los borradores). */
-  compartir: { archivo: string; titulo: string; texto: string } | null;
+  /** Datos para compartir el PDF. */
+  compartir: { archivo: string; titulo: string; texto: string };
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [fecha, setFecha] = useState(hoy());
@@ -63,7 +102,7 @@ export function AccionesDocumento({
         </Boton>
       </Link>
 
-      {compartir && <BotonCompartir documentoId={documentoId} {...compartir} />}
+      <BotonCompartir documentoId={documentoId} {...compartir} />
 
       {mailto && (
         <div className="flex flex-col gap-1">
@@ -381,6 +420,7 @@ export function CondicionesDocumento({
   tipo: string;
   inicial: {
     fechaVencimiento: string | null;
+    plazoDias: number | null;
     validoHasta: string | null;
     formaPagoId: number | null;
     descuentoGlobalPct: number;
@@ -389,11 +429,12 @@ export function CondicionesDocumento({
     descripcion: string | null;
     notasCliente: string | null;
   };
-  formasPago: { id: number; nombre: string; dias_vencimiento: number }[];
+  formasPago: { id: number; nombre: string; dias_vencimiento: number; plazos_dias: number[] }[];
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [guardado, setGuardado] = useState(false);
   const [fechaVencimiento, setFechaVencimiento] = useState(inicial.fechaVencimiento ?? "");
+  const [plazoDias, setPlazoDias] = useState<number | null>(inicial.plazoDias);
   const [validoHasta, setValidoHasta] = useState(inicial.validoHasta ?? "");
   const [formaPagoId, setFormaPagoId] = useState(inicial.formaPagoId ? String(inicial.formaPagoId) : "");
   const [descuento, setDescuento] = useState(String(inicial.descuentoGlobalPct).replace(".", ","));
@@ -407,6 +448,8 @@ export function CondicionesDocumento({
     "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   const esPresupuesto = tipo === "presupuesto";
+  // Plazos a elegir: solo si la forma de pago es aplazada (y no en presupuestos).
+  const plazosForma = esPresupuesto ? [] : (formasPago.find((f) => String(f.id) === formaPagoId)?.plazos_dias ?? []);
 
   return (
     <form
@@ -418,6 +461,7 @@ export function CondicionesDocumento({
           await desenvolver(
             guardarCabecera(documentoId, {
               fechaVencimiento,
+              plazoDias: plazosForma.includes(plazoDias ?? -1) ? plazoDias : null,
               validoHasta,
               formaPagoId: formaPagoId ? Number(formaPagoId) : null,
               descuentoGlobalPct: num(descuento),
@@ -434,7 +478,14 @@ export function CondicionesDocumento({
     >
       <label className={etiqueta}>
         Forma de pago
-        <select value={formaPagoId} onChange={(e) => setFormaPagoId(e.target.value)} className={CAMPO}>
+        <select
+          value={formaPagoId}
+          onChange={(e) => {
+            setFormaPagoId(e.target.value);
+            setPlazoDias(null);
+          }}
+          className={CAMPO}
+        >
           <option value="">Sin especificar</option>
           {formasPago.map((f) => (
             <option key={f.id} value={f.id}>
@@ -455,12 +506,28 @@ export function CondicionesDocumento({
             <input
               type="date"
               value={fechaVencimiento}
-              onChange={(e) => setFechaVencimiento(e.target.value)}
+              onChange={(e) => {
+                setFechaVencimiento(e.target.value);
+                setPlazoDias(null);
+              }}
               className={CAMPO}
             />
           </label>
         )}
-        <div className="flex items-end pb-2 text-xs text-texto-terciario">Vacío = se calcula al emitir.</div>
+        <div className="flex items-end pb-1">
+          {plazosForma.length > 0 ? (
+            <PlazosRapidos
+              plazos={plazosForma}
+              elegido={plazoDias}
+              alElegir={(dias) => {
+                setPlazoDias(dias);
+                if (dias) setFechaVencimiento("");
+              }}
+            />
+          ) : (
+            <span className="pb-1 text-xs text-texto-terciario">Vacío = se calcula al emitir.</span>
+          )}
+        </div>
         <label className={etiqueta}>
           Descuento global (%)
           <input value={descuento} onChange={(e) => setDescuento(e.target.value)} inputMode="decimal" className={CAMPO} />

@@ -1,5 +1,22 @@
 // Etiquetas en castellano para los enums de documentos y cobros.
 
+/** Suma días a una fecha AAAA-MM-DD. */
+export function sumarDias(fecha: string, dias: number) {
+  const d = new Date(`${fecha}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Texto de pago de un documento: la plantilla de la forma de pago, con «{plazo}» sustituido por
+ * «a N días fecha factura» (plazo elegido) o «antes del dd/mm/aaaa» (fecha puesta a mano).
+ * Es el mismo cálculo que hace la base de datos al emitir; aquí sirve para ver cómo quedará en el borrador.
+ */
+export function textoFormaPago(plantilla: string, plazoDias: number | null, vencimiento: string) {
+  const [a, m, d] = vencimiento.split("-");
+  return plantilla.replace("{plazo}", plazoDias ? `a ${plazoDias} días fecha factura` : `antes del ${d}/${m}/${a}`);
+}
+
 export const ETIQUETA_TIPO: Record<string, string> = {
   presupuesto: "Presupuesto",
   albaran: "Albarán",

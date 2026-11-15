@@ -618,6 +618,7 @@ export type Database = {
           fecha: string
           fecha_operacion: string | null
           fecha_vencimiento: string | null
+          plazo_dias: number | null
           firmado: boolean
           forma_pago_id: number | null
           iban_cobro: string | null
@@ -671,6 +672,7 @@ export type Database = {
           fecha?: string
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
+          plazo_dias?: number | null
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -724,6 +726,7 @@ export type Database = {
           fecha?: string
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
+          plazo_dias?: number | null
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -951,18 +954,21 @@ export type Database = {
           dias_vencimiento: number
           id: number
           nombre: string
+          plazos_dias: number[]
           texto_factura: string | null
         }
         Insert: {
           dias_vencimiento?: number
           id?: number
           nombre: string
+          plazos_dias?: number[]
           texto_factura?: string | null
         }
         Update: {
           dias_vencimiento?: number
           id?: number
           nombre?: string
+          plazos_dias?: number[]
           texto_factura?: string | null
         }
         Relationships: []
