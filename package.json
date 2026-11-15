@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "copiar-worker": "node scripts/copiar-worker-maplibre.mjs",
+    "predev": "npm run copiar-worker",
+    "prebuild": "npm run copiar-worker",
+    "postinstall": "node scripts/copiar-worker-maplibre.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
@@ -16,7 +20,7 @@
     "clsx": "^2.1.1",
     "exifr": "^7.1.3",
     "leaflet": "^1.9.4",
-    "maplibre-gl": "^5.24.1",
+    "maplibre-gl": "^6.18.0",
     "next": "^15.5.29",
     "react": "19.0.0",
     "react-dom": "19.0.0",

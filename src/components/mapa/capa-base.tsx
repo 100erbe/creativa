@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { TileLayer, useMap } from "react-leaflet";
+import { setWorkerUrl } from "maplibre-gl";
 import { maplibreGL } from "@maplibre/maplibre-gl-leaflet";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
@@ -11,6 +12,18 @@ import {
   MAPA_SUBDOMINIOS,
   MAPA_TESELAS,
 } from "./config-mapa";
+
+/**
+ * MapLibre 6 no consigue cargar su worker con el empaquetado de Next, así que se sirve como archivo estático
+ * (se copia a public/maplibre con `npm run copiar-worker`, que se ejecuta solo en dev y en build).
+ */
+const RUTA_WORKER = "/maplibre/maplibre-gl-worker.mjs";
+let workerConfigurado = false;
+function configurarWorker() {
+  if (workerConfigurado) return;
+  setWorkerUrl(RUTA_WORKER);
+  workerConfigurado = true;
+}
 
 function hayWebGL() {
   try {
@@ -37,6 +50,7 @@ export function CapaBase() {
       setAlternativa(true);
       return;
     }
+    configurarWorker();
     // `attribution` es una opción de capa de Leaflet que los tipos de MapLibre no conocen.
     const capa = maplibreGL({ style: MAPA_ESTILO, attribution: MAPA_ATRIBUCION_VECTORIAL } as Parameters<typeof maplibreGL>[0]);
     capa.addTo(mapa);

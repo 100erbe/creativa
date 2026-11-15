@@ -13,3 +13,6 @@ next-env.d.ts
 
 # Caché incremental de TypeScript (se regenera con tsc / next build)
 *.tsbuildinfo
+
+# Copia del worker de MapLibre (se genera con npm run copiar-worker)
+/public/maplibre/
