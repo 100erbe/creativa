@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { BarraLateral } from "@/components/admin/barra-lateral";
+import { IniciarAvisos } from "@/components/avisos/panel-avisos";
 
 export default async function LayoutAdmin({
   children,
@@ -22,6 +23,7 @@ export default async function LayoutAdmin({
         rolEtiqueta="Administración"
         iniciales={iniciales}
       />
+      <IniciarAvisos />
       <div className="min-w-0 flex-1 px-esp4 py-esp5 md:px-esp8 md:py-esp6 print:p-0">{children}</div>
     </div>
   );

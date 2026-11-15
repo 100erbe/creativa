@@ -4,6 +4,7 @@ import { BarraInferior } from "@/components/empleado/barra-inferior";
 import { Logo } from "@/components/ui/logo";
 import { BotonSalir } from "@/components/empleado/boton-salir";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
+import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
 
 export default async function LayoutEmpleado({
   children,
@@ -20,7 +21,9 @@ export default async function LayoutEmpleado({
         <BotonSalir />
       </header>
       <main className="flex-1 overflow-y-auto pb-20">
+        <IniciarAvisos />
         <SincronizarFotos />
+        <BannerAvisos />
         {children}
       </main>
       <BarraInferior />

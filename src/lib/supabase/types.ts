@@ -1427,6 +1427,53 @@ export type Database = {
         }
         Relationships: []
       }
+      suscripciones_push: {
+        Row: {
+          actualizada_en: string
+          auth: string
+          creada_en: string
+          endpoint: string
+          fallos_seguidos: number
+          id: number
+          p256dh: string
+          ultimo_envio_ok: string | null
+          user_agent: string | null
+          usuario_id: string
+        }
+        Insert: {
+          actualizada_en?: string
+          auth: string
+          creada_en?: string
+          endpoint: string
+          fallos_seguidos?: number
+          id?: number
+          p256dh: string
+          ultimo_envio_ok?: string | null
+          user_agent?: string | null
+          usuario_id: string
+        }
+        Update: {
+          actualizada_en?: string
+          auth?: string
+          creada_en?: string
+          endpoint?: string
+          fallos_seguidos?: number
+          id?: number
+          p256dh?: string
+          ultimo_envio_ok?: string | null
+          user_agent?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suscripciones_push_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tarifas_cliente: {
         Row: {
           cliente_id: number | null

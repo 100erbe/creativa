@@ -21,6 +21,12 @@ const SECCIONES = [
     icono: "clientes",
   },
   {
+    href: "/admin/ajustes/avisos",
+    titulo: "Avisos en este dispositivo",
+    texto: "Activa las notificaciones en tu móvil u ordenador para enterarte de lo que pasa en el campo.",
+    icono: "avisos",
+  },
+  {
     href: "/admin/ajustes/catalogo",
     titulo: "Catálogo y precios",
     texto: "Precios de fabricación e instalación de cada producto y formato, IVA y qué artículos están activos.",

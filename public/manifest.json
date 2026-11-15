@@ -1,8 +1,11 @@
 {
+  "id": "/app/agenda",
   "name": "Creativa",
   "short_name": "Creativa",
   "description": "Gestión de campañas de street marketing",
   "start_url": "/app/agenda",
+  "scope": "/",
+  "lang": "es",
   "display": "standalone",
   "background_color": "#FAFAF9",
   "theme_color": "#C2410C",

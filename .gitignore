@@ -10,3 +10,6 @@ npm-debug.log*
 *.pem
 .vercel
 next-env.d.ts
+
+# Caché incremental de TypeScript (se regenera con tsc / next build)
+*.tsbuildinfo

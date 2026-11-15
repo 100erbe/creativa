@@ -11,6 +11,6 @@ export const config = {
      * Aplica a todas las rutas excepto archivos estáticos e imágenes,
      * para no gastar una llamada a Supabase en cada asset.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons/|manifest.json).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icons/|manifest.json|sw.js).*)",
   ],
 };

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
 import { createClient } from "@/lib/supabase/client";
+import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
 
 const ENLACES = [
@@ -54,6 +55,7 @@ export function BarraLateral({
   }, [abierto]);
 
   async function salir() {
+    await liberarDispositivo();
     await supabase.auth.signOut();
     router.push("/entrar");
     router.refresh();

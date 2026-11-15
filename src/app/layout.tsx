@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   title: "Creativa",
   description: "Gestión de campañas de street marketing",
   manifest: "/manifest.json",
+  // iPhone: al añadirla a la pantalla de inicio se abre como app (requisito para recibir avisos push).
+  appleWebApp: { capable: true, title: "Creativa", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

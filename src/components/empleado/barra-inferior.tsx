@@ -8,6 +8,7 @@ import { cn } from "@/lib/cn";
 const ENLACES = [
   { href: "/app/agenda", etiqueta: "Agenda", icono: "calendario" },
   { href: "/app/mapa", etiqueta: "Mapa", icono: "ubicacion" },
+  { href: "/app/avisos", etiqueta: "Avisos", icono: "avisos" },
 ] as const;
 
 export function BarraInferior() {

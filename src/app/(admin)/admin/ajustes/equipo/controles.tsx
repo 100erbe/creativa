@@ -8,6 +8,7 @@ import { Insignia } from "@/components/ui/insignia";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { desenvolver } from "@/lib/accion";
 import { actualizarPersona, cambiarContrasena, crearPersona } from "./acciones";
+import { enviarPruebaA } from "@/lib/push/acciones";
 
 type Persona = {
   id: string;
@@ -43,7 +44,9 @@ function useAccion() {
   return { pendiente, error, aviso, ejecutar };
 }
 
-export function Equipo({ personas, yoId }: { personas: Persona[]; yoId: string }) {
+type Dispositivos = Record<string, { cantidad: number; fallos: number }>;
+
+export function Equipo({ personas, yoId, dispositivos }: { personas: Persona[]; yoId: string; dispositivos: Dispositivos }) {
   const [editando, setEditando] = useState<string | "nueva" | null>(null);
 
   return (
@@ -74,6 +77,7 @@ export function Equipo({ personas, yoId }: { personas: Persona[]; yoId: string }
                   {p.email}
                   {p.telefono ? ` · ${p.telefono}` : ""}
                 </p>
+                <EstadoAvisos personaId={p.id} activa={p.activo} info={dispositivos[p.id]} />
               </div>
               <Insignia tono={p.rol === "admin" ? "info" : "neutro"}>{ETIQUETA_ROL[p.rol] ?? p.rol}</Insignia>
               {!p.activo && <Insignia tono="peligro">Desactivada</Insignia>}
@@ -232,6 +236,40 @@ function CambiarContrasena({ id }: { id: string }) {
       </div>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
       {aviso && <p className="text-xs text-texto-exito">{aviso}</p>}
+    </div>
+  );
+}
+
+/** ¿Le llegan los avisos a esta persona? Cuántos móviles tiene activados y un botón para probarlo. */
+function EstadoAvisos({ personaId, activa, info }: { personaId: string; activa: boolean; info?: { cantidad: number; fallos: number } }) {
+  const { pendiente, error, aviso, ejecutar } = useAccion();
+  if (!activa) return null;
+
+  const sinAvisos = !info || info.cantidad === 0;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-esp3 gap-y-1 text-xs">
+      <span className={sinAvisos ? "text-texto-aviso" : info.fallos > 0 ? "text-texto-peligro" : "text-texto-exito"}>
+        {sinAvisos
+          ? "Sin avisos activados"
+          : `Avisos en ${info.cantidad} dispositivo${info.cantidad === 1 ? "" : "s"}${info.fallos > 0 ? " · los últimos envíos han fallado" : ""}`}
+      </span>
+      {!sinAvisos && (
+        <button
+          disabled={pendiente}
+          onClick={() =>
+            ejecutar(async () => {
+              const r = await desenvolver(enviarPruebaA(personaId));
+              if (r.omitido) throw new Error(r.omitido);
+              return r.enviadas > 0 ? "Prueba enviada." : "No se pudo entregar la prueba.";
+            })
+          }
+          className="font-medium text-texto-marca disabled:opacity-50"
+        >
+          {pendiente ? "Enviando…" : "Enviar prueba"}
+        </button>
+      )}
+      {aviso && <span className="text-texto-exito">{aviso}</span>}
+      {error && <span className="text-texto-peligro">{error}</span>}
     </div>
   );
 }
