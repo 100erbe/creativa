@@ -19,7 +19,7 @@ import {
   marcarRetirado,
   finalizarCampana,
 } from "./acciones";
-import { FormularioPunto, type PuntoEditable } from "./formulario-punto";
+import { FormularioPunto, type ArticuloPunto, type PuntoEditable } from "./formulario-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
@@ -37,6 +37,7 @@ export function ControlesPunto({
   asignados,
   candidatos,
   punto,
+  articulos,
   tieneFotos,
   fechasCampana,
   otrosPuntos,
@@ -47,6 +48,7 @@ export function ControlesPunto({
   asignados: Asignado[];
   candidatos: Candidato[];
   punto: PuntoEditable;
+  articulos: ArticuloPunto[];
   tieneFotos: boolean;
   fechasCampana: { inicio: string | null; fin: string | null };
   otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
@@ -79,6 +81,7 @@ export function ControlesPunto({
     return (
       <FormularioPunto
         campanaId={campanaId}
+        articulos={articulos}
         punto={punto}
         fechasCampana={fechasCampana}
         otrosPuntos={otrosPuntos}
@@ -365,10 +368,12 @@ export function EnlaceCliente({
 /** Botón "Añadir punto" que despliega el formulario con mapa en la propia ficha de la campaña. */
 export function BotonAnadirPunto({
   campanaId,
+  articulos,
   fechasCampana,
   otrosPuntos,
 }: {
   campanaId: number;
+  articulos: ArticuloPunto[];
   fechasCampana: { inicio: string | null; fin: string | null };
   otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
 }) {
@@ -377,6 +382,7 @@ export function BotonAnadirPunto({
     return (
       <FormularioPunto
         campanaId={campanaId}
+        articulos={articulos}
         fechasCampana={fechasCampana}
         otrosPuntos={otrosPuntos}
         onCerrar={() => setAbierto(false)}

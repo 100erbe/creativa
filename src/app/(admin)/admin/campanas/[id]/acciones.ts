@@ -7,6 +7,8 @@ import { accion } from "@/lib/accion";
 import type { Database } from "@/lib/supabase/types";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { enSegundoPlano, fechaAviso, notificar } from "@/lib/push/notificar";
+import { soporteDe } from "@/lib/soporte";
+import { articulosDeCampana } from "@/lib/campanas/articulos";
 
 /** Personas con el punto pendiente o en curso en su agenda (las que hay que avisar de un cambio). */
 async function asignadosActivos(supabase: Awaited<ReturnType<typeof createClient>>, puntoId: number) {
@@ -172,6 +174,8 @@ export const actualizarCampana = accion(
 export type DatosPunto = {
   nombre: string;
   tipoSoporte: string;
+  /** Artículo del presupuesto/factura al que pertenece el punto (obligatorio si la campaña tiene documentos). */
+  lineaId: number | null;
   direccion: string;
   latitud: number;
   longitud: number;
@@ -185,7 +189,6 @@ export type DatosPunto = {
 export const guardarPunto = accion(async (campanaId: number, puntoId: number | null, d: DatosPunto) => {
   const admin = await exigirAdmin();
   if (!d.nombre.trim()) throw new Error("Pon un nombre al punto (ej. «Farola Av. Andalucía 12»).");
-  if (!(d.tipoSoporte in ETIQUETA_SOPORTE)) throw new Error("Tipo de soporte no válido.");
   if (!Number.isFinite(d.latitud) || !Number.isFinite(d.longitud)) {
     throw new Error("Marca la ubicación en el mapa o busca la dirección.");
   }
@@ -198,9 +201,25 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
   }
   const supabase = await createClient();
 
+  // Solo se pueden instalar los artículos que están en el presupuesto o la factura de la campaña. Sin
+  // documentos vinculados no hay artículos que elegir y se admite el soporte a mano.
+  const articulos = await articulosDeCampana(supabase, campanaId);
+  let tipoSoporte: TipoSoporte;
+  let lineaId: number | null = null;
+  if (articulos.length > 0) {
+    const elegido = articulos.find((a) => a.id === d.lineaId);
+    if (!elegido) throw new Error("Elige a qué artículo del presupuesto o de la factura corresponde el punto.");
+    lineaId = elegido.id;
+    tipoSoporte = soporteDe(elegido.producto);
+  } else {
+    if (!(d.tipoSoporte in ETIQUETA_SOPORTE)) throw new Error("Tipo de soporte no válido.");
+    tipoSoporte = d.tipoSoporte as TipoSoporte;
+  }
+
   const fila = {
     nombre: d.nombre.trim(),
-    tipo_soporte: d.tipoSoporte as TipoSoporte,
+    tipo_soporte: tipoSoporte,
+    linea_id: lineaId,
     direccion: d.direccion.trim() || null,
     latitud: Math.round(d.latitud * 1e7) / 1e7,
     longitud: Math.round(d.longitud * 1e7) / 1e7,

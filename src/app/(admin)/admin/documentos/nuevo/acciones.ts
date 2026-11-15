@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import type { Database } from "@/lib/supabase/types";
+import { soporteDe } from "@/lib/soporte";
 import { accion } from "@/lib/accion";
 
 type Alcance = Database["public"]["Enums"]["alcance_servicio"];
@@ -357,16 +358,3 @@ export const eliminarPunto = accion(async (documentoId: number, campanaId: numbe
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
 });
-
-/** Tipo de soporte (enum de la campaña) que corresponde a un producto del catálogo. */
-function soporteDe(producto: string): TipoSoporte {
-  const p = producto.toLowerCase();
-  if (p.includes("tótem") || p.includes("totem")) return "totem";
-  if (p.includes("valla")) return "valla";
-  if (p.includes("lona")) return "lona";
-  if (p.includes("banderola")) return "mobiliario_urbano";
-  if (p.includes("marquesina")) return "marquesina";
-  if (p.includes("pantalla")) return "pantalla";
-  if (p.includes("cartel")) return "cartel";
-  return "otro";
-}

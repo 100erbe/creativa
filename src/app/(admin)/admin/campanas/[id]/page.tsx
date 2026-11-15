@@ -7,6 +7,7 @@ import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
@@ -47,7 +48,7 @@ export default async function PaginaCampana({
         .maybeSingle(),
       supabase
         .from("puntos_campana")
-        .select("id, nombre, tipo_soporte, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia")
+        .select("id, nombre, tipo_soporte, linea_id, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia")
         .eq("campana_id", campanaId)
         .order("id"),
       supabase
@@ -104,6 +105,20 @@ export default async function PaginaCampana({
   }));
 
   const fechasCampana = { inicio: campana.fecha_inicio, fin: campana.fecha_fin };
+
+  // Artículos de los presupuestos/facturas vinculados y piezas ya repartidas entre los puntos.
+  const articulosCampana = await articulosDeCampana(supabase, campanaId);
+  const repartidas = new Map<number, number>();
+  for (const p of puntos ?? []) {
+    if (p.linea_id != null) repartidas.set(p.linea_id, (repartidas.get(p.linea_id) ?? 0) + Number(p.piezas ?? 0));
+  }
+  const articulosPunto = articulosCampana.map((a) => ({
+    id: a.id,
+    etiqueta: a.artista ? `${a.nombre} — ${a.artista}` : a.nombre,
+    documento: a.documento,
+    piezas: a.piezas,
+    repartidas: repartidas.get(a.id) ?? 0,
+  }));
   const puntosParaMapa = (puntos ?? []).map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -196,8 +211,9 @@ export default async function PaginaCampana({
             }))}
           />
 
+          <ResumenArticulos articulos={articulosPunto} />
           <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>
-          <BotonAnadirPunto campanaId={campanaId} fechasCampana={fechasCampana} otrosPuntos={puntosParaMapa} />
+          <BotonAnadirPunto campanaId={campanaId} articulos={articulosPunto} fechasCampana={fechasCampana} otrosPuntos={puntosParaMapa} />
           {lista.map((p) => {
             const asignados = (asignaciones ?? [])
               .filter((a) => a.punto_id === p.id)
@@ -252,8 +268,10 @@ export default async function PaginaCampana({
                   estado={p.estado}
                   asignados={asignados}
                   candidatos={candidatos}
+                  articulos={articulosPunto}
                   punto={{
                     id: p.id,
+                    linea_id: p.linea_id,
                     nombre: p.nombre,
                     tipo_soporte: p.tipo_soporte,
                     direccion: p.direccion,
@@ -339,6 +357,46 @@ export default async function PaginaCampana({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
+
+/** Cuántas piezas de cada artículo del documento están ya repartidas entre los puntos. Discreto: una línea por artículo. */
+function ResumenArticulos({
+  articulos,
+}: {
+  articulos: { id: number; etiqueta: string; documento: string; piezas: number; repartidas: number }[];
+}) {
+  if (articulos.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
+      <p className="text-xs font-medium uppercase tracking-wide text-texto-terciario">Artículos repartidos</p>
+      {articulos.map((a) => {
+        const restan = a.piezas - a.repartidas;
+        const exceso = restan < 0;
+        const porcentaje = a.piezas > 0 ? Math.min(100, Math.round((a.repartidas / a.piezas) * 100)) : 0;
+        return (
+          <div key={a.id} className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-esp3 text-sm">
+              <span className="min-w-0 flex-1 truncate text-texto-primario" title={`${a.etiqueta} · ${a.documento}`}>
+                {a.etiqueta}
+              </span>
+              <span className={exceso ? "whitespace-nowrap text-xs text-texto-aviso" : "whitespace-nowrap text-xs text-texto-secundario"}>
+                {num(a.repartidas)} / {num(a.piezas)}
+                {exceso ? ` · te pasas en ${num(-restan)}` : restan > 0 ? ` · quedan ${num(restan)}` : " · completo"}
+              </span>
+            </div>
+            <div className="h-1 overflow-hidden rounded-completo bg-fondo-sutil">
+              <div
+                className={exceso ? "h-full bg-fondo-aviso" : "h-full bg-fondo-marca"}
+                style={{ width: `${porcentaje}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

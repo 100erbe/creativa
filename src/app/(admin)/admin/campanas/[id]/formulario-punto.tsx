@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
 import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
@@ -14,6 +15,7 @@ import { guardarPunto } from "./acciones";
 
 export type PuntoEditable = {
   id: number;
+  linea_id: number | null;
   nombre: string;
   tipo_soporte: string;
   direccion: string | null;
@@ -25,7 +27,6 @@ export type PuntoEditable = {
   notas: string | null;
 };
 
-type ResultadoBusqueda = { display_name: string; lat: string; lon: string };
 
 const area =
   "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
@@ -34,14 +35,28 @@ const area =
  * Alta o edición de un punto de la campaña, desde la propia ficha de la campaña
  * (no hace falta que exista un documento en borrador).
  */
+const formatoPiezas = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
+
+/** Artículo de un documento de la campaña, con las piezas ya repartidas entre sus puntos. */
+export type ArticuloPunto = {
+  id: number;
+  etiqueta: string;
+  documento: string;
+  piezas: number;
+  repartidas: number;
+};
+
 export function FormularioPunto({
   campanaId,
+  articulos,
   punto,
   fechasCampana,
   otrosPuntos,
   onCerrar,
 }: {
   campanaId: number;
+  /** Artículos de los presupuestos/facturas de la campaña. Si hay, el punto debe pertenecer a uno. */
+  articulos: ArticuloPunto[];
   /** Si viene, se edita ese punto; si no, se crea uno nuevo. */
   punto?: PuntoEditable;
   fechasCampana: { inicio: string | null; fin: string | null };
@@ -58,33 +73,20 @@ export function FormularioPunto({
   );
   const [nombre, setNombre] = useState(punto?.nombre ?? "");
   const [tipo, setTipo] = useState(punto?.tipo_soporte ?? "cartel");
+  const [lineaId, setLineaId] = useState<number | null>(
+    punto?.linea_id ?? (articulos.length === 1 ? articulos[0]!.id : null),
+  );
   const [direccion, setDireccion] = useState(punto?.direccion ?? "");
   const [piezas, setPiezas] = useState(punto?.piezas != null ? String(punto.piezas).replace(".", ",") : "");
   const [colocacion, setColocacion] = useState(punto ? (punto.fecha_colocacion_prevista ?? "") : (fechasCampana.inicio ?? ""));
   const [retirada, setRetirada] = useState(punto ? (punto.fecha_retirada_prevista ?? "") : (fechasCampana.fin ?? ""));
   const [instrucciones, setInstrucciones] = useState(punto?.notas ?? "");
-  const [busqueda, setBusqueda] = useState("");
-  const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
-  const [buscando, setBuscando] = useState(false);
-
-  // Geocodificación con Nominatim (OpenStreetMap, gratuito): solo al pulsar "Buscar".
-  async function buscar() {
-    const q = busqueda.trim();
-    if (!q) return;
-    setBuscando(true);
+  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y, si aún no tiene nombre, se propone uno.
+  function elegirBusqueda(sugerencia: Sugerencia) {
+    setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
+    setDireccion(sugerencia.direccion);
+    setNombre((actual) => (actual.trim() ? actual : sugerencia.titulo));
     setError(null);
-    try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=es&accept-language=es&q=${encodeURIComponent(q)}`,
-      );
-      const datos = (await r.json()) as ResultadoBusqueda[];
-      setResultados(datos);
-      if (datos.length === 0) setError("No se ha encontrado esa dirección. Prueba a marcarla en el mapa.");
-    } catch {
-      setError("No se pudo buscar la dirección. Márcala directamente en el mapa.");
-    } finally {
-      setBuscando(false);
-    }
   }
 
   async function direccionDe(p: Posicion) {
@@ -113,10 +115,17 @@ export function FormularioPunto({
     });
   }
 
+  // Contador de piezas del artículo elegido: lo ya repartido en otros puntos + lo que se escribe aquí.
+  const articuloElegido = articulos.find((a) => a.id === lineaId) ?? null;
+  const propias = punto && punto.linea_id === lineaId ? (punto.piezas ?? 0) : 0;
+  const estas = Number(piezas.replace(",", ".")) || 0;
+  const restantes = articuloElegido ? articuloElegido.piezas - (articuloElegido.repartidas - propias) - estas : 0;
+
   function guardar(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!posicion) return setError("Primero marca la ubicación en el mapa o busca la dirección.");
+    if (articulos.length > 0 && lineaId == null) return setError("Elige a qué artículo del presupuesto o de la factura corresponde el punto.");
     const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
     iniciar(async () => {
       try {
@@ -124,6 +133,7 @@ export function FormularioPunto({
           guardarPunto(campanaId, punto?.id ?? null, {
             nombre,
             tipoSoporte: tipo,
+            lineaId,
             direccion,
             latitud: posicion.latitud,
             longitud: posicion.longitud,
@@ -144,46 +154,7 @@ export function FormularioPunto({
   return (
     <div className="grid grid-cols-1 gap-esp4 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 xl:grid-cols-[1fr_340px]">
       <div className="flex flex-col gap-esp2">
-        <div className="flex gap-esp2">
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-                void buscar();
-              }
-            }}
-            placeholder="Buscar dirección: Calle Larios 5, Málaga"
-            enterKeyHint="search"
-            type="search"
-            aria-label="Buscar dirección"
-            className={CAMPO}
-          />
-          <Boton type="button" variante="secundario" className="min-h-11 md:min-h-0" onClick={buscar} cargando={buscando}>
-            <Icono nombre="buscar" size={16} />
-            Buscar
-          </Boton>
-        </div>
-        {resultados.length > 0 && (
-          <div className="flex flex-col rounded-md border border-borde-default bg-fondo-superficie">
-            {resultados.map((r) => (
-              <button
-                key={`${r.lat},${r.lon}`}
-                type="button"
-                onClick={() => {
-                  setPosicion({ latitud: Number(r.lat), longitud: Number(r.lon) });
-                  setDireccion(r.display_name.split(",").slice(0, 3).join(",").trim());
-                  setResultados([]);
-                }}
-                className="min-h-11 px-esp3 py-esp2 text-left text-sm text-texto-primario hover:bg-fondo-sutil active:bg-fondo-sutil md:text-xs"
-              >
-                {r.display_name}
-              </button>
-            ))}
-          </div>
-        )}
+        <BuscadorDireccion onElegir={elegirBusqueda} />
         <MapaSelector
           puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
           posicion={posicion}
@@ -211,20 +182,57 @@ export function FormularioPunto({
             className={CAMPO}
           />
         </Campo>
-        <div className="grid grid-cols-2 gap-esp3">
-          <Campo texto="Soporte">
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={CAMPO}>
-              {Object.entries(ETIQUETA_SOPORTE).map(([valor, etiqueta]) => (
-                <option key={valor} value={valor}>
-                  {etiqueta}
-                </option>
-              ))}
-            </select>
-          </Campo>
-          <Campo texto="Piezas">
-            <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={CAMPO} />
-          </Campo>
-        </div>
+        {articulos.length > 0 ? (
+          <>
+            <Campo texto="Artículo *">
+              <select
+                value={lineaId ?? ""}
+                onChange={(e) => setLineaId(e.target.value ? Number(e.target.value) : null)}
+                className={CAMPO}
+              >
+                <option value="">Elige un artículo…</option>
+                {articulos.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+            <Campo texto="Piezas de este punto">
+              <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={CAMPO} />
+              {articuloElegido && (
+                <span className={restantes < 0 ? "text-xs text-texto-aviso" : "text-xs text-texto-terciario"} role="status">
+                  {restantes < 0
+                    ? `Con este punto te pasas ${formatoPiezas(-restantes)} del total (${formatoPiezas(articuloElegido.piezas)}). Puedes guardarlo igualmente.`
+                    : restantes === 0
+                      ? `Con este punto se reparte todo el artículo (${formatoPiezas(articuloElegido.piezas)}).`
+                      : `Quedan ${formatoPiezas(restantes)} de ${formatoPiezas(articuloElegido.piezas)}`}
+                </span>
+              )}
+            </Campo>
+          </>
+        ) : (
+          <>
+            <p className="rounded-md bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario">
+              Esta campaña no tiene presupuesto ni factura vinculados. Vincula uno desde el documento para elegir entre
+              sus artículos; mientras, indica el soporte a mano.
+            </p>
+            <div className="grid grid-cols-2 gap-esp3">
+              <Campo texto="Soporte">
+                <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={CAMPO}>
+                  {Object.entries(ETIQUETA_SOPORTE).map(([valor, etiqueta]) => (
+                    <option key={valor} value={valor}>
+                      {etiqueta}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+              <Campo texto="Piezas">
+                <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={CAMPO} />
+              </Campo>
+            </div>
+          </>
+        )}
         <Campo texto="Dirección">
           <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={CAMPO} />
         </Campo>

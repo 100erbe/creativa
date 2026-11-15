@@ -7,6 +7,7 @@ import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
 import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
@@ -319,7 +320,6 @@ function CampanaVinculada({
   );
 }
 
-type ResultadoBusqueda = { display_name: string; lat: string; lon: string };
 
 function etiquetaArticulo(a: Articulo) {
   return a.artista ? `${a.artista} — ${a.descripcion}` : a.descripcion;
@@ -345,28 +345,12 @@ function NuevoPunto({
   const [colocacion, setColocacion] = useState(campana.fecha_inicio ?? "");
   const [retirada, setRetirada] = useState(campana.fecha_fin ?? "");
   const [notas, setNotas] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-  const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
-  const [buscando, setBuscando] = useState(false);
-
-  // Geocodificación con Nominatim (OpenStreetMap, gratuito): solo al pulsar "Buscar".
-  async function buscar() {
-    const q = busqueda.trim();
-    if (!q) return;
-    setBuscando(true);
+  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y, si aún no tiene nombre, se propone uno.
+  function elegirBusqueda(sugerencia: Sugerencia) {
+    setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
+    setDireccion(sugerencia.direccion);
+    setNombre((actual) => (actual.trim() ? actual : sugerencia.titulo));
     setError(null);
-    try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=es&accept-language=es&q=${encodeURIComponent(q)}`,
-      );
-      const datos = (await r.json()) as ResultadoBusqueda[];
-      setResultados(datos);
-      if (datos.length === 0) setError("No se ha encontrado esa dirección. Prueba a marcarla en el mapa.");
-    } catch {
-      setError("No se pudo buscar la dirección. Márcala directamente en el mapa.");
-    } finally {
-      setBuscando(false);
-    }
   }
 
   async function direccionDe(p: Posicion) {
@@ -402,52 +386,12 @@ function NuevoPunto({
     setDireccion("");
     setNotas("");
     setPiezas("");
-    setBusqueda("");
-    setResultados([]);
   }
 
   return (
     <div className="grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-esp2">
-        <div className="flex gap-esp2">
-          <input
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur(); // esconde el teclado para ver los resultados
-                void buscar();
-              }
-            }}
-            placeholder="Buscar dirección: Calle Larios 5, Málaga"
-            enterKeyHint="search"
-            type="search"
-            className={entrada}
-          />
-          <Boton variante="secundario" className="min-h-11 md:min-h-0" onClick={buscar} cargando={buscando}>
-            <Icono nombre="buscar" size={16} />
-            Buscar
-          </Boton>
-        </div>
-        {resultados.length > 0 && (
-          <div className="flex flex-col rounded-md border border-borde-default bg-fondo-superficie">
-            {resultados.map((r) => (
-              <button
-                key={`${r.lat},${r.lon}`}
-                type="button"
-                onClick={() => {
-                  setPosicion({ latitud: Number(r.lat), longitud: Number(r.lon) });
-                  setDireccion(r.display_name.split(",").slice(0, 3).join(",").trim());
-                  setResultados([]);
-                }}
-                className="min-h-11 px-esp3 py-esp2 text-left text-sm text-texto-primario hover:bg-fondo-sutil active:bg-fondo-sutil md:text-xs"
-              >
-                {r.display_name}
-              </button>
-            ))}
-          </div>
-        )}
+        <BuscadorDireccion onElegir={elegirBusqueda} />
         <MapaSelector
           puntos={puntos.map((p) => ({
             id: p.id,
