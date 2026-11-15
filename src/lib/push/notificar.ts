@@ -43,7 +43,9 @@ export async function notificar(destinatarios: string[], aviso: Aviso, opciones:
     await enviarPush(
       ids,
       { titulo: aviso.titulo, cuerpo: aviso.cuerpo, url: aviso.url, tag: aviso.tag, urgente: aviso.urgente },
-      { tipo: "real", urgencia: aviso.urgente ? "high" : "normal" },
+      // Prioridad alta siempre: son avisos de trabajo (cambios de plan, incidencias). Con prioridad normal, Android
+      // puede retener el aviso durante minutos u horas si el móvil está en reposo (Doze).
+      { tipo: "real", urgencia: "high" },
     );
   } catch (e) {
     console.error("notificar:", e);
