@@ -9,7 +9,10 @@ const MapaSelectorLeaflet = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[360px] items-center justify-center rounded-lg border border-borde-default bg-fondo-sutil text-sm text-texto-terciario">
+      <div
+        style={{ height: "clamp(380px, 62vh, 640px)" }}
+        className="flex items-center justify-center rounded-lg border border-borde-default bg-fondo-sutil text-sm text-texto-terciario"
+      >
         Cargando mapa…
       </div>
     ),
@@ -22,7 +25,7 @@ export function MapaSelector(props: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
   onElegir: (p: Posicion) => void;
-  altura?: number;
+  altura?: number | string;
 }) {
   return <MapaSelectorLeaflet {...props} />;
 }

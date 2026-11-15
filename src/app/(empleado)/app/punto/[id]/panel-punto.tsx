@@ -7,6 +7,7 @@ import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { ALTURA_MAPA_FICHA } from "@/components/mapa/config-mapa";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
 import { comprimirImagen } from "@/lib/comprimir-imagen";
@@ -429,7 +430,7 @@ export function PanelPunto({
             estado: punto.estado,
           },
         ]}
-        altura={180}
+        altura={ALTURA_MAPA_FICHA}
       />
 
       {punto.direccion && (

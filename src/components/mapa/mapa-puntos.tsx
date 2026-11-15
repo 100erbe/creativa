@@ -11,7 +11,10 @@ const MapaLeaflet = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-[280px] items-center justify-center rounded-lg border border-borde-default bg-fondo-sutil text-sm text-texto-terciario">
+      <div
+        style={{ height: "clamp(280px, 45vh, 520px)" }}
+        className="flex items-center justify-center rounded-lg border border-borde-default bg-fondo-sutil text-sm text-texto-terciario"
+      >
         Cargando mapa…
       </div>
     ),
@@ -25,7 +28,7 @@ export function MapaPuntos({
   altura,
 }: {
   puntos: PuntoMapa[];
-  altura?: number;
+  altura?: number | string;
 }) {
   return <MapaLeaflet puntos={puntos} altura={altura} />;
 }

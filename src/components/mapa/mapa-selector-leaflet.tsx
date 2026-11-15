@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { CapaBase } from "./capa-base";
 
 // Mapa para elegir la ubicación de un punto: clic en el mapa = nueva posición.
 // Muestra también los puntos ya creados de la campaña.
@@ -49,12 +50,12 @@ export function MapaSelectorLeaflet({
   puntos,
   posicion,
   onElegir,
-  altura = 360,
+  altura = "clamp(380px, 62vh, 640px)",
 }: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
   onElegir: (p: Posicion) => void;
-  altura?: number;
+  altura?: number | string;
 }) {
   const centro: [number, number] =
     puntos.length > 0
@@ -72,10 +73,7 @@ export function MapaSelectorLeaflet({
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%", cursor: "crosshair" }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">colaboradores de OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <CapaBase />
         <Clics onElegir={onElegir} />
         <Seguir posicion={posicion} />
         {puntos.map((p) => (

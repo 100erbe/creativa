@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { desenvolver } from "@/lib/accion";
@@ -187,7 +188,7 @@ export function FormularioPunto({
           puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
           posicion={posicion}
           onElegir={elegirEnMapa}
-          altura={320}
+          altura={ALTURA_MAPA_GRANDE}
         />
         <p className="text-xs text-texto-terciario">
           Haz clic en el mapa para {punto ? "mover" : "colocar"} el punto; puedes arrastrarlo para ajustarlo.

@@ -1,8 +1,10 @@
 "use client";
 
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { CapaBase } from "./capa-base";
 
 // Mapa con OpenStreetMap (gratuito, sin clave de API) a través de Leaflet.
 // No usamos los iconos PNG por defecto de Leaflet (dan problemas de rutas
@@ -39,12 +41,27 @@ function iconoPunto(color: string) {
   });
 }
 
+/** Con varios puntos, el mapa se encuadra para que se vean todos (antes se usaba un zoom fijo). */
+function Encuadrar({ puntos }: { puntos: PuntoMapa[] }) {
+  const mapa = useMap();
+  useEffect(() => {
+    if (puntos.length < 2) return;
+    mapa.fitBounds(L.latLngBounds(puntos.map((p) => [p.latitud, p.longitud] as [number, number])), {
+      padding: [40, 40],
+      maxZoom: 17,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puntos.map((p) => `${p.latitud},${p.longitud}`).join("|")]);
+  return null;
+}
+
 export function MapaLeaflet({
   puntos,
-  altura = 280,
+  altura = "clamp(280px, 45vh, 520px)",
 }: {
   puntos: PuntoMapa[];
-  altura?: number;
+  /** Número de píxeles o cualquier medida CSS (p. ej. "clamp(380px, 66vh, 720px)"). */
+  altura?: number | string;
 }) {
   if (puntos.length === 0) {
     return (
@@ -77,10 +94,8 @@ export function MapaLeaflet({
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%" }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">colaboradores de OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <Encuadrar puntos={puntos} />
+        <CapaBase />
         {puntos.map((p) => (
           <Marker
             key={p.id}

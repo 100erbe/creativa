@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { Icono } from "@/components/ui/iconos";
 import { etiquetaEstado } from "@/lib/etiquetas";
 
@@ -26,7 +27,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
           longitud: p.longitud,
           estado: p.estado_punto,
         }))}
-        altura={240}
+        altura={ALTURA_MAPA_GRANDE}
       />
       <div className="flex flex-col gap-esp2">
         {puntos.map((p) => (

@@ -7,6 +7,7 @@ import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
@@ -185,7 +186,7 @@ export default async function PaginaCampana({
       <div className="flex flex-col-reverse gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
           <MapaPuntos
-            altura={340}
+            altura={ALTURA_MAPA_GRANDE}
             puntos={lista.map((p) => ({
               id: p.id,
               nombre: p.nombre,

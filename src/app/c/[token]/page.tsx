@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { ALTURA_MAPA_MEDIA } from "@/components/mapa/config-mapa";
 import { Logo } from "@/components/ui/logo";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
@@ -67,7 +68,7 @@ export default async function PaginaPublicaCliente({
             longitud: p.longitud!,
             estado: p.punto_estado ?? undefined,
           }))}
-        altura={240}
+        altura={ALTURA_MAPA_MEDIA}
       />
 
       <div className="flex flex-col gap-esp4">
