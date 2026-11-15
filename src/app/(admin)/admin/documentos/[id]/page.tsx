@@ -299,7 +299,7 @@ export default async function PaginaDocumento({
             <div className="h-px bg-fondo-hover" />
             <div className="flex items-center">
               <span className="flex-1 text-base font-semibold text-texto-primario">Total</span>
-              <span className="text-[28px] font-semibold leading-9 text-texto-primario">
+              <span className="whitespace-nowrap text-[clamp(1.375rem,7vw,1.75rem)] font-semibold leading-9 text-texto-primario">
                 {euros(Number(doc.total))}
               </span>
             </div>
