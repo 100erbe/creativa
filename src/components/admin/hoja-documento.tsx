@@ -78,6 +78,8 @@ export type DatosHoja = {
   motivoExencion: string | null;
   pago: { texto: string | null; banco: string | null; iban: string | null };
   notasCliente: string | null;
+  /** Sello «PAGADA» (solo facturas cobradas por completo, y solo si se pide). */
+  pagada?: { fecha: string | null; metodo: string | null } | null;
 };
 
 const AZUL = "text-[#425d90]";
@@ -189,13 +191,13 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
             <Etiqueta>Emisor</Etiqueta>
             <p className="text-[10pt] font-bold">{d.empresa.razonSocial ?? d.empresa.nombreComercial}</p>
             {d.empresa.nif && <p>NIF {d.empresa.nif}</p>}
-            {d.empresa.direccion && <p>{d.empresa.direccion}</p>}
+            {d.empresa.direccion && <p className="whitespace-pre-line">{d.empresa.direccion}</p>}
           </div>
           <div className="border-l border-neutral-300 pl-[6mm]">
             <Etiqueta>{esAlbaran ? "Destinatario" : "Cliente"}</Etiqueta>
             <p className="text-[10pt] font-bold">{d.cliente.razonSocial || "—"}</p>
             {d.cliente.documento && <p>{d.cliente.documento}</p>}
-            {d.cliente.direccion && <p>{d.cliente.direccion}</p>}
+            {d.cliente.direccion && <p className="whitespace-pre-line">{d.cliente.direccion}</p>}
           </div>
         </section>
 
@@ -285,6 +287,19 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
         {/* Pago a la izquierda, totales a la derecha */}
         <section className="mt-[6mm] grid grid-cols-[1fr_72mm] gap-[8mm] [break-inside:avoid]">
           <div className="flex flex-col gap-[4mm]">
+            {d.pagada && (
+              <div
+                className="ml-[4mm] mt-[1mm] w-fit -rotate-6 rounded-[1.5mm] border-[0.7mm] border-double border-[#15803d] px-[5mm] py-[1.5mm] text-center text-[#15803d]"
+                aria-label="Factura pagada"
+              >
+                <p className="text-[20pt] font-bold leading-none tracking-[0.18em]">PAGADA</p>
+                {(d.pagada.fecha || d.pagada.metodo) && (
+                  <p className="mt-[1mm] text-[8pt] font-semibold tracking-[0.04em]">
+                    {[d.pagada.fecha ? fechaNumerica(d.pagada.fecha) : null, d.pagada.metodo].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+            )}
             {(d.pago.texto || d.pago.iban) && (d.tipo === "factura" || esPresupuesto || esRecibo) && (
               <div>
                 <Etiqueta>Forma de pago</Etiqueta>
@@ -366,7 +381,7 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
             <p className="font-semibold">
               {[d.empresa.nombreComercial, d.empresa.lema].filter(Boolean).join(" · ")}
             </p>
-            {d.empresa.direccion && <p>{d.empresa.direccion}</p>}
+            {d.empresa.direccion && <p>{d.empresa.direccion.replace(/\n/g, ", ")}</p>}
             <p>{[d.empresa.telefonos, d.empresa.email].filter(Boolean).join(" · ")}</p>
           </div>
         </footer>

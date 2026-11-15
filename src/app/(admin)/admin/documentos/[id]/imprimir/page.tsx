@@ -1,11 +1,11 @@
-import { sumarDias, textoFormaPago } from "@/lib/documentos";
+import { METODOS_COBRO, sumarDias, textoFormaPago } from "@/lib/documentos";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Icono } from "@/components/ui/iconos";
 import { HojaDocumento, type DatosHoja } from "@/components/admin/hoja-documento";
-import { componerDireccion } from "@/lib/direccion";
+import { componerDireccionEnLineas } from "@/lib/direccion";
 import { etiquetaDocumentoIdentidad, nombreArchivo } from "@/lib/documento-impresion";
 import { BotonImprimir } from "./boton-imprimir";
 
@@ -17,10 +17,13 @@ const LOGO_SECUNDARIO = "/brand/logo-crea-comunicacion.svg";
 /** El título de la pestaña es el nombre que propone el navegador al "Guardar como PDF". */
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pagada?: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  const conSello = (await searchParams).pagada === "1";
   const documentoId = Number(id);
   if (!Number.isInteger(documentoId)) return { title: "Documento" };
 
@@ -33,17 +36,25 @@ export async function generateMetadata({
   if (!data) return { title: "Documento" };
 
   const cliente = Array.isArray(data.clientes) ? data.clientes[0] : data.clientes;
-  return {
-    title: nombreArchivo(data.tipo, data.numero_completo, data.cliente_razon_social ?? cliente?.razon_social ?? ""),
-  };
+  const nombre = nombreArchivo(data.tipo, data.numero_completo, data.cliente_razon_social ?? cliente?.razon_social ?? "");
+  // «PAGADA» en el nombre solo si de verdad lleva el sello (factura cobrada por completo).
+  const cobrada =
+    conSello &&
+    data.tipo === "factura" &&
+    (await supabase.from("v_estado_cobro").select("estado_cobro").eq("id", documentoId).maybeSingle()).data
+      ?.estado_cobro === "cobrada";
+  return { title: cobrada ? `${nombre} PAGADA` : nombre };
 }
 
 export default async function PaginaImprimirDocumento({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pagada?: string }>;
 }) {
   const { id } = await params;
+  const pideSello = (await searchParams).pagada === "1";
   const documentoId = Number(id);
   if (!Number.isInteger(documentoId)) notFound();
 
@@ -103,6 +114,25 @@ export default async function PaginaImprimirDocumento({
     }
   }
 
+  // Sello «PAGADA»: solo en facturas emitidas y cobradas por completo.
+  const facturaEmitida = doc.tipo === "factura" && doc.estado !== "borrador";
+  const [{ data: estadoCobro }, { data: cobros }] = facturaEmitida
+    ? await Promise.all([
+        supabase.from("v_estado_cobro").select("estado_cobro, ultimo_cobro").eq("id", documentoId).maybeSingle(),
+        supabase.from("cobros").select("metodo").eq("documento_id", documentoId),
+      ])
+    : [{ data: null }, { data: [] }];
+  const cobrada = estadoCobro?.estado_cobro === "cobrada";
+  // El método solo se indica si todos los cobros se hicieron igual.
+  const metodos = [...new Set((cobros ?? []).map((c) => c.metodo))];
+  const pagada =
+    pideSello && cobrada
+      ? {
+          fecha: estadoCobro?.ultimo_cobro ?? null,
+          metodo: metodos.length === 1 ? (METODOS_COBRO.find((m) => m.valor === metodos[0])?.etiqueta ?? null) : null,
+        }
+      : null;
+
   const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
   // Un documento emitido lleva los datos del cliente congelados; un borrador, los de la ficha.
   const numeroDocumentoCliente = doc.cliente_documento ?? cliente?.numero_documento ?? null;
@@ -120,7 +150,7 @@ export default async function PaginaImprimirDocumento({
       razonSocial: empresa?.razon_social ?? null,
       nif: empresa?.nif ?? null,
       direccion: empresa
-        ? componerDireccion({
+        ? componerDireccionEnLineas({
             direccion: empresa.direccion,
             codigoPostal: empresa.codigo_postal,
             municipio: empresa.municipio,
@@ -143,7 +173,7 @@ export default async function PaginaImprimirDocumento({
       documento: numeroDocumentoCliente
         ? etiquetaDocumentoIdentidad(cliente?.tipo_documento, numeroDocumentoCliente)
         : null,
-      direccion: componerDireccion({
+      direccion: componerDireccionEnLineas({
         direccion: doc.cliente_direccion ?? cliente?.direccion,
         codigoPostal: doc.cliente_cp ?? cliente?.codigo_postal,
         municipio: doc.cliente_municipio ?? cliente?.municipio,
@@ -169,6 +199,7 @@ export default async function PaginaImprimirDocumento({
     motivoExencion: doc.motivo_exencion,
     pago: { texto: textoPago, banco: cuenta?.banco ?? null, iban: doc.iban_cobro },
     notasCliente: doc.notas_cliente,
+    pagada,
   };
 
   return (
@@ -185,6 +216,24 @@ export default async function PaginaImprimirDocumento({
           En el diálogo de impresión elige «Guardar como PDF», tamaño A4 y activa «Gráficos de fondo» para que
           se vean los colores.
         </p>
+        {facturaEmitida &&
+          (cobrada ? (
+            <Link
+              href={`/admin/documentos/${documentoId}/imprimir${pagada ? "" : "?pagada=1"}`}
+              replace
+              aria-pressed={!!pagada}
+              className="inline-flex h-10 items-center gap-esp2 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
+            >
+              <Icono nombre={pagada ? "cerrar" : "check"} size={16} />
+              {pagada ? "Quitar sello «PAGADA»" : "Añadir sello «PAGADA»"}
+            </Link>
+          ) : (
+            pideSello && (
+              <p className="text-xs text-texto-aviso">
+                Sin sello «PAGADA»: la factura aún no está cobrada por completo.
+              </p>
+            )
+          ))}
         <BotonImprimir />
       </div>
 
