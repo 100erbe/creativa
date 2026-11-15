@@ -29,7 +29,7 @@ export default async function PaginaAvisos() {
     <div className="flex flex-col gap-esp6">
       <div className="flex items-center gap-esp3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-texto-primario">Avisos</h1>
+          <h1 className="text-2xl font-semibold text-texto-primario">Avisos al equipo</h1>
           <p className="text-sm text-texto-secundario">
             Comunicaciones al equipo. Los urgentes se repiten hasta que cada persona confirma.
           </p>

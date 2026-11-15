@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
+import { Campana } from "@/components/avisos/campana";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
@@ -15,7 +16,6 @@ const ENLACES = [
   { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
   { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
-  { href: "/admin/avisos", etiqueta: "Avisos", icono: "avisos" },
   { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
   { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
 ] as const;
@@ -36,10 +36,12 @@ export function BarraLateral({
   nombre,
   rolEtiqueta,
   iniciales,
+  noLeidos = 0,
 }: {
   nombre: string;
   rolEtiqueta: string;
   iniciales: string;
+  noLeidos?: number;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -124,6 +126,7 @@ export function BarraLateral({
           <Icono nombre="menu" size={22} />
         </button>
         <Marca alto={30} />
+        <Campana href="/admin/avisos" etiquetaEnlace="Avisos al equipo" noLeidos={noLeidos} className="ml-auto" />
       </header>
 
       {abierto && (

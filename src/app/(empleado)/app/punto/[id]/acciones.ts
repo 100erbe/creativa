@@ -112,6 +112,29 @@ export const eliminarFotoPunto = accion(async (fotoId: number, puntoId: number) 
 export type EstadosAnteriores = { punto: string; asignacion: string };
 
 const ESTADOS_PUNTO_REABRIR = ["pendiente", "incidencia"];
+const ETIQUETA_ESTADO = { instalado: "instalado", retirado: "retirado" } as const;
+
+/** Avisa a la administración de que un miembro ha cerrado un punto (instalado o retirado). */
+async function avisarCierreAdministracion(puntoId: number, estado: keyof typeof ETIQUETA_ESTADO) {
+  const supabase = await createClient();
+  const [{ data: punto }, usuario] = await Promise.all([
+    supabase.from("puntos_campana").select("nombre, campana_id, campanas(nombre)").eq("id", puntoId).maybeSingle(),
+    obtenerUsuarioActual(),
+  ]);
+  if (!punto) return;
+  const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
+  await notificarAdministradores(
+    {
+      tipo: `punto_${estado}`,
+      titulo: `Punto ${ETIQUETA_ESTADO[estado]}: ${punto.nombre}`,
+      cuerpo: `${usuario?.nombre ?? "Un miembro"}${campana?.nombre ? ` (${campana.nombre})` : ""}`,
+      url: `/admin/campanas/${punto.campana_id}`,
+      tag: `cierre-${puntoId}`,
+    },
+    { excluir: usuario?.id },
+  );
+}
+
 const ESTADOS_ASIGNACION_REABRIR = ["pendiente", "en_curso"];
 
 /**
@@ -150,6 +173,8 @@ export const marcarPuntoInstalado = accion(async (
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
     throw new Error(errorAsignacion.message);
   }
+
+  enSegundoPlano(() => avisarCierreAdministracion(puntoId, "instalado"));
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
@@ -259,6 +284,8 @@ export const marcarPuntoRetirado = accion(async (puntoId: number, asignacionId: 
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
     throw new Error(errorAsignacion.message);
   }
+
+  enSegundoPlano(() => avisarCierreAdministracion(puntoId, "retirado"));
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");

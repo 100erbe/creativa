@@ -8,10 +8,9 @@ import { cn } from "@/lib/cn";
 const ENLACES = [
   { href: "/app/agenda", etiqueta: "Agenda", icono: "calendario" },
   { href: "/app/mapa", etiqueta: "Mapa", icono: "ubicacion" },
-  { href: "/app/avisos", etiqueta: "Avisos", icono: "avisos" },
 ] as const;
 
-export function BarraInferior({ noLeidos = 0 }: { noLeidos?: number }) {
+export function BarraInferior() {
   const pathname = usePathname();
 
   return (
@@ -27,17 +26,7 @@ export function BarraInferior({ noLeidos = 0 }: { noLeidos?: number }) {
               activo ? "text-texto-marca" : "text-texto-terciario",
             )}
           >
-            <span className="relative">
-              <Icono nombre={enlace.icono} size={22} />
-              {enlace.href === "/app/avisos" && noLeidos > 0 && (
-                <span
-                  aria-label={`${noLeidos} sin leer`}
-                  className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-[10px] font-semibold leading-none text-texto-inverso"
-                >
-                  {noLeidos > 9 ? "9+" : noLeidos}
-                </span>
-              )}
-            </span>
+            <Icono nombre={enlace.icono} size={22} />
             {enlace.etiqueta}
           </Link>
         );

@@ -94,3 +94,9 @@ export const marcarLeidas = accion(async () => {
     .is("leida_en", null);
   if (error) throw new Error(error.message);
 });
+
+/** Los últimos avisos de la persona, para el modal de la campana. */
+export const cargarAvisosRecientes = accion(async () => {
+  const { cargarBandeja } = await import("./bandeja");
+  return cargarBandeja(30);
+});
