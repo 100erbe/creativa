@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { validarMetadatosFoto } from "@/lib/foto-metadatos";
 import { accion } from "@/lib/accion";
+import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { enSegundoPlano, notificarAdministradores } from "@/lib/push/notificar";
 
 const BUCKET_FOTOS = "fotos-puntos";
 const MAX_BYTES_FOTO = 512 * 1024; // mismo límite que el bucket
@@ -203,11 +205,31 @@ export const reportarIncidencia = accion(async (puntoId: number, notas: string) 
   const texto = notas.trim();
   if (!texto) throw new Error("Cuenta qué ha pasado para poder avisar.");
   const supabase = await createClient();
+  const [{ data: punto }, usuario] = await Promise.all([
+    supabase.from("puntos_campana").select("nombre, campana_id, campanas(nombre)").eq("id", puntoId).maybeSingle(),
+    obtenerUsuarioActual(),
+  ]);
   const { error } = await supabase
     .from("puntos_campana")
     .update({ estado: "incidencia", incidencia: texto, incidencia_en: new Date().toISOString() })
     .eq("id", puntoId);
   if (error) throw new Error(error.message);
+
+  // La administración se entera al momento de lo que pasa en el campo.
+  const campana = Array.isArray(punto?.campanas) ? punto?.campanas[0] : punto?.campanas;
+  enSegundoPlano(() =>
+    notificarAdministradores(
+      {
+        tipo: "incidencia_reportada",
+        titulo: `Incidencia en ${punto?.nombre ?? "un punto"}`,
+        cuerpo: `${usuario?.nombre ?? "Un instalador"}${campana?.nombre ? ` (${campana.nombre})` : ""}: ${texto.slice(0, 140)}`,
+        url: punto ? `/admin/campanas/${punto.campana_id}` : "/admin/campanas",
+        tag: `incidencia-${puntoId}`,
+        urgente: true,
+      },
+      { excluir: usuario?.id },
+    ),
+  );
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");

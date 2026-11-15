@@ -81,3 +81,16 @@ export const enviarPruebaA = accion(async (usuarioId: string): Promise<Resultado
     { tipo: "prueba", ttlSegundos: 120 },
   );
 });
+
+/** Marca como leídos todos los avisos de la persona (al abrir la bandeja). */
+export const marcarLeidas = accion(async () => {
+  const usuario = await obtenerUsuarioActual();
+  if (!usuario) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notificaciones")
+    .update({ leida_en: new Date().toISOString() })
+    .eq("usuario_id", usuario.id)
+    .is("leida_en", null);
+  if (error) throw new Error(error.message);
+});

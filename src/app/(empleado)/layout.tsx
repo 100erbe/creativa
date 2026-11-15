@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { BarraInferior } from "@/components/empleado/barra-inferior";
 import { Logo } from "@/components/ui/logo";
+import { contarNoLeidos } from "@/lib/push/bandeja";
 import { BotonSalir } from "@/components/empleado/boton-salir";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
@@ -13,6 +14,7 @@ export default async function LayoutEmpleado({
 }) {
   const usuario = await obtenerUsuarioActual();
   if (!usuario || usuario.rol !== "empleado") redirect("/entrar");
+  const noLeidos = await contarNoLeidos();
 
   return (
     <div className="flex min-h-dvh flex-col bg-fondo-lienzo">
@@ -26,7 +28,7 @@ export default async function LayoutEmpleado({
         <BannerAvisos />
         {children}
       </main>
-      <BarraInferior />
+      <BarraInferior noLeidos={noLeidos} />
     </div>
   );
 }

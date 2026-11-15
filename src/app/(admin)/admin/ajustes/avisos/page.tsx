@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { Icono } from "@/components/ui/iconos";
 import { PanelAvisos } from "@/components/avisos/panel-avisos";
+import { Bandeja } from "@/components/avisos/bandeja";
+import { cargarBandeja } from "@/lib/push/bandeja";
 
-export default function PaginaAvisosAdmin() {
+export const dynamic = "force-dynamic";
+
+export default async function PaginaAvisosAdmin() {
+  const avisos = await cargarBandeja();
   return (
     <div className="flex max-w-2xl flex-col gap-esp5">
       <div className="flex flex-col gap-esp2">
@@ -19,6 +24,10 @@ export default function PaginaAvisosAdmin() {
           incidencia) sin tener la app abierta. Cada dispositivo se activa por separado.
         </p>
       </div>
+      <section className="flex flex-col gap-esp3">
+        <h2 className="text-base font-semibold text-texto-primario">Últimos avisos</h2>
+        <Bandeja avisos={avisos} />
+      </section>
       <PanelAvisos />
     </div>
   );

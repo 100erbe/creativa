@@ -1244,6 +1244,47 @@ export type Database = {
           },
         ]
       }
+      notificaciones: {
+        Row: {
+          creada_en: string
+          cuerpo: string
+          id: number
+          leida_en: string | null
+          tipo: string
+          titulo: string
+          url: string | null
+          usuario_id: string
+        }
+        Insert: {
+          creada_en?: string
+          cuerpo: string
+          id?: number
+          leida_en?: string | null
+          tipo: string
+          titulo: string
+          url?: string | null
+          usuario_id: string
+        }
+        Update: {
+          creada_en?: string
+          cuerpo?: string
+          id?: number
+          leida_en?: string | null
+          tipo?: string
+          titulo?: string
+          url?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificaciones_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos: {
         Row: {
           activo: boolean
@@ -1388,6 +1429,38 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_progreso_campana"
             referencedColumns: ["campana_id"]
+          },
+        ]
+      }
+      resumenes_enviados: {
+        Row: {
+          enviado_en: string
+          fecha_objetivo: string
+          id: number
+          puntos: number
+          usuario_id: string
+        }
+        Insert: {
+          enviado_en?: string
+          fecha_objetivo: string
+          id?: number
+          puntos: number
+          usuario_id: string
+        }
+        Update: {
+          enviado_en?: string
+          fecha_objetivo?: string
+          id?: number
+          puntos?: number
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resumenes_enviados_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }

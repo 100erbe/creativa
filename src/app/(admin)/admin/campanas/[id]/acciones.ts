@@ -6,6 +6,17 @@ import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { accion } from "@/lib/accion";
 import type { Database } from "@/lib/supabase/types";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
+import { enSegundoPlano, fechaAviso, notificar } from "@/lib/push/notificar";
+
+/** Personas con el punto pendiente o en curso en su agenda (las que hay que avisar de un cambio). */
+async function asignadosActivos(supabase: Awaited<ReturnType<typeof createClient>>, puntoId: number) {
+  const { data } = await supabase
+    .from("asignaciones_punto")
+    .select("usuario_id")
+    .eq("punto_id", puntoId)
+    .in("estado", ["pendiente", "en_curso"]);
+  return (data ?? []).map((a) => a.usuario_id);
+}
 
 function refrescar(campanaId: number) {
   revalidatePath(`/admin/campanas/${campanaId}`);
@@ -14,7 +25,7 @@ function refrescar(campanaId: number) {
 }
 
 export const asignarPunto = accion(async (campanaId: number, puntoId: number, usuarioId: string) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
 
   const { data: existente } = await supabase
@@ -29,7 +40,7 @@ export const asignarPunto = accion(async (campanaId: number, puntoId: number, us
   // La fecha de la agenda del empleado es la de colocación prevista del punto.
   const { data: punto } = await supabase
     .from("puntos_campana")
-    .select("fecha_colocacion_prevista")
+    .select("nombre, fecha_colocacion_prevista, campanas(nombre)")
     .eq("id", puntoId)
     .maybeSingle();
 
@@ -44,15 +55,53 @@ export const asignarPunto = accion(async (campanaId: number, puntoId: number, us
   // Al asignar el primer punto la campaña deja de estar "planificada".
   await supabase.from("campanas").update({ estado: "en_curso" }).eq("id", campanaId).eq("estado", "planificada");
 
+  const campana = Array.isArray(punto?.campanas) ? punto?.campanas[0] : punto?.campanas;
+  enSegundoPlano(() =>
+    notificar(
+      [usuarioId],
+      {
+        tipo: "punto_asignado",
+        titulo: `Nuevo punto: ${punto?.nombre ?? "punto"}`,
+        cuerpo: `${campana?.nombre ?? "Campaña"} · colocar ${fechaAviso(punto?.fecha_colocacion_prevista)}`,
+        url: `/app/punto/${puntoId}`,
+        tag: `punto-${puntoId}`,
+      },
+      { excluir: admin.id },
+    ),
+  );
+
   refrescar(campanaId);
 });
 
 export const quitarAsignacion = accion(async (campanaId: number, asignacionId: number) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
+
+  const { data: antes } = await supabase
+    .from("asignaciones_punto")
+    .select("usuario_id, estado, puntos_campana(nombre)")
+    .eq("id", asignacionId)
+    .maybeSingle();
 
   const { error } = await supabase.from("asignaciones_punto").delete().eq("id", asignacionId);
   if (error) throw new Error(error.message);
+
+  // Solo se avisa si el trabajo seguía pendiente: quitar una tarea ya hecha no cambia nada para esa persona.
+  if (antes && ["pendiente", "en_curso"].includes(antes.estado)) {
+    const punto = Array.isArray(antes.puntos_campana) ? antes.puntos_campana[0] : antes.puntos_campana;
+    enSegundoPlano(() =>
+      notificar(
+        [antes.usuario_id],
+        {
+          tipo: "punto_quitado",
+          titulo: `Ya no tienes: ${punto?.nombre ?? "un punto"}`,
+          cuerpo: "Se ha quitado de tu agenda.",
+          url: "/app/agenda",
+        },
+        { excluir: admin.id },
+      ),
+    );
+  }
 
   refrescar(campanaId);
 });
@@ -134,7 +183,7 @@ export type DatosPunto = {
 
 /** Crea (puntoId null) o modifica un punto de la campaña, también cuando el documento ya está emitido. */
 export const guardarPunto = accion(async (campanaId: number, puntoId: number | null, d: DatosPunto) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   if (!d.nombre.trim()) throw new Error("Pon un nombre al punto (ej. «Farola Av. Andalucía 12»).");
   if (!(d.tipoSoporte in ETIQUETA_SOPORTE)) throw new Error("Tipo de soporte no válido.");
   if (!Number.isFinite(d.latitud) || !Number.isFinite(d.longitud)) {
@@ -165,6 +214,11 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
     const { error } = await supabase.from("puntos_campana").insert({ ...fila, campana_id: campanaId });
     if (error) throw new Error(error.message);
   } else {
+    const { data: antes } = await supabase
+      .from("puntos_campana")
+      .select("nombre, tipo_soporte, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, notas")
+      .eq("id", puntoId)
+      .maybeSingle();
     const { data, error } = await supabase
       .from("puntos_campana")
       .update(fila)
@@ -179,6 +233,41 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
       .update({ fecha_programada: fila.fecha_colocacion_prevista })
       .eq("punto_id", puntoId)
       .in("estado", ["pendiente", "en_curso"]);
+
+    // Se avisa de lo que ha cambiado a quien tiene el punto en su agenda.
+    if (antes) {
+      const cambios: string[] = [];
+      if (antes.fecha_colocacion_prevista !== fila.fecha_colocacion_prevista) {
+        cambios.push(`colocación ${fechaAviso(fila.fecha_colocacion_prevista)}`);
+      }
+      if (antes.fecha_retirada_prevista !== fila.fecha_retirada_prevista) {
+        cambios.push(`retirada ${fechaAviso(fila.fecha_retirada_prevista)}`);
+      }
+      const seMovio =
+        Math.abs(Number(antes.latitud) - fila.latitud) > 1e-5 || Math.abs(Number(antes.longitud) - fila.longitud) > 1e-5;
+      if (seMovio || (antes.direccion ?? null) !== fila.direccion) cambios.push("ubicación");
+      if ((antes.notas ?? null) !== fila.notas) cambios.push("instrucciones");
+      if (antes.nombre !== fila.nombre) cambios.push("nombre");
+      if (antes.tipo_soporte !== fila.tipo_soporte) cambios.push("soporte");
+      if ((antes.piezas == null ? null : Number(antes.piezas)) !== fila.piezas) cambios.push("piezas");
+
+      if (cambios.length > 0) {
+        const destinatarios = await asignadosActivos(supabase, puntoId);
+        enSegundoPlano(() =>
+          notificar(
+            destinatarios,
+            {
+              tipo: "punto_modificado",
+              titulo: `Cambios en ${fila.nombre}`,
+              cuerpo: `Cambia: ${cambios.join(", ")}.`,
+              url: `/app/punto/${puntoId}`,
+              tag: `punto-${puntoId}`,
+            },
+            { excluir: admin.id },
+          ),
+        );
+      }
+    }
   }
 
   refrescar(campanaId);
@@ -186,12 +275,12 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
 
 /** Solo se borran puntos que aún no se han trabajado y no tienen fotos (el archivo quedaría huérfano). */
 export const eliminarPuntoCampana = accion(async (campanaId: number, puntoId: number) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
 
   const { data: punto } = await supabase
     .from("puntos_campana")
-    .select("estado")
+    .select("estado, nombre")
     .eq("id", puntoId)
     .eq("campana_id", campanaId)
     .maybeSingle();
@@ -202,15 +291,28 @@ export const eliminarPuntoCampana = accion(async (campanaId: number, puntoId: nu
   const { count } = await supabase.from("fotos_punto").select("id", { count: "exact", head: true }).eq("punto_id", puntoId);
   if ((count ?? 0) > 0) throw new Error("Este punto tiene fotos: elimínalas antes de borrar el punto.");
 
+  const destinatarios = await asignadosActivos(supabase, puntoId); // antes de borrar: las asignaciones caen en cascada
   const { error } = await supabase.from("puntos_campana").delete().eq("id", puntoId).eq("campana_id", campanaId);
   if (error) throw new Error(error.message);
+  enSegundoPlano(() =>
+    notificar(
+      destinatarios,
+      {
+        tipo: "punto_eliminado",
+        titulo: `Punto eliminado: ${punto.nombre}`,
+        cuerpo: "Ya no hay que hacerlo.",
+        url: "/app/agenda",
+      },
+      { excluir: admin.id },
+    ),
+  );
 
   refrescar(campanaId);
 });
 
 /** El administrador da por resuelta una incidencia: el punto vuelve a estar pendiente en la agenda. */
 export const resolverIncidencia = accion(async (campanaId: number, puntoId: number) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -219,9 +321,24 @@ export const resolverIncidencia = accion(async (campanaId: number, puntoId: numb
     .eq("id", puntoId)
     .eq("campana_id", campanaId)
     .eq("estado", "incidencia")
-    .select("id");
+    .select("id, nombre");
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("Este punto no tiene una incidencia abierta.");
+
+  const destinatarios = await asignadosActivos(supabase, puntoId);
+  enSegundoPlano(() =>
+    notificar(
+      destinatarios,
+      {
+        tipo: "incidencia_resuelta",
+        titulo: `Incidencia resuelta: ${data[0]?.nombre ?? "punto"}`,
+        cuerpo: "El punto vuelve a estar pendiente en tu agenda.",
+        url: `/app/punto/${puntoId}`,
+        tag: `punto-${puntoId}`,
+      },
+      { excluir: admin.id },
+    ),
+  );
 
   refrescar(campanaId);
 });
@@ -264,12 +381,12 @@ export const renovarEnlaceCliente = accion(async (campanaId: number) => {
 
 /** Encarga la retirada de un punto ya instalado: aparece en la agenda de esa persona como "Retirar". */
 export const programarRetirada = accion(async (campanaId: number, puntoId: number, usuarioId: string) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
 
   const { data: punto } = await supabase
     .from("puntos_campana")
-    .select("estado, fecha_retirada_prevista")
+    .select("estado, nombre, fecha_retirada_prevista")
     .eq("id", puntoId)
     .eq("campana_id", campanaId)
     .maybeSingle();
@@ -295,6 +412,20 @@ export const programarRetirada = accion(async (campanaId: number, puntoId: numbe
     fecha_programada: punto.fecha_retirada_prevista,
   });
   if (error) throw new Error(error.message);
+
+  enSegundoPlano(() =>
+    notificar(
+      [usuarioId],
+      {
+        tipo: "retirada_asignada",
+        titulo: `Retirada: ${punto.nombre}`,
+        cuerpo: `Retirar ${fechaAviso(punto.fecha_retirada_prevista)}`,
+        url: `/app/punto/${puntoId}`,
+        tag: `punto-${puntoId}`,
+      },
+      { excluir: admin.id },
+    ),
+  );
 
   refrescar(campanaId);
 });
