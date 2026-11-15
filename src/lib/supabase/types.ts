@@ -106,6 +106,89 @@ export type Database = {
           },
         ]
       }
+      avisos: {
+        Row: {
+          cerrado_en: string | null
+          creado_en: string
+          creado_por: string | null
+          cuerpo: string
+          id: number
+          titulo: string
+          urgente: boolean
+        }
+        Insert: {
+          cerrado_en?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuerpo: string
+          id?: number
+          titulo: string
+          urgente?: boolean
+        }
+        Update: {
+          cerrado_en?: string | null
+          creado_en?: string
+          creado_por?: string | null
+          cuerpo?: string
+          id?: number
+          titulo?: string
+          urgente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avisos_destinatarios: {
+        Row: {
+          aviso_id: number
+          confirmado_en: string | null
+          envios: number
+          escalado_en: string | null
+          leido_en: string | null
+          ultimo_envio_en: string | null
+          usuario_id: string
+        }
+        Insert: {
+          aviso_id: number
+          confirmado_en?: string | null
+          envios?: number
+          escalado_en?: string | null
+          leido_en?: string | null
+          ultimo_envio_en?: string | null
+          usuario_id: string
+        }
+        Update: {
+          aviso_id?: number
+          confirmado_en?: string | null
+          envios?: number
+          escalado_en?: string | null
+          leido_en?: string | null
+          ultimo_envio_en?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_destinatarios_aviso_id_fkey"
+            columns: ["aviso_id"]
+            isOneToOne: false
+            referencedRelation: "avisos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_destinatarios_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campanas: {
         Row: {
           actualizado_en: string

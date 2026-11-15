@@ -15,6 +15,7 @@ const ENLACES = [
   { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
   { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
+  { href: "/admin/avisos", etiqueta: "Avisos", icono: "avisos" },
   { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
   { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
 ] as const;
