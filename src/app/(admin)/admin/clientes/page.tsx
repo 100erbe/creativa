@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
@@ -51,7 +52,8 @@ export default async function PaginaClientes({
     );
   }
 
-  const { data: clientes, count } = await consulta;
+  const { data: clientes, count, error: errorLista } = await consulta;
+  lanzarSiError({ error: errorLista });
   const filas = clientes ?? [];
   const total = count ?? 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));

@@ -13,8 +13,39 @@ const PASOS: Paso[] = [
 
 /** Indicador de pasos del asistente. Con `documentoId` cada paso es un enlace. */
 export function PasosDocumento({ actual, documentoId }: { actual: number; documentoId?: number }) {
+  const pasoActual = PASOS.find((p) => p.numero === actual);
   return (
-    <div className="flex flex-wrap items-center gap-esp3">
+    <>
+      {/* Móvil: "Paso 2 de 4" + barra de 4 segmentos (los pasos hechos son enlaces). */}
+      <div className="flex flex-col gap-esp2 md:hidden">
+        <p className="text-sm font-medium text-texto-primario">
+          Paso {actual} de {PASOS.length} · <span className="text-texto-marca">{pasoActual?.etiqueta}</span>
+        </p>
+        <div className="flex gap-1.5">
+          {PASOS.map((paso) => {
+            const barra = (
+              <span
+                className={cn(
+                  "block h-2 rounded-completo",
+                  paso.numero < actual && "bg-borde-exito",
+                  paso.numero === actual && "bg-fondo-marca",
+                  paso.numero > actual && "bg-fondo-hover",
+                )}
+              />
+            );
+            return documentoId && paso.numero !== actual ? (
+              <Link key={paso.numero} href={paso.ruta(documentoId)} aria-label={paso.etiqueta} className="flex-1 py-2">
+                {barra}
+              </Link>
+            ) : (
+              <span key={paso.numero} className="flex-1 py-2">
+                {barra}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    <div className="hidden flex-wrap items-center gap-esp3 md:flex">
       {PASOS.map((paso, i) => {
         const estado = paso.numero < actual ? "hecho" : paso.numero === actual ? "actual" : "pendiente";
         const contenido = (
@@ -61,5 +92,6 @@ export function PasosDocumento({ actual, documentoId }: { actual: number; docume
         );
       })}
     </div>
+    </>
   );
 }

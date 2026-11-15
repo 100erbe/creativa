@@ -3,19 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { Logo } from "@/components/ui/logo";
+import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
+import { fechaMedia } from "@/lib/formato";
 
 export const dynamic = "force-dynamic";
-
-const ETIQUETA_SOPORTE: Record<string, string> = {
-  valla: "Valla",
-  totem: "Tótem",
-  lona: "Lona",
-  cartel: "Cartel",
-  mobiliario_urbano: "Mobiliario urbano",
-  marquesina: "Marquesina",
-  pantalla: "Pantalla",
-  otro: "Soporte",
-};
 
 export default async function PaginaPublicaCliente({
   params,
@@ -58,7 +49,11 @@ export default async function PaginaPublicaCliente({
           {cabecera.campana_nombre}
         </h1>
         <p className="text-sm text-texto-terciario">
-          {cabecera.fecha_inicio} — {cabecera.fecha_fin}
+          {cabecera.fecha_inicio && cabecera.fecha_fin
+            ? `${fechaMedia(cabecera.fecha_inicio)} — ${fechaMedia(cabecera.fecha_fin)}`
+            : cabecera.fecha_inicio
+              ? `Desde el ${fechaMedia(cabecera.fecha_inicio)}`
+              : ""}
         </p>
       </div>
 
@@ -89,8 +84,8 @@ export default async function PaginaPublicaCliente({
                   {p.direccion ? ` · ${p.direccion}` : ""}
                 </p>
               </div>
-              <Insignia tono={TONO_POR_ESTADO[p.punto_estado] ?? "neutro"}>
-                {p.punto_estado}
+              <Insignia tono={TONO_POR_ESTADO[p.punto_estado === "incidencia" ? "pendiente" : p.punto_estado] ?? "neutro"}>
+                {etiquetaEstado(p.punto_estado === "incidencia" ? "pendiente" : p.punto_estado)}
               </Insignia>
             </div>
             {(fotosPorPunto.get(p.punto_id) ?? []).length > 0 && (

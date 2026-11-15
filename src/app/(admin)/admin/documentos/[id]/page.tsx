@@ -8,7 +8,8 @@ import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
-import { AccionesDocumento, Cobros } from "./controles";
+import { AccionesDocumento, CondicionesDocumento, Cobros } from "./controles";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 
 export const dynamic = "force-dynamic";
 
@@ -30,10 +31,10 @@ export default async function PaginaDocumento({
 
   const supabase = await createClient();
 
-  const [{ data: doc }, { data: lineas }, { data: derivados }] = await Promise.all([
+  const resultados = await Promise.all([
     supabase
       .from("documentos")
-      .select("*, clientes(razon_social, numero_documento, direccion, codigo_postal, municipio, provincia)")
+      .select("*, clientes(razon_social, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion)")
       .eq("id", documentoId)
       .maybeSingle(),
     supabase
@@ -46,6 +47,8 @@ export default async function PaginaDocumento({
       .select("id, tipo, numero_completo")
       .eq("documento_origen_id", documentoId),
   ]);
+  if (resultados[0].error?.code !== "PGRST116") lanzarSiError(...resultados);
+  const [{ data: doc }, { data: lineas }, { data: derivados }] = resultados;
 
   if (!doc) notFound();
 
@@ -70,7 +73,18 @@ export default async function PaginaDocumento({
     : null;
 
   const esBorrador = doc.estado === "borrador";
+  const { data: formasPago } = esBorrador
+    ? await supabase.from("formas_pago").select("id, nombre, dias_vencimiento").order("nombre")
+    : { data: [] };
   const cobrable = doc.tipo === "factura" && !esBorrador;
+
+  // Destinatarios del email: contactos marcados como "recibe las facturas" + el email de facturación.
+  const [{ data: contactosFactura }, { data: empresa }] = esBorrador
+    ? [{ data: [] }, { data: null }]
+    : await Promise.all([
+        supabase.from("contactos_cliente").select("email").eq("cliente_id", doc.cliente_id).eq("recibe_facturas", true),
+        supabase.from("empresa").select("nombre_comercial").limit(1).maybeSingle(),
+      ]);
 
   const [{ data: estadoCobro }, { data: cobros }] = cobrable
     ? await Promise.all([
@@ -100,10 +114,21 @@ export default async function PaginaDocumento({
 
   const etiquetaTipo = ETIQUETA_TIPO[doc.tipo] ?? doc.tipo;
   const titulo = doc.numero_completo ?? `${etiquetaTipo} en borrador`;
+
+  const destinatarios = [
+    ...new Set(
+      [...(contactosFactura ?? []).map((c) => c.email), cliente?.email_facturacion].filter((e): e is string => !!e),
+    ),
+  ];
+  const mailto = esBorrador
+    ? null
+    : `mailto:${destinatarios.join(",")}?subject=${encodeURIComponent(`${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim())}&body=${encodeURIComponent(
+        `Hola,\n\nTe adjunto ${doc.tipo === "factura" || doc.tipo === "rectificativa" ? "la" : "el"} ${etiquetaTipo.toLowerCase()} ${doc.numero_completo ?? ""} por importe de ${euros(Number(doc.total))}.\n\nUn saludo,\n${empresa?.nombre_comercial ?? ""}`,
+      )}`;
   const filasLineas = lineas ?? [];
 
   return (
-    <div className="flex flex-col gap-esp6">
+    <div className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}>
       <div className="flex flex-col gap-esp2">
         <Link
           href="/admin/documentos"
@@ -286,13 +311,36 @@ export default async function PaginaDocumento({
             )}
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          {esBorrador && (
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+              <h2 className="text-base font-semibold text-texto-primario">Condiciones</h2>
+              <CondicionesDocumento
+                documentoId={doc.id}
+                tipo={doc.tipo}
+                formasPago={formasPago ?? []}
+                inicial={{
+                  fechaVencimiento: doc.fecha_vencimiento,
+                  validoHasta: doc.valido_hasta,
+                  formaPagoId: doc.forma_pago_id,
+                  descuentoGlobalPct: Number(doc.descuento_global_pct),
+                  retencionPct: Number(doc.retencion_pct),
+                  campana: doc.campana,
+                  descripcion: doc.descripcion,
+                  notasCliente: doc.notas_cliente,
+                }}
+              />
+            </div>
+          )}
+
+          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-base font-semibold text-texto-primario">Acciones</h2>
             <AccionesDocumento
               documentoId={doc.id}
               tipo={doc.tipo}
               estado={doc.estado}
               etiquetaTipo={etiquetaTipo}
+              mailto={mailto}
+              hayDestinatario={destinatarios.length > 0}
             />
           </div>
 
@@ -315,6 +363,22 @@ export default async function PaginaDocumento({
           )}
         </div>
       </div>
+
+      {/* Móvil: el resumen y el botón de emitir quedan al pie, sin tener que recorrer toda la página. */}
+      {esBorrador && (
+        <div className="fixed inset-x-0 bottom-0 z-20 flex items-center gap-esp3 border-t border-borde-default bg-fondo-superficie px-esp4 pt-esp3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-lg xl:hidden print:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-texto-terciario">Total</p>
+            <p className="text-lg font-semibold leading-tight text-texto-primario">{euros(Number(doc.total))}</p>
+          </div>
+          <a
+            href="#acciones"
+            className="inline-flex h-11 items-center rounded-md bg-fondo-marca px-esp5 text-sm font-medium text-texto-sobre-marca"
+          >
+            Revisar y emitir
+          </a>
+        </div>
+      )}
     </div>
   );
 }

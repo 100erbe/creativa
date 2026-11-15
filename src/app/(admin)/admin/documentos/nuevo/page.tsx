@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export default async function PaginaNuevoDocumento({
   searchParams,
 }: {
-  searchParams: Promise<{ documento?: string; paso?: string; tipo?: string }>;
+  searchParams: Promise<{ documento?: string; paso?: string; tipo?: string; cliente?: string }>;
 }) {
-  const { documento, paso, tipo } = await searchParams;
+  const { documento, paso, tipo, cliente: clienteParam } = await searchParams;
   const supabase = await createClient();
 
   const cargarClientes = async () =>
@@ -26,7 +26,13 @@ export default async function PaginaNuevoDocumento({
   // Sin documento todavía → Paso 1: tipo + cliente.
   if (!documento) {
     const tipoInicial = (["presupuesto", "albaran", "factura"] as const).find((t) => t === tipo);
-    return <PasoCliente clientes={await cargarClientes()} tipoInicial={tipoInicial as TipoNuevoDocumento} />;
+    return (
+      <PasoCliente
+        clientes={await cargarClientes()}
+        tipoInicial={tipoInicial as TipoNuevoDocumento}
+        clienteInicialId={Number(clienteParam) || undefined}
+      />
+    );
   }
 
   const documentoId = Number(documento);

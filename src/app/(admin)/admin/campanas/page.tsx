@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
+import { Boton } from "@/components/ui/boton";
+import { Icono } from "@/components/ui/iconos";
 import { fechaCorta } from "@/lib/formato";
+import { ETIQUETA_ESTADO_CAMPANA as ETIQUETA_ESTADO } from "@/lib/etiquetas";
 
 export const dynamic = "force-dynamic";
-
-const ETIQUETA_ESTADO: Record<string, string> = {
-  planificada: "Planificada",
-  en_curso: "En curso",
-  finalizada: "Finalizada",
-  cancelada: "Cancelada",
-};
 
 const FILTROS = [
   { valor: "", etiqueta: "Todas" },
@@ -27,24 +24,34 @@ export default async function PaginaCampanas({
   const { estado = "" } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: campanas }, { data: progreso }] = await Promise.all([
+  const resultados = await Promise.all([
     supabase
       .from("campanas")
       .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin")
       .order("fecha_inicio", { ascending: false }),
     supabase.from("v_progreso_campana").select("*"),
   ]);
+  lanzarSiError(...resultados);
+  const [{ data: campanas }, { data: progreso }] = resultados;
 
   const progresoPorId = new Map((progreso ?? []).map((p) => [p.campana_id, p]));
   const filas = (campanas ?? []).filter((c) => !estado || c.estado === estado);
 
   return (
     <div className="flex flex-col gap-esp6">
-      <div>
-        <h1 className="text-2xl font-semibold text-texto-primario">Campañas</h1>
-        <p className="text-sm text-texto-secundario">
-          Soportes, instalaciones y fotos de cada campaña.
-        </p>
+      <div className="flex items-center gap-esp3">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold text-texto-primario">Campañas</h1>
+          <p className="text-sm text-texto-secundario">
+            Soportes, instalaciones y fotos de cada campaña.
+          </p>
+        </div>
+        <Link href="/admin/campanas/nueva" className="shrink-0" aria-label="Nueva campaña">
+          <Boton>
+            <Icono nombre="mas" size={16} />
+            <span className="hidden sm:inline">Nueva campaña</span>
+          </Boton>
+        </Link>
       </div>
 
       <div className="flex gap-esp2">
@@ -67,7 +74,8 @@ export default async function PaginaCampanas({
         {filas.map((c) => {
           const p = progresoPorId.get(c.id);
           const total = Number(p?.puntos_totales ?? 0);
-          const hechos = Number(p?.puntos_instalados ?? 0) + Number(p?.puntos_verificados ?? 0);
+          const hechos =
+            Number(p?.puntos_instalados ?? 0) + Number(p?.puntos_verificados ?? 0) + Number(p?.puntos_retirados ?? 0);
           const incidencias = Number(p?.puntos_con_incidencia ?? 0);
           return (
             <Link

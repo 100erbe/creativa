@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { LimpiarBorradores } from "./limpiar-borradores";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ const ESTADOS = [
   { valor: "facturado", etiqueta: "Facturados" },
 ];
 
-type Filtros = { tipo?: string; estado?: string; q?: string; pagina?: string };
+type Filtros = { tipo?: string; estado?: string; q?: string; cliente?: string; cobro?: string; pagina?: string };
 
 function enlace(actual: Filtros, cambios: Partial<Filtros>) {
   const f = { ...actual, ...cambios };
@@ -46,6 +48,8 @@ export default async function PaginaDocumentos({
   // Se quitan los caracteres que rompen la sintaxis de .or() de PostgREST.
   const q = (filtros.q ?? "").replace(/[,()%*\\]/g, " ").trim();
   const pagina = Math.max(1, Number(filtros.pagina) || 1);
+  const cobro = filtros.cobro === "pendiente" || filtros.cobro === "vencida" ? filtros.cobro : "";
+  const clienteId = Number.isInteger(Number(filtros.cliente)) && Number(filtros.cliente) > 0 ? Number(filtros.cliente) : null;
 
   const supabase = await createClient();
 
@@ -75,8 +79,19 @@ export default async function PaginaDocumentos({
   if (tipo) consulta = consulta.eq("tipo", tipo as "factura");
   if (estado) consulta = consulta.eq("estado", estado as "borrador");
   if (condicionBusqueda) consulta = consulta.or(condicionBusqueda);
+  if (clienteId) consulta = consulta.eq("cliente_id", clienteId);
+  if (cobro) {
+    // Facturas con algo por cobrar (o solo las vencidas), según la vista de cobros.
+    const { data: porCobrar } = await supabase
+      .from("v_estado_cobro")
+      .select("id")
+      .in("estado_cobro", cobro === "vencida" ? ["vencida"] : ["pendiente", "parcial", "vencida"]);
+    const ids = (porCobrar ?? []).flatMap((c) => (c.id == null ? [] : [c.id]));
+    consulta = consulta.in("id", ids.length ? ids : [-1]);
+  }
 
-  const { data: documentos, count } = await consulta;
+  const { data: documentos, count, error: errorLista } = await consulta;
+  lanzarSiError({ error: errorLista });
   const filas = documentos ?? [];
   const total = count ?? 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
@@ -88,7 +103,20 @@ export default async function PaginaDocumentos({
     : { data: [] };
   const cobroPorId = new Map((cobros ?? []).map((c) => [c.id, c.estado_cobro]));
 
-  const actual: Filtros = { tipo, estado, q };
+  const actual: Filtros = { tipo, estado, q, cobro, cliente: clienteId ? String(clienteId) : "" };
+
+  // Borradores sin ninguna línea con más de una hora: restos del asistente.
+  const { data: borradores } = await supabase
+    .from("documentos")
+    .select("id, lineas_documento(id)")
+    .eq("estado", "borrador")
+    .lt("creado_en", new Date(Date.now() - 60 * 60 * 1000).toISOString());
+  const borradoresVacios = (borradores ?? []).filter((b) => (b.lineas_documento ?? []).length === 0).length;
+
+  // Cuando se llega desde la ficha de un cliente se muestra de quién son los documentos.
+  const clienteFiltrado = clienteId
+    ? (await supabase.from("clientes").select("razon_social").eq("id", clienteId).maybeSingle()).data
+    : null;
 
   return (
     <div className="flex flex-col gap-esp6">
@@ -107,6 +135,18 @@ export default async function PaginaDocumentos({
         </Link>
       </div>
 
+      {borradoresVacios > 0 && <LimpiarBorradores cantidad={borradoresVacios} />}
+
+      {clienteId && (
+        <div className="flex flex-wrap items-center gap-esp2 text-sm text-texto-secundario">
+          Documentos de
+          <span className="font-medium text-texto-primario">{clienteFiltrado?.razon_social ?? `cliente #${clienteId}`}</span>
+          <Link href={enlace({ ...actual, cliente: "" }, { pagina: "" })} className="font-medium text-texto-marca">
+            Quitar filtro
+          </Link>
+        </div>
+      )}
+
       <div className="flex flex-col gap-esp3 md:flex-row md:flex-wrap md:items-center">
         <div className="-mx-esp4 flex gap-esp2 overflow-x-auto px-esp4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
           {TIPOS.map((t) => (
@@ -122,9 +162,28 @@ export default async function PaginaDocumentos({
               {t.etiqueta}
             </Link>
           ))}
+          {[
+            { valor: "pendiente", etiqueta: "Por cobrar" },
+            { valor: "vencida", etiqueta: "Vencidas" },
+          ].map((c) => (
+            <Link
+              key={c.valor}
+              href={enlace(actual, { cobro: cobro === c.valor ? "" : c.valor, tipo: "factura", pagina: "" })}
+              aria-pressed={cobro === c.valor}
+              className={
+                cobro === c.valor
+                  ? "inline-flex min-h-10 shrink-0 items-center rounded-completo bg-fondo-peligro px-esp3 text-sm font-medium text-texto-inverso md:min-h-0 md:py-esp1"
+                  : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
+              }
+            >
+              {c.etiqueta}
+            </Link>
+          ))}
         </div>
         <form action="/admin/documentos" className="flex flex-wrap items-center gap-esp2 md:ml-auto md:flex-nowrap">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
+          {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
+          {cobro && <input type="hidden" name="cobro" value={cobro} />}
           <select
             name="estado"
             defaultValue={estado}

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { rutaSegura } from "@/lib/ruta-segura";
 import { Logo } from "@/components/ui/logo";
 import { FormularioEntrar } from "./formulario-entrar";
 
@@ -14,16 +15,21 @@ export default async function PaginaEntrar({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Si ya hay sesión, reparte directamente según el rol.
+  // Hay sesión pero la cuenta no sirve (sin perfil o desactivada): se queda en esta
+  // página con el aviso y un botón para cerrar la sesión. Redirigir aquí crearía un
+  // bucle con el middleware, que devuelve a /entrar a las cuentas inactivas.
+  let sesionSinAcceso = false;
+
   if (user) {
     const { data: fila } = await supabase
       .from("usuarios")
-      .select("rol")
+      .select("rol, activo")
       .eq("id", user.id)
       .single();
 
-    if (fila?.rol === "admin") redirect(volver ?? "/admin/panel");
-    if (fila?.rol === "empleado") redirect(volver ?? "/app/agenda");
+    if (fila?.activo && fila.rol === "admin") redirect(rutaSegura(volver, "/admin/panel"));
+    if (fila?.activo && fila.rol === "empleado") redirect(rutaSegura(volver, "/app/agenda"));
+    sesionSinAcceso = true;
   }
 
   return (
@@ -34,8 +40,9 @@ export default async function PaginaEntrar({
           <h1 className="sr-only">Creativa · acceso</h1>
         </div>
         <FormularioEntrar
-          cuentaInactiva={error === "cuenta-inactiva"}
-          volver={volver}
+          cuentaInactiva={error === "cuenta-inactiva" || sesionSinAcceso}
+          sesionAbierta={sesionSinAcceso}
+          volver={rutaSegura(volver, "")}
         />
       </div>
     </main>

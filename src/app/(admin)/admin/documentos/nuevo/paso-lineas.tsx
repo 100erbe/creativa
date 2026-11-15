@@ -6,15 +6,19 @@ import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
+import { BarraAccion, CAMPO, PanelBusqueda } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { euros } from "@/lib/formato";
 import { ETIQUETA_ALCANCE, ETIQUETA_TIPO } from "@/lib/documentos";
 import {
   actualizarLinea,
   anadirLinea,
+  anadirLineaLibre,
   eliminarLinea,
   previsualizarPrecio,
 } from "./acciones";
+import { desenvolver } from "@/lib/accion";
+import { confirmar } from "@/components/ui/dialogos";
 
 type Alcance = "fabricacion" | "instalacion" | "fabricacion_instalacion";
 
@@ -190,21 +194,26 @@ export function PasoLineas({
                 {euros(documento.total)}
               </span>
             </div>
-            <div className="mt-esp2 flex gap-esp3">
+            <BarraAccion className="md:mt-esp2">
+              <div className="min-w-0 md:hidden">
+                <p className="text-xs text-texto-terciario">Total</p>
+                <p className="text-lg font-semibold leading-tight text-texto-primario">{euros(documento.total)}</p>
+              </div>
               <Boton
                 variante="secundario"
+                className="ml-auto md:ml-0"
                 onClick={() => router.push(`/admin/documentos/nuevo?documento=${documento.id}&paso=cliente`)}
               >
                 Atrás
               </Boton>
               <Boton
-                className="flex-1"
+                className="md:flex-1"
                 disabled={lineas.length === 0}
                 onClick={() => router.push(`/admin/documentos/nuevo?documento=${documento.id}&paso=campana`)}
               >
                 Continuar
               </Boton>
-            </div>
+            </BarraAccion>
             {lineas.length === 0 && (
               <p className="text-xs text-texto-terciario">Añade al menos un artículo para continuar.</p>
             )}
@@ -246,8 +255,7 @@ function ListaCompacta({ lineas }: { lineas: Linea[] }) {
 //  Formulario para añadir un artículo del catálogo
 // ---------------------------------------------------------------------
 
-const entrada =
-  "h-9 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco disabled:bg-fondo-sutil disabled:opacity-60";
+const entrada = CAMPO;
 
 function FormularioArticulo({
   documento,
@@ -279,6 +287,7 @@ function FormularioArticulo({
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
+  const [libre, setLibre] = useState(false);
 
   const producto = catalogo.find((p) => p.id === productoId) ?? null;
   const conMedidas = producto?.unidad === "m2" || producto?.unidad === "ml";
@@ -340,7 +349,7 @@ function FormularioArticulo({
     setCalculando(true);
     const t = setTimeout(async () => {
       try {
-        const r = await previsualizarPrecio({
+        const r = await desenvolver(previsualizarPrecio({
           clienteId: documento.cliente_id,
           productoId: producto.id,
           formatoId,
@@ -348,7 +357,7 @@ function FormularioArticulo({
           piezas: nPiezas,
           anchoCm: medidas ? nAncho : null,
           altoCm: medidas ? nAlto : null,
-        });
+        }));
         if (cancelado) return;
         setTarifa(r);
         if (!precioManual) setPrecio(texto(r.precio, 4));
@@ -388,7 +397,7 @@ function FormularioArticulo({
 
     iniciar(async () => {
       try {
-        await anadirLinea(documento.id, {
+        await desenvolver(anadirLinea(documento.id, {
           productoId: producto.id,
           formatoId,
           alcance,
@@ -400,7 +409,7 @@ function FormularioArticulo({
           descuento: nDescuento,
           descripcion,
           artista,
-        });
+        }));
         setProductoId(null);
         setTarifa(null);
         onAnadido();
@@ -408,6 +417,17 @@ function FormularioArticulo({
         setError(e instanceof Error ? e.message : "No se pudo añadir el artículo.");
       }
     });
+  }
+
+  if (libre) {
+    return (
+      <FormularioLineaLibre
+        documento={documento}
+        artistas={artistas}
+        onAnadido={onAnadido}
+        onCancelar={() => setLibre(false)}
+      />
+    );
   }
 
   return (
@@ -443,7 +463,7 @@ function FormularioArticulo({
                           descuento: r.ultimo_descuento,
                         });
                     }}
-                    className="flex items-center gap-1 rounded-completo border border-borde-fuerte bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
+                    className="flex min-h-10 items-center gap-1 rounded-completo border border-borde-fuerte bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
                   >
                     <Icono nombre="mas" size={12} className="text-icono-marca" />
                     {r.etiqueta}
@@ -455,54 +475,69 @@ function FormularioArticulo({
           )}
 
           <div className="relative">
-            <Icono
-              nombre="buscar"
-              size={16}
-              className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
-            />
-            <input
-              value={busqueda}
-              onChange={(e) => {
-                setBusqueda(e.target.value);
-                setAbierto(true);
-              }}
-              onFocus={() => setAbierto(true)}
-              onBlur={() => setAbierto(false)}
-              placeholder="Buscar en el catálogo: lona, banderola, 70x100…"
-              className={cn(entrada, "h-10 pl-9")}
-            />
-            {/* Desplegable flotante: no ocupa altura hasta que se busca o se abre. */}
+            <button
+              type="button"
+              onClick={() => setAbierto(true)}
+              aria-haspopup="listbox"
+              aria-expanded={abierto}
+              className="flex h-11 w-full items-center gap-esp3 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-left hover:bg-fondo-sutil md:h-10"
+            >
+              <Icono nombre="buscar" size={16} className="shrink-0 text-icono-secundario" />
+              <span className="truncate text-sm text-texto-terciario">
+                Buscar en el catálogo: lona, banderola, 70x100…
+              </span>
+            </button>
             {abierto && (
-          <div
-            onMouseDown={(e) => e.preventDefault()}
-            className="absolute inset-x-0 top-full z-20 mt-1 flex max-h-72 flex-col gap-esp3 overflow-y-auto rounded-md border border-borde-default bg-fondo-superficie p-esp2 shadow-lg"
-          >
-            {resultados.map(([categoria, productos]) => (
-              <div key={categoria} className="flex flex-col gap-1">
-                <span className="px-esp2 text-[11px] font-medium uppercase tracking-wide text-texto-terciario">
-                  {categoria}
-                </span>
-                {productos.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => elegirProducto(p)}
-                    className="flex items-center gap-esp3 rounded-md px-esp2 py-1.5 text-left hover:bg-fondo-sutil"
-                  >
-                    <span className="flex-1 text-sm text-texto-primario">{p.nombre}</span>
-                    {p.formatos.length > 0 && (
-                      <span className="text-xs text-texto-terciario">{p.formatos.length} formatos</span>
-                    )}
-                    <span className="w-16 text-right text-xs text-texto-terciario">por {UNIDAD[p.unidad] ?? p.unidad}</span>
-                  </button>
+              <PanelBusqueda
+                busqueda={busqueda}
+                onBusqueda={setBusqueda}
+                placeholder="Buscar en el catálogo…"
+                onCerrar={() => {
+                  setAbierto(false);
+                  setBusqueda("");
+                }}
+                onEnter={() => {
+                  const unico = resultados.length === 1 && resultados[0]![1].length === 1 ? resultados[0]![1][0] : undefined;
+                  if (unico) elegirProducto(unico);
+                  else (document.activeElement as HTMLElement | null)?.blur();
+                }}
+              >
+                {resultados.map(([categoria, productos]) => (
+                  <div key={categoria} className="flex flex-col gap-1">
+                    <span className="px-esp2 pt-esp2 text-[11px] font-medium uppercase tracking-wide text-texto-terciario">
+                      {categoria}
+                    </span>
+                    {productos.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => elegirProducto(p)}
+                        className="flex min-h-12 shrink-0 items-center gap-esp3 rounded-md px-esp2 py-1.5 text-left hover:bg-fondo-sutil active:bg-fondo-sutil md:min-h-10"
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="text-sm text-texto-primario">{p.nombre}</span>
+                          {p.formatos.length > 0 && (
+                            <span className="text-xs text-texto-terciario">{p.formatos.length} formatos</span>
+                          )}
+                        </span>
+                        <span className="shrink-0 text-xs text-texto-terciario">por {UNIDAD[p.unidad] ?? p.unidad}</span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
-              </div>
-            ))}
-            {resultados.length === 0 && (
-              <p className="px-esp2 py-esp3 text-sm text-texto-terciario">Nada en el catálogo con «{busqueda}».</p>
+                {resultados.length === 0 && (
+                  <p className="px-esp2 py-esp3 text-sm text-texto-terciario">Nada en el catálogo con «{busqueda}».</p>
+                )}
+              </PanelBusqueda>
             )}
           </div>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setLibre(true)}
+            className="w-fit text-sm font-medium text-texto-marca"
+          >
+            ¿No está en el catálogo? Añadir un concepto libre
+          </button>
         </>
       )}
 
@@ -525,33 +560,57 @@ function FormularioArticulo({
 
           <div className="grid grid-cols-2 gap-esp3 md:grid-cols-4">
             {producto.formatos.length > 0 && (
-              <Etiqueta texto="Formato" className="col-span-2">
-                <select
-                  value={formatoId ?? ""}
-                  onChange={(e) => elegirFormato(e.target.value ? Number(e.target.value) : null)}
-                  className={entrada}
-                >
-                  <option value="">{producto.medidaLibre ? "A medida" : "Sin formato"}</option>
-                  {producto.formatos.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.nombre}
-                    </option>
-                  ))}
-                </select>
+              <Etiqueta texto="Formato" className="col-span-2" grupo={producto.formatos.length <= 4}>
+                {producto.formatos.length <= 4 ? (
+                  <div className="flex flex-wrap gap-esp2">
+                    {[{ id: null as number | null, nombre: producto.medidaLibre ? "A medida" : "Sin formato" }, ...producto.formatos].map(
+                      (f) => (
+                        <button
+                          key={f.id ?? "ninguno"}
+                          type="button"
+                          onClick={() => elegirFormato(f.id)}
+                          aria-pressed={formatoId === f.id}
+                          className={cn(
+                            "min-h-11 rounded-md border px-esp3 text-sm font-medium md:min-h-9",
+                            formatoId === f.id
+                              ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
+                              : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                          )}
+                        >
+                          {f.nombre}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <select
+                    value={formatoId ?? ""}
+                    onChange={(e) => elegirFormato(e.target.value ? Number(e.target.value) : null)}
+                    className={entrada}
+                  >
+                    <option value="">{producto.medidaLibre ? "A medida" : "Sin formato"}</option>
+                    {producto.formatos.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.nombre}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </Etiqueta>
             )}
-            <Etiqueta texto="Alcance" className="col-span-2">
-              <div className="flex h-9 overflow-hidden rounded-md border border-borde-fuerte">
+            <Etiqueta texto="Alcance" className="col-span-2" grupo>
+              <div className="flex flex-wrap gap-esp2">
                 {alcancesDe(producto).map((a) => (
                   <button
                     key={a}
                     type="button"
                     onClick={() => setAlcance(a)}
+                    aria-pressed={alcance === a}
                     className={cn(
-                      "flex-1 px-esp2 text-xs font-medium",
+                      "min-h-11 flex-1 rounded-md border px-esp3 text-xs font-medium md:min-h-9",
                       alcance === a
-                        ? "bg-fondo-marca text-texto-sobre-marca"
-                        : "bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                        ? "border-borde-foco bg-fondo-marca text-texto-sobre-marca"
+                        : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
                     )}
                   >
                     {ETIQUETA_ALCANCE[a]}
@@ -619,19 +678,34 @@ function FormularioArticulo({
             </div>
           </div>
 
-          <Etiqueta texto="Artista / referencia (opcional)">
+          <Etiqueta texto="Artista / referencia (opcional)" grupo>
+            {artistas.length > 0 && (
+              <div className="flex flex-wrap gap-esp2">
+                {artistas.map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setArtista(artista === a ? "" : a)}
+                    aria-pressed={artista === a}
+                    className={cn(
+                      "min-h-10 rounded-completo border px-esp3 text-xs font-medium",
+                      artista === a
+                        ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
+                        : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                    )}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            )}
             <input
               value={artista}
               onChange={(e) => setArtista(e.target.value)}
-              list="artistas-documento"
+              enterKeyHint="next"
               placeholder="Ej. Artista A — gira 2026"
               className={entrada}
             />
-            <datalist id="artistas-documento">
-              {artistas.map((a) => (
-                <option key={a} value={a} />
-              ))}
-            </datalist>
             <span className="text-xs text-texto-terciario">
               Sale en la factura debajo del concepto. Útil si el documento mezcla varios artistas.
             </span>
@@ -655,10 +729,10 @@ function FormularioArticulo({
                 {importe != null ? euros(importe) : "—"}
               </p>
             </div>
-            <Boton variante="secundario" onClick={() => setProductoId(null)}>
+            <Boton variante="secundario" className="min-h-11" onClick={() => setProductoId(null)}>
               Cancelar
             </Boton>
-            <Boton onClick={anadir} cargando={pendiente} disabled={calculando && !precioManual}>
+            <Boton className="min-h-11" onClick={anadir} cargando={pendiente} disabled={calculando && !precioManual}>
               <Icono nombre="mas" size={16} />
               Añadir
             </Boton>
@@ -675,14 +749,14 @@ function FormularioArticulo({
 
 function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Linea[] }) {
   return (
-    <div className="flex flex-col gap-esp3 overflow-x-auto rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+    <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
       <div>
         <h2 className="text-base font-semibold text-texto-primario">Artículos · {lineas.length}</h2>
         {lineas.length > 0 && (
           <p className="text-xs text-texto-terciario">Toca cantidad, precio o descuento para cambiarlos.</p>
         )}
       </div>
-      <div className="grid min-w-[620px] grid-cols-[1fr_80px_100px_70px_100px_24px] gap-esp3 text-xs font-medium text-texto-terciario">
+      <div className="hidden min-w-[620px] grid-cols-[1fr_80px_100px_70px_100px_24px] gap-esp3 text-xs font-medium text-texto-terciario md:grid">
         <span>CONCEPTO</span>
         <span className="text-right">CANT.</span>
         <span className="text-right">PRECIO</span>
@@ -690,7 +764,7 @@ function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Lin
         <span className="text-right">IMPORTE</span>
         <span />
       </div>
-      <div className="flex min-w-[620px] flex-col divide-y divide-fondo-hover">
+      <div className="flex flex-col divide-y divide-fondo-hover md:min-w-[620px]">
         {lineas.map((l) => (
           <FilaLinea key={`${l.id}-${l.piezas}-${l.precio_unitario}-${l.descuento_pct}-${l.descripcion}-${l.artista ?? ""}`} documentoId={documentoId} linea={l} />
         ))}
@@ -716,7 +790,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
     setError(null);
     iniciar(async () => {
       try {
-        await actualizarLinea(documentoId, linea.id, cambios);
+        await desenvolver(actualizarLinea(documentoId, linea.id, cambios));
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo guardar.");
@@ -732,15 +806,16 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
   }
 
   const celda =
-    "h-8 w-full rounded-md border border-transparent bg-transparent px-esp2 text-right text-sm text-texto-primario outline-none hover:border-borde-default focus:border-borde-foco focus:bg-fondo-superficie";
+    "h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-right text-base text-texto-primario outline-none focus:border-borde-foco md:h-8 md:border-transparent md:bg-transparent md:text-sm md:hover:border-borde-default md:focus:bg-fondo-superficie";
+  const etiquetaMovil = "text-[11px] text-texto-terciario md:hidden";
   const alPulsarEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
   };
 
   return (
-    <div className={cn("flex flex-col py-esp2", pendiente && "opacity-60")}>
-      <div className="grid grid-cols-[1fr_80px_100px_70px_100px_24px] items-center gap-esp3">
-        <div className="min-w-0">
+    <div className={cn("flex flex-col py-esp3 md:py-esp2", pendiente && "opacity-60")}>
+      <div className="grid grid-cols-3 items-end gap-esp2 md:grid-cols-[1fr_80px_100px_70px_100px_24px] md:items-center md:gap-esp3">
+        <div className="col-span-3 min-w-0 md:col-span-1">
           <input
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
@@ -762,7 +837,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
             onKeyDown={alPulsarEnter}
             placeholder="+ Artista / referencia"
             aria-label="Artista"
-            className="h-7 w-full rounded-md border border-transparent bg-transparent px-esp2 text-left text-xs text-texto-secundario outline-none placeholder:text-texto-terciario hover:border-borde-default focus:border-borde-foco focus:bg-fondo-superficie"
+            className="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-left text-base text-texto-secundario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:mt-0 md:h-7 md:border-transparent md:bg-transparent md:text-xs md:hover:border-borde-default md:focus:bg-fondo-superficie"
           />
           {linea.cantidad !== linea.piezas && (
             <p className="px-esp2 text-xs text-texto-terciario">
@@ -770,56 +845,72 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
             </p>
           )}
         </div>
-        <input
-          value={piezas}
-          onChange={(e) => setPiezas(e.target.value)}
-          onBlur={() => confirmarNumero(piezas, linea.piezas, "piezas", () => setPiezas(texto(linea.piezas, 3)))}
-          onKeyDown={alPulsarEnter}
-          inputMode="decimal"
-          aria-label="Cantidad"
-          className={celda}
-        />
-        <input
-          value={precio}
-          onChange={(e) => setPrecio(e.target.value)}
-          onBlur={() =>
-            confirmarNumero(precio, linea.precio_unitario, "precio_unitario", () =>
-              setPrecio(texto(linea.precio_unitario, 4)),
-            )
-          }
-          onKeyDown={alPulsarEnter}
-          inputMode="decimal"
-          aria-label="Precio unitario"
-          className={celda}
-        />
-        <input
-          value={descuento}
-          onChange={(e) => setDescuento(e.target.value)}
-          onBlur={() =>
-            confirmarNumero(descuento, linea.descuento_pct, "descuento_pct", () =>
-              setDescuento(texto(linea.descuento_pct)),
-            )
-          }
-          onKeyDown={alPulsarEnter}
-          inputMode="decimal"
-          aria-label="Descuento"
-          className={celda}
-        />
-        <span className="text-right text-sm font-medium text-texto-primario">{euros(linea.importe)}</span>
+        <label className="flex flex-col gap-0.5">
+          <span className={etiquetaMovil}>Cant.</span>
+          <input
+            value={piezas}
+            onChange={(e) => setPiezas(e.target.value)}
+            onBlur={() => confirmarNumero(piezas, linea.piezas, "piezas", () => setPiezas(texto(linea.piezas, 3)))}
+            onKeyDown={alPulsarEnter}
+            inputMode="decimal"
+            enterKeyHint="done"
+            aria-label="Cantidad"
+            className={celda}
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <span className={etiquetaMovil}>Precio €</span>
+          <input
+            value={precio}
+            onChange={(e) => setPrecio(e.target.value)}
+            onBlur={() =>
+              confirmarNumero(precio, linea.precio_unitario, "precio_unitario", () =>
+                setPrecio(texto(linea.precio_unitario, 4)),
+              )
+            }
+            onKeyDown={alPulsarEnter}
+            inputMode="decimal"
+            enterKeyHint="done"
+            aria-label="Precio unitario"
+            className={celda}
+          />
+        </label>
+        <label className="flex flex-col gap-0.5">
+          <span className={etiquetaMovil}>Dto. %</span>
+          <input
+            value={descuento}
+            onChange={(e) => setDescuento(e.target.value)}
+            onBlur={() =>
+              confirmarNumero(descuento, linea.descuento_pct, "descuento_pct", () =>
+                setDescuento(texto(linea.descuento_pct)),
+              )
+            }
+            onKeyDown={alPulsarEnter}
+            inputMode="decimal"
+            enterKeyHint="done"
+            aria-label="Descuento"
+            className={celda}
+          />
+        </label>
+        <span className="col-span-2 flex items-center justify-between pt-esp1 text-right text-base font-semibold text-texto-primario md:col-span-1 md:justify-end md:pt-0 md:text-sm md:font-medium">
+          <span className="text-xs font-normal text-texto-terciario md:hidden">Importe</span>
+          {euros(linea.importe)}
+        </span>
         <button
           disabled={pendiente}
-          onClick={() =>
+          onClick={async () => {
+            if (!(await confirmar(`¿Eliminar «${linea.descripcion}» del documento?`))) return;
             iniciar(async () => {
               try {
-                await eliminarLinea(documentoId, linea.id);
+                await desenvolver(eliminarLinea(documentoId, linea.id));
                 router.refresh();
               } catch (e) {
                 setError(e instanceof Error ? e.message : "No se pudo eliminar.");
               }
-            })
-          }
+            });
+          }}
           aria-label="Eliminar línea"
-          className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
+          className="flex h-11 w-11 items-center justify-center justify-self-end text-icono-secundario hover:text-texto-peligro disabled:opacity-50 md:h-6 md:w-6"
         >
           <Icono nombre="eliminar" size={16} />
         </button>
@@ -832,17 +923,21 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
 function Etiqueta({
   texto: t,
   className,
+  grupo,
   children,
 }: {
   texto: string;
   className?: string;
+  /** Grupo de botones: un <label> activaría el primero al tocar el título. */
+  grupo?: boolean;
   children: React.ReactNode;
 }) {
+  const Contenedor = grupo ? "div" : "label";
   return (
-    <label className={cn("flex flex-col gap-1", className)}>
+    <Contenedor className={cn("flex flex-col gap-1", className)}>
       <span className="text-xs font-medium text-texto-secundario">{t}</span>
       {children}
-    </label>
+    </Contenedor>
   );
 }
 
@@ -851,6 +946,156 @@ function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
     <div className="flex items-center">
       <span className="flex-1 text-sm text-texto-secundario">{etiqueta}</span>
       <span className="text-sm font-medium text-texto-primario">{valor}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+//  Concepto libre: algo que no está en el catálogo
+// ---------------------------------------------------------------------
+
+const IVAS = [21, 10, 4, 0];
+
+function FormularioLineaLibre({
+  documento,
+  artistas,
+  onAnadido,
+  onCancelar,
+}: {
+  documento: Cabecera;
+  artistas: string[];
+  onAnadido: () => void;
+  onCancelar: () => void;
+}) {
+  const [descripcion, setDescripcion] = useState("");
+  const [artista, setArtista] = useState("");
+  const [unidad, setUnidad] = useState("ud");
+  const [cantidad, setCantidad] = useState("1");
+  const [precio, setPrecio] = useState("");
+  const [descuento, setDescuento] = useState(texto(documento.descuento_habitual));
+  const [iva, setIva] = useState("21");
+  const [error, setError] = useState<string | null>(null);
+  const [pendiente, iniciar] = useTransition();
+
+  const nCantidad = num(cantidad);
+  const nPrecio = num(precio);
+  const nDescuento = descuento.trim() === "" ? 0 : num(descuento);
+  const importe =
+    Number.isFinite(nCantidad) && Number.isFinite(nPrecio) && Number.isFinite(nDescuento)
+      ? Math.round(nCantidad * nPrecio * (1 - nDescuento / 100) * 100) / 100
+      : null;
+
+  function anadir() {
+    setError(null);
+    if (!descripcion.trim()) return setError("Escribe el concepto.");
+    if (!Number.isFinite(nCantidad) || nCantidad === 0) return setError("Indica la cantidad.");
+    if (!Number.isFinite(nPrecio) || nPrecio < 0) return setError("Indica el precio unitario.");
+    if (!Number.isFinite(nDescuento) || nDescuento < 0 || nDescuento > 100) return setError("El descuento va de 0 a 100 %.");
+    iniciar(async () => {
+      try {
+        await desenvolver(
+          anadirLineaLibre(documento.id, {
+            descripcion,
+            artista,
+            unidad,
+            piezas: nCantidad,
+            precio: nPrecio,
+            descuento: nDescuento,
+            iva: Number(iva),
+          }),
+        );
+        onAnadido();
+        onCancelar();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo añadir el concepto.");
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+      <div>
+        <h2 className="text-base font-semibold text-texto-primario">Añadir concepto libre</h2>
+        <p className="text-sm text-texto-secundario">
+          Para lo que no está en el catálogo (un desplazamiento, un trabajo suelto…). No tiene tarifa: el precio lo
+          escribes tú.
+        </p>
+      </div>
+      <Etiqueta texto="Concepto *">
+        <input
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          autoFocus
+          placeholder="Ej. Desplazamiento a Marbella"
+          className={entrada}
+        />
+      </Etiqueta>
+      <div className="grid grid-cols-2 gap-esp3 md:grid-cols-4">
+        <Etiqueta texto="Cantidad">
+          <input value={cantidad} onChange={(e) => setCantidad(e.target.value)} inputMode="decimal" className={entrada} />
+        </Etiqueta>
+        <Etiqueta texto="Unidad">
+          <select value={unidad} onChange={(e) => setUnidad(e.target.value)} className={entrada}>
+            {Object.entries(UNIDAD).map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>
+                {etiqueta}
+              </option>
+            ))}
+          </select>
+        </Etiqueta>
+        <Etiqueta texto="Precio unitario (€)">
+          <input value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" className={entrada} />
+        </Etiqueta>
+        <Etiqueta texto="Descuento (%)">
+          <input value={descuento} onChange={(e) => setDescuento(e.target.value)} inputMode="decimal" className={entrada} />
+        </Etiqueta>
+        <Etiqueta texto="IVA">
+          <select value={iva} onChange={(e) => setIva(e.target.value)} className={entrada}>
+            {IVAS.map((v) => (
+              <option key={v} value={v}>
+                {v} %
+              </option>
+            ))}
+          </select>
+        </Etiqueta>
+      </div>
+      <Etiqueta texto="Artista / referencia (opcional)">
+        {artistas.length > 0 && (
+          <div className="flex flex-wrap gap-esp2">
+            {artistas.map((a) => (
+              <button
+                key={a}
+                type="button"
+                onClick={() => setArtista(artista === a ? "" : a)}
+                aria-pressed={artista === a}
+                className={cn(
+                  "min-h-10 rounded-completo border px-esp3 text-xs font-medium",
+                  artista === a
+                    ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
+                    : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                )}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        )}
+        <input value={artista} onChange={(e) => setArtista(e.target.value)} className={entrada} />
+      </Etiqueta>
+      {error && <p className="text-sm text-texto-peligro">{error}</p>}
+      <div className="flex items-center gap-esp3 border-t border-fondo-hover pt-esp3">
+        <div className="flex-1">
+          <p className="text-xs text-texto-terciario">Importe de la línea</p>
+          <p className="text-lg font-semibold text-texto-primario">{importe != null ? euros(importe) : "—"}</p>
+        </div>
+        <Boton variante="secundario" className="min-h-11" onClick={onCancelar}>
+          Cancelar
+        </Boton>
+        <Boton className="min-h-11" onClick={anadir} cargando={pendiente}>
+          <Icono nombre="mas" size={16} />
+          Añadir
+        </Boton>
+      </div>
     </div>
   );
 }

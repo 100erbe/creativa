@@ -15,6 +15,7 @@ const ENLACES = [
   { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
   { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
+  { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
 ] as const;
 
 function Marca({ alto = 36 }: { alto?: number }) {

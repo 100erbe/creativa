@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type Rol = "admin" | "empleado";
@@ -16,7 +17,7 @@ export type UsuarioActual = {
  * (donde vive el rol admin/empleado), o null si no hay sesión.
  * Pensado para Server Components y Route Handlers.
  */
-export async function obtenerUsuarioActual(): Promise<UsuarioActual | null> {
+export const obtenerUsuarioActual = cache(async function obtenerUsuarioActual(): Promise<UsuarioActual | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,4 +41,4 @@ export async function obtenerUsuarioActual(): Promise<UsuarioActual | null> {
     rol: fila.rol,
     avatarUrl: fila.avatar_url,
   };
-}
+});

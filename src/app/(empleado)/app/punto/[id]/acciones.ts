@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { validarMetadatosFoto } from "@/lib/foto-metadatos";
+import { accion } from "@/lib/accion";
 
 const BUCKET_FOTOS = "fotos-puntos";
 const MAX_BYTES_FOTO = 512 * 1024; // mismo límite que el bucket
@@ -15,7 +16,7 @@ const TIPOS_FOTO: Record<string, string> = { "image/webp": "webp", "image/jpeg":
  * se guarda y de dónde sale lo decide validarMetadatosFoto (no se fía de lo que manda el cliente):
  * sin coordenadas válidas y coherentes con el origen, la foto se guarda sin ubicación.
  */
-export async function subirFotoPunto(formData: FormData) {
+export const subirFotoPunto = accion(async (formData: FormData) => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -71,15 +72,21 @@ export async function subirFotoPunto(formData: FormData) {
     throw new Error(errorInsert.message);
   }
 
+  // Primera foto = el trabajo ha empezado.
+  if (asignacionId) {
+    await supabase.from("asignaciones_punto").update({ estado: "en_curso" }).eq("id", asignacionId).eq("estado", "pendiente");
+  }
+
   revalidatePath(`/app/punto/${puntoId}`);
-}
+  revalidatePath("/app/agenda");
+});
 
 /**
  * Borra una foto (fila + archivo). Solo la puede borrar quien la subió o un
  * admin: lo garantizan las políticas RLS de fotos_punto y de storage.objects,
  * no esta función. Si la fila no se borra (no es suya), no se toca el archivo.
  */
-export async function eliminarFotoPunto(fotoId: number, puntoId: number) {
+export const eliminarFotoPunto = accion(async (fotoId: number, puntoId: number) => {
   const supabase = await createClient();
 
   const { data: borradas, error } = await supabase
@@ -97,7 +104,7 @@ export async function eliminarFotoPunto(fotoId: number, puntoId: number) {
   if (errorArchivo) throw new Error(errorArchivo.message);
 
   revalidatePath(`/app/punto/${puntoId}`);
-}
+});
 
 /** Estados en los que estaban el punto y la asignación antes de marcar como instalado. */
 export type EstadosAnteriores = { punto: string; asignacion: string };
@@ -109,10 +116,10 @@ const ESTADOS_ASIGNACION_REABRIR = ["pendiente", "en_curso"];
  * Marca el punto como instalado. Devuelve los estados anteriores para poder deshacerlo
  * (el botón "Deshacer" de unos segundos usa exactamente esos).
  */
-export async function marcarPuntoInstalado(
+export const marcarPuntoInstalado = accion(async (
   puntoId: number,
   asignacionId: number,
-): Promise<EstadosAnteriores> {
+): Promise<EstadosAnteriores> => {
   const supabase = await createClient();
 
   const [{ data: punto }, { data: asignacion }] = await Promise.all([
@@ -145,7 +152,7 @@ export async function marcarPuntoInstalado(
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
   return { punto: punto.estado, asignacion: asignacion.estado };
-}
+});
 
 /**
  * Deshace "marcar como instalado": sirve para el botón "Deshacer" de unos segundos (con los
@@ -153,11 +160,11 @@ export async function marcarPuntoInstalado(
  * (sin ellos: vuelve a pendiente / en curso). No se puede reabrir un punto ya verificado por
  * el administrador: lo impide esta función y, además, un trigger de la base de datos.
  */
-export async function reabrirPunto(
+export const reabrirPunto = accion(async (
   puntoId: number,
   asignacionId: number,
   anteriores?: Partial<EstadosAnteriores>,
-) {
+) => {
   const supabase = await createClient();
 
   const { data: punto } = await supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle();
@@ -190,16 +197,47 @@ export async function reabrirPunto(
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
-}
+});
 
-export async function reportarIncidencia(puntoId: number, notas: string) {
+export const reportarIncidencia = accion(async (puntoId: number, notas: string) => {
+  const texto = notas.trim();
+  if (!texto) throw new Error("Cuenta qué ha pasado para poder avisar.");
   const supabase = await createClient();
   const { error } = await supabase
     .from("puntos_campana")
-    .update({ estado: "incidencia", notas })
+    .update({ estado: "incidencia", incidencia: texto, incidencia_en: new Date().toISOString() })
     .eq("id", puntoId);
   if (error) throw new Error(error.message);
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
-}
+});
+
+/** Cierra una tarea de retirada: el punto pasa a "retirado". */
+export const marcarPuntoRetirado = accion(async (puntoId: number, asignacionId: number) => {
+  const supabase = await createClient();
+
+  const [{ data: punto }, { data: asignacion }] = await Promise.all([
+    supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle(),
+    supabase.from("asignaciones_punto").select("estado, punto_id, rol_asignacion").eq("id", asignacionId).maybeSingle(),
+  ]);
+  if (!punto || !asignacion || asignacion.punto_id !== puntoId) throw new Error("No se encuentra el punto o la tarea.");
+  if (asignacion.rol_asignacion !== "retirador") throw new Error("Esta tarea no es una retirada.");
+  if (punto.estado === "retirado") return;
+  if (!["instalado", "verificado"].includes(punto.estado)) throw new Error("Este punto no está instalado.");
+
+  const { error: errorPunto } = await supabase.from("puntos_campana").update({ estado: "retirado" }).eq("id", puntoId);
+  if (errorPunto) throw new Error(errorPunto.message);
+
+  const { error: errorAsignacion } = await supabase
+    .from("asignaciones_punto")
+    .update({ estado: "completada", fecha_completada: new Date().toISOString() })
+    .eq("id", asignacionId);
+  if (errorAsignacion) {
+    await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
+    throw new Error(errorAsignacion.message);
+  }
+
+  revalidatePath(`/app/punto/${puntoId}`);
+  revalidatePath("/app/agenda");
+});

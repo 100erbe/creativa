@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
+import { fechaMedia } from "@/lib/formato";
 import { comprimirImagen } from "@/lib/comprimir-imagen";
+import { encolarFoto, esErrorDeRed } from "@/lib/cola-fotos";
 import { leerExifFoto } from "@/lib/exif-foto";
 import type { OrigenFoto, OrigenUbicacion } from "@/lib/foto-metadatos";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
@@ -14,21 +18,13 @@ import {
   subirFotoPunto,
   eliminarFotoPunto,
   marcarPuntoInstalado,
+  marcarPuntoRetirado,
   reabrirPunto,
   reportarIncidencia,
   type EstadosAnteriores,
 } from "./acciones";
-
-const ETIQUETA_SOPORTE: Record<string, string> = {
-  valla: "Valla",
-  totem: "Tótem",
-  lona: "Lona",
-  cartel: "Cartel",
-  mobiliario_urbano: "Mobiliario urbano",
-  marquesina: "Marquesina",
-  pantalla: "Pantalla",
-  otro: "Soporte",
-};
+import { desenvolver } from "@/lib/accion";
+import { avisar, confirmar } from "@/components/ui/dialogos";
 
 const MAX_FOTOS_GALERIA = 10;
 const SEGUNDOS_DESHACER = 8;
@@ -43,7 +39,11 @@ type Punto = {
   longitud: number;
   estado: string;
   notas: string | null;
-  campanas: { nombre: string } | { nombre: string }[] | null;
+  incidencia: string | null;
+  piezas: number | null;
+  fecha_colocacion_prevista: string | null;
+  fecha_retirada_prevista: string | null;
+  campanas: { nombre: string; descripcion: string | null } | { nombre: string; descripcion: string | null }[] | null;
 };
 
 type Foto = {
@@ -85,7 +85,7 @@ export function PanelPunto({
   esAdmin,
 }: {
   punto: Punto;
-  asignacion: { id: number; estado: string } | null;
+  asignacion: { id: number; estado: string; rol_asignacion: string } | null;
   fotos: Foto[];
   usuarioId: string | null;
   esAdmin: boolean;
@@ -143,8 +143,11 @@ export function PanelPunto({
     return () => clearTimeout(t);
   }, [deshacer]);
 
-  /** Comprime y sube una foto con sus metadatos. */
-  async function subirUna(archivo: File, datos: DatosFoto) {
+  /**
+   * Comprime y sube una foto con sus metadatos. Sin cobertura la guarda en el móvil para enviarla
+   * sola más tarde ("encolada"); cualquier otro fallo se lanza como error.
+   */
+  async function subirUna(archivo: File, datos: DatosFoto): Promise<"subida" | "encolada"> {
     const comprimida = await comprimirImagen(archivo);
     const formData = new FormData();
     formData.set("archivo", comprimida);
@@ -158,7 +161,25 @@ export function PanelPunto({
       formData.set("origenUbicacion", datos.ubicacion.origen);
     }
     if (datos.tomadaEn) formData.set("tomadaEn", datos.tomadaEn);
-    await subirFotoPunto(formData);
+    try {
+      await desenvolver(subirFotoPunto(formData));
+      return "subida";
+    } catch (e) {
+      if (esErrorDeRed(e)) {
+        const campos: Record<string, string> = {};
+        formData.forEach((valor, clave) => {
+          if (typeof valor === "string") campos[clave] = valor;
+        });
+        const guardada = await encolarFoto({
+          puntoId: punto.id,
+          nombre: comprimida.name || "foto.webp",
+          archivo: comprimida,
+          campos,
+        });
+        if (guardada) return "encolada";
+      }
+      throw e;
+    }
   }
 
   // ── Cámara ────────────────────────────────────────────────────────────────
@@ -194,14 +215,18 @@ export function PanelPunto({
             origen: "gps_camara",
           };
         } else {
-          const seguir = confirm(
+          const seguir = await confirmar(
             `${mensajeSinUbicacion(resultado.motivo)}\n\n¿Subir la foto igualmente, sin ubicación? (El cliente no podrá ver dónde se hizo.)`,
           );
           if (!seguir) return;
         }
       }
 
-      await subirUna(archivo, { origenFoto: "camara", ubicacion });
+      const resultado = await subirUna(archivo, { origenFoto: "camara", ubicacion });
+      if (resultado === "encolada") {
+        setAviso({ tono: "aviso", texto: "Sin conexión: la foto está guardada en el móvil y se enviará sola cuando haya cobertura." });
+        return;
+      }
       setAviso(
         ubicacion || !incluirUbicacion
           ? { tono: "ok", texto: "Foto subida." }
@@ -209,7 +234,7 @@ export function PanelPunto({
       );
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "No se pudo subir la foto.");
+      void avisar(err instanceof Error ? err.message : "No se pudo subir la foto.");
     } finally {
       setSubiendo(false);
     }
@@ -231,7 +256,7 @@ export function PanelPunto({
       let actual: { latitud: number; longitud: number } | null = null;
       const sinGps = incluirUbicacion ? exifs.filter((x) => x.latitud === null).length : 0;
       if (sinGps > 0) {
-        const usarActual = confirm(
+        const usarActual = await confirmar(
           `${sinGps === 1 ? "Esta foto no incluye ubicación" : `${sinGps} fotos no incluyen ubicación`} (algunos móviles la quitan al elegir de la galería).\n\n` +
             "Aceptar: usar tu ubicación ACTUAL. El cliente verá que es la ubicación del momento de subirla, no necesariamente la de donde se hizo.\n" +
             "Cancelar: subirla sin ubicación.",
@@ -240,13 +265,14 @@ export function PanelPunto({
           const r = await obtenerUbicacion();
           if (r.posicion) {
             actual = { latitud: r.posicion.coords.latitude, longitud: r.posicion.coords.longitude };
-          } else if (!confirm(`${mensajeSinUbicacion(r.motivo)}\n\n¿Subirla igualmente, sin ubicación?`)) {
+          } else if (!(await confirmar(`${mensajeSinUbicacion(r.motivo)}\n\n¿Subirla igualmente, sin ubicación?`))) {
             return;
           }
         }
       }
 
       let subidas = 0;
+      let encoladas = 0;
       let sinUbicacion = 0;
       const fallos: string[] = [];
 
@@ -261,12 +287,13 @@ export function PanelPunto({
         }
 
         try {
-          await subirUna(archivo, {
+          const resultado = await subirUna(archivo, {
             origenFoto: "galeria",
             ubicacion,
             tomadaEn: exif.fecha?.toISOString(),
           });
-          subidas++;
+          if (resultado === "encolada") encoladas++;
+          else subidas++;
           if (!ubicacion) sinUbicacion++;
         } catch (err) {
           fallos.push(`${archivo.name}: ${err instanceof Error ? err.message : "error"}`);
@@ -274,13 +301,14 @@ export function PanelPunto({
       }
 
       const partes = [`${subidas} foto${subidas === 1 ? "" : "s"} subida${subidas === 1 ? "" : "s"}`];
+      if (encoladas > 0) partes.push(`${encoladas} guardada${encoladas === 1 ? "" : "s"} en el móvil (sin conexión)`);
       if (incluirUbicacion && sinUbicacion > 0) partes.push(`${sinUbicacion} sin ubicación`);
       if (fallos.length > 0) partes.push(`${fallos.length} con error`);
-      setAviso({ tono: fallos.length > 0 || (incluirUbicacion && sinUbicacion > 0) ? "aviso" : "ok", texto: partes.join(" · ") + "." });
-      if (fallos.length > 0) alert(`No se pudieron subir:\n${fallos.join("\n")}`);
+      setAviso({ tono: fallos.length > 0 || encoladas > 0 || (incluirUbicacion && sinUbicacion > 0) ? "aviso" : "ok", texto: partes.join(" · ") + "." });
+      if (fallos.length > 0) void avisar(`No se pudieron subir:\n${fallos.join("\n")}`);
       if (subidas > 0) router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "No se pudieron subir las fotos.");
+      void avisar(err instanceof Error ? err.message : "No se pudieron subir las fotos.");
     } finally {
       setProgreso(null);
       setSubiendo(false);
@@ -288,13 +316,13 @@ export function PanelPunto({
   }
 
   async function eliminarFoto(fotoId: number) {
-    if (!confirm("¿Eliminar esta foto?")) return;
+    if (!(await confirmar("¿Eliminar esta foto?"))) return;
     setEliminando(fotoId);
     try {
-      await eliminarFotoPunto(fotoId, punto.id);
+      await desenvolver(eliminarFotoPunto(fotoId, punto.id));
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "No se pudo eliminar la foto.");
+      void avisar(err instanceof Error ? err.message : "No se pudo eliminar la foto.");
     } finally {
       setEliminando(null);
     }
@@ -305,11 +333,11 @@ export function PanelPunto({
     if (!asignacion) return;
     iniciar(async () => {
       try {
-        const anteriores = await marcarPuntoInstalado(punto.id, asignacion.id);
+        const anteriores = await desenvolver(marcarPuntoInstalado(punto.id, asignacion.id));
         setDeshacer({ anteriores, restantes: SEGUNDOS_DESHACER });
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "No se pudo marcar el punto.");
+        void avisar(err instanceof Error ? err.message : "No se pudo marcar el punto.");
       }
     });
   }
@@ -320,24 +348,37 @@ export function PanelPunto({
     setDeshacer(null);
     iniciar(async () => {
       try {
-        await reabrirPunto(punto.id, asignacion.id, anteriores);
+        await desenvolver(reabrirPunto(punto.id, asignacion.id, anteriores));
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "No se pudo deshacer.");
+        void avisar(err instanceof Error ? err.message : "No se pudo deshacer.");
       }
     });
   }
 
-  function reabrir() {
+  async function reabrir() {
     if (!asignacion) return;
-    if (!confirm("¿Volver a dejar este punto como pendiente? Hazlo solo si lo marcaste como instalado por error.")) return;
+    if (!(await confirmar("¿Volver a dejar este punto como pendiente? Hazlo solo si lo marcaste como instalado por error."))) return;
     iniciar(async () => {
       try {
-        await reabrirPunto(punto.id, asignacion.id);
+        await desenvolver(reabrirPunto(punto.id, asignacion.id));
         setDeshacer(null);
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "No se pudo reabrir el punto.");
+        void avisar(err instanceof Error ? err.message : "No se pudo reabrir el punto.");
+      }
+    });
+  }
+
+  async function retirar() {
+    if (!asignacion) return;
+    if (!(await confirmar("¿Confirmas que el material de este punto ya está retirado?"))) return;
+    iniciar(async () => {
+      try {
+        await desenvolver(marcarPuntoRetirado(punto.id, asignacion.id));
+        router.refresh();
+      } catch (err) {
+        void avisar(err instanceof Error ? err.message : "No se pudo marcar el punto como retirado.");
       }
     });
   }
@@ -345,31 +386,37 @@ export function PanelPunto({
   function enviarIncidencia() {
     iniciar(async () => {
       try {
-        await reportarIncidencia(punto.id, notaIncidencia);
+        await desenvolver(reportarIncidencia(punto.id, notaIncidencia));
         setMostrarIncidencia(false);
         router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : "No se pudo enviar la incidencia.");
+        void avisar(err instanceof Error ? err.message : "No se pudo enviar la incidencia.");
       }
     });
   }
 
-  const instalado = asignacion?.estado === "completada" && punto.estado === "instalado";
+  const esRetirada = asignacion?.rol_asignacion === "retirador";
+  const instalado = !esRetirada && asignacion?.estado === "completada" && punto.estado === "instalado";
+  const retirado = punto.estado === "retirado";
   const verificado = punto.estado === "verificado";
 
   return (
     <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
       <div className="flex items-start gap-esp3">
-        <button onClick={() => router.back()} className="mt-1 text-icono-secundario" aria-label="Volver">
+        <Link
+          href="/app/agenda"
+          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-icono-secundario"
+          aria-label="Volver a mi agenda"
+        >
           <Icono nombre="atras" size={22} />
-        </button>
+        </Link>
         <div className="flex-1">
           <h1 className="text-lg font-semibold text-texto-primario">{punto.nombre}</h1>
           <p className="text-sm text-texto-terciario">
             {ETIQUETA_SOPORTE[punto.tipo_soporte] ?? punto.tipo_soporte} · {campana?.nombre}
           </p>
         </div>
-        <Insignia tono={TONO_POR_ESTADO[punto.estado] ?? "neutro"}>{punto.estado}</Insignia>
+        <Insignia tono={TONO_POR_ESTADO[punto.estado] ?? "neutro"}>{etiquetaEstado(punto.estado)}</Insignia>
       </div>
 
       <MapaPuntos
@@ -398,10 +445,34 @@ export function PanelPunto({
         </a>
       )}
 
-      {punto.notas && punto.estado === "incidencia" && (
+      {punto.estado === "incidencia" && punto.incidencia && (
         <div className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3">
           <p className="text-xs font-medium text-texto-peligro">INCIDENCIA REPORTADA</p>
-          <p className="text-sm text-texto-primario">{punto.notas}</p>
+          <p className="text-sm text-texto-primario">{punto.incidencia}</p>
+        </div>
+      )}
+
+      {/* Qué hay que hacer y cuándo: lo que el administrador dejó escrito al crear el punto. */}
+      {(punto.notas || punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista || campana?.descripcion) && (
+        <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-texto-terciario">Trabajo a realizar</h2>
+          {punto.notas && <p className="whitespace-pre-line text-sm text-texto-primario">{punto.notas}</p>}
+          {(punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista) && (
+            <p className="text-xs text-texto-secundario">
+              {[
+                punto.piezas != null ? `${punto.piezas} ${punto.piezas === 1 ? "pieza" : "piezas"}` : null,
+                punto.fecha_colocacion_prevista ? `Colocar el ${fechaMedia(punto.fecha_colocacion_prevista)}` : null,
+                punto.fecha_retirada_prevista ? `Retirar el ${fechaMedia(punto.fecha_retirada_prevista)}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
+          {campana?.descripcion && (
+            <p className="whitespace-pre-line border-t border-fondo-hover pt-esp2 text-xs text-texto-terciario">
+              Campaña: {campana.descripcion}
+            </p>
+          )}
         </div>
       )}
 
@@ -517,7 +588,18 @@ export function PanelPunto({
       </div>
 
       {/* Acciones */}
-      {asignacion && asignacion.estado !== "completada" && (
+      {asignacion && asignacion.estado !== "completada" && esRetirada && (
+        <div className="flex flex-col gap-esp2">
+          <Boton onClick={retirar} cargando={pendiente}>
+            Marcar como retirado
+          </Boton>
+          <p className="text-center text-xs text-texto-terciario">
+            Haz una foto del punto ya retirado si el cliente la pide.
+          </p>
+        </div>
+      )}
+
+      {asignacion && asignacion.estado !== "completada" && !esRetirada && (
         <div className="flex flex-col gap-esp2">
           <Boton onClick={completar} cargando={pendiente}>
             Marcar como instalado
@@ -545,7 +627,14 @@ export function PanelPunto({
         </div>
       )}
 
-      {verificado && (
+      {retirado && (
+        <p className="flex items-center gap-esp2 rounded-lg border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3 text-sm text-texto-exito">
+          <Icono nombre="check" size={16} />
+          Punto retirado
+        </p>
+      )}
+
+      {verificado && !(esRetirada && asignacion?.estado !== "completada") && (
         <p className="rounded-lg border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3 text-sm text-texto-exito">
           Verificado por el administrador. Ya no se puede modificar.
         </p>

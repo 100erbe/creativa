@@ -19,7 +19,7 @@ export default async function LayoutAdmin({
     <div className="flex min-h-dvh flex-col bg-fondo-lienzo md:flex-row print:block print:bg-white">
       <BarraLateral
         nombre={`${usuario.nombre} ${usuario.apellidos ?? ""}`.trim()}
-        rolEtiqueta="Administradora"
+        rolEtiqueta="Administración"
         iniciales={iniciales}
       />
       <div className="min-w-0 flex-1 px-esp4 py-esp5 md:px-esp8 md:py-esp6 print:p-0">{children}</div>

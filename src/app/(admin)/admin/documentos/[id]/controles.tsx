@@ -13,27 +13,17 @@ import {
   eliminarBorrador,
   registrarCobro,
   eliminarCobro,
+  cambiarEstadoPresupuesto,
+  guardarCabecera,
 } from "./acciones";
-
-function useAccion() {
-  const router = useRouter();
-  const [pendiente, iniciar] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function ejecutar(accion: () => Promise<void>) {
-    setError(null);
-    iniciar(async () => {
-      try {
-        await accion();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo completar la acción.");
-      }
-    });
-  }
-  return { router, pendiente, error, ejecutar };
-}
+import { CAMPO } from "@/components/ui/panel-busqueda";
+import { desenvolver } from "@/lib/accion";
+import { confirmar } from "@/components/ui/dialogos";
+import { useAccion } from "@/lib/use-accion";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
+
+const ESTADOS_SEGUIMIENTO: string[] = ["emitido", "enviado", "aceptado", "rechazado", "caducado"];
 
 /** Botones de la ficha: emitir (borrador), convertir, duplicar y eliminar. */
 export function AccionesDocumento({
@@ -41,11 +31,16 @@ export function AccionesDocumento({
   tipo,
   estado,
   etiquetaTipo,
+  mailto,
+  hayDestinatario,
 }: {
   documentoId: number;
   tipo: string;
   estado: string;
   etiquetaTipo: string;
+  /** Enlace mailto: ya preparado (null en los borradores). */
+  mailto: string | null;
+  hayDestinatario: boolean;
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [fecha, setFecha] = useState(hoy());
@@ -64,6 +59,23 @@ export function AccionesDocumento({
         </Boton>
       </Link>
 
+      {mailto && (
+        <div className="flex flex-col gap-1">
+          <a
+            href={mailto}
+            className="inline-flex h-10 items-center justify-center gap-esp2 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp4 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
+          >
+            <Icono nombre="enviar" size={16} />
+            Enviar por email
+          </a>
+          <p className="text-xs text-texto-terciario">
+            {hayDestinatario
+              ? "Se abre tu correo con el mensaje preparado. Guarda antes el PDF (Imprimir / PDF) para adjuntarlo."
+              : "El cliente no tiene email de facturación ni contacto que reciba facturas: añádelo en su ficha. Guarda antes el PDF para adjuntarlo."}
+          </p>
+        </div>
+      )}
+
       {esBorrador && (
         <>
           <label className="flex flex-col gap-1 text-xs text-texto-secundario">
@@ -72,7 +84,7 @@ export function AccionesDocumento({
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario"
+              className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
             />
           </label>
 
@@ -92,7 +104,7 @@ export function AccionesDocumento({
                   cargando={pendiente}
                   onClick={() =>
                     ejecutar(async () => {
-                      await emitirDocumento(documentoId, fecha);
+                      await desenvolver(emitirDocumento(documentoId, fecha));
                       setConfirmarEmision(false);
                       router.refresh();
                     })
@@ -116,12 +128,58 @@ export function AccionesDocumento({
         </>
       )}
 
-      {emitido && (tipo === "presupuesto" || tipo === "albaran") && estado !== "facturado" && (
+      {tipo === "presupuesto" && ESTADOS_SEGUIMIENTO.includes(estado) && (
+        <div className="flex flex-col gap-esp2 rounded-md bg-fondo-sutil px-esp3 py-esp3">
+          <p className="text-xs font-medium text-texto-secundario">Seguimiento del presupuesto</p>
+          <div className="grid grid-cols-2 gap-esp2">
+            {(
+              [
+                ["enviado", "Enviado"],
+                ["aceptado", "Aceptado"],
+                ["rechazado", "Rechazado"],
+                ["caducado", "Caducado"],
+              ] as const
+            ).map(([valor, etiqueta]) => (
+              <Boton
+                key={valor}
+                tamano="s"
+                variante={estado === valor ? "primario" : "secundario"}
+                aria-pressed={estado === valor}
+                disabled={pendiente}
+                onClick={() =>
+                  ejecutar(async () => {
+                    await desenvolver(cambiarEstadoPresupuesto(documentoId, valor));
+                    router.refresh();
+                  })
+                }
+              >
+                {etiqueta}
+              </Boton>
+            ))}
+          </div>
+          {estado !== "emitido" && (
+            <button
+              disabled={pendiente}
+              onClick={() =>
+                ejecutar(async () => {
+                  await desenvolver(cambiarEstadoPresupuesto(documentoId, "emitido"));
+                  router.refresh();
+                })
+              }
+              className="w-fit text-xs font-medium text-texto-marca disabled:opacity-50"
+            >
+              Quitar el estado (volver a emitido)
+            </button>
+          )}
+        </div>
+      )}
+
+      {emitido && (tipo === "presupuesto" || tipo === "albaran") && estado !== "facturado" && estado !== "rechazado" && estado !== "caducado" && (
         <Boton
           cargando={pendiente}
           onClick={() =>
             ejecutar(async () => {
-              const nuevo = await convertirDocumento(documentoId, "factura");
+              const nuevo = await desenvolver(convertirDocumento(documentoId, "factura"));
               router.push(`/admin/documentos/${nuevo}`);
             })
           }
@@ -136,14 +194,14 @@ export function AccionesDocumento({
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder="Motivo de la rectificación (opcional)"
-            className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton
             variante="secundario"
             cargando={pendiente}
             onClick={() =>
               ejecutar(async () => {
-                const nuevo = await convertirDocumento(documentoId, "rectificativa", motivo);
+                const nuevo = await desenvolver(convertirDocumento(documentoId, "rectificativa", motivo));
                 router.push(`/admin/documentos/${nuevo}`);
               })
             }
@@ -158,7 +216,7 @@ export function AccionesDocumento({
         disabled={pendiente}
         onClick={() =>
           ejecutar(async () => {
-            const nuevo = await duplicarDocumento(documentoId);
+            const nuevo = await desenvolver(duplicarDocumento(documentoId));
             router.push(`/admin/documentos/${nuevo}`);
           })
         }
@@ -171,10 +229,10 @@ export function AccionesDocumento({
         <Boton
           variante="peligro"
           disabled={pendiente}
-          onClick={() => {
-            if (!confirm("¿Eliminar este borrador? No se puede deshacer.")) return;
+          onClick={async () => {
+            if (!(await confirmar("¿Eliminar este borrador? No se puede deshacer."))) return;
             ejecutar(async () => {
-              await eliminarBorrador(documentoId);
+              await desenvolver(eliminarBorrador(documentoId));
               router.push("/admin/documentos");
             });
           }}
@@ -226,10 +284,10 @@ export function Cobros({
               <button
                 aria-label="Eliminar cobro"
                 disabled={pendiente}
-                onClick={() => {
-                  if (!confirm("¿Eliminar este cobro?")) return;
+                onClick={async () => {
+                  if (!(await confirmar("¿Eliminar este cobro?"))) return;
                   ejecutar(async () => {
-                    await eliminarCobro(documentoId, c.id);
+                    await desenvolver(eliminarCobro(documentoId, c.id));
                     router.refresh();
                   });
                 }}
@@ -248,12 +306,12 @@ export function Cobros({
           onSubmit={(e) => {
             e.preventDefault();
             ejecutar(async () => {
-              await registrarCobro(documentoId, {
+              await desenvolver(registrarCobro(documentoId, {
                 importe: Number(importe.replace(",", ".")),
                 fecha,
                 metodo,
                 referencia,
-              });
+              }));
               setReferencia("");
               router.refresh();
             });
@@ -265,21 +323,21 @@ export function Cobros({
               onChange={(e) => setImporte(e.target.value)}
               inputMode="decimal"
               aria-label="Importe cobrado"
-              className="h-9 w-[110px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario"
+              className="h-11 md:h-9 w-[110px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
             />
             <input
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
               aria-label="Fecha del cobro"
-              className="h-9 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-sm text-texto-primario"
+              className="h-11 md:h-9 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
             />
           </div>
           <select
             value={metodo}
             onChange={(e) => setMetodo(e.target.value as MetodoCobro)}
             aria-label="Método de cobro"
-            className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-sm text-texto-primario"
+            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
           >
             {METODOS_COBRO.map((m) => (
               <option key={m.valor} value={m.valor}>
@@ -291,7 +349,7 @@ export function Cobros({
             value={referencia}
             onChange={(e) => setReferencia(e.target.value)}
             placeholder="Referencia (opcional)"
-            className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario" cargando={pendiente}>
             Registrar cobro
@@ -303,5 +361,132 @@ export function Cobros({
 
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
     </div>
+  );
+}
+
+/** Condiciones de un borrador: vencimiento, forma de pago, descuento, retención y textos del documento. */
+export function CondicionesDocumento({
+  documentoId,
+  tipo,
+  inicial,
+  formasPago,
+}: {
+  documentoId: number;
+  tipo: string;
+  inicial: {
+    fechaVencimiento: string | null;
+    validoHasta: string | null;
+    formaPagoId: number | null;
+    descuentoGlobalPct: number;
+    retencionPct: number;
+    campana: string | null;
+    descripcion: string | null;
+    notasCliente: string | null;
+  };
+  formasPago: { id: number; nombre: string; dias_vencimiento: number }[];
+}) {
+  const { router, pendiente, error, ejecutar } = useAccion();
+  const [guardado, setGuardado] = useState(false);
+  const [fechaVencimiento, setFechaVencimiento] = useState(inicial.fechaVencimiento ?? "");
+  const [validoHasta, setValidoHasta] = useState(inicial.validoHasta ?? "");
+  const [formaPagoId, setFormaPagoId] = useState(inicial.formaPagoId ? String(inicial.formaPagoId) : "");
+  const [descuento, setDescuento] = useState(String(inicial.descuentoGlobalPct).replace(".", ","));
+  const [retencion, setRetencion] = useState(String(inicial.retencionPct).replace(".", ","));
+  const [campana, setCampana] = useState(inicial.campana ?? "");
+  const [descripcion, setDescripcion] = useState(inicial.descripcion ?? "");
+  const [notas, setNotas] = useState(inicial.notasCliente ?? "");
+
+  const num = (v: string) => (v.trim() === "" ? 0 : Number(v.replace(",", ".")));
+  const area =
+    "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+  const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
+  const esPresupuesto = tipo === "presupuesto";
+
+  return (
+    <form
+      className="flex flex-col gap-esp3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setGuardado(false);
+        ejecutar(async () => {
+          await desenvolver(
+            guardarCabecera(documentoId, {
+              fechaVencimiento,
+              validoHasta,
+              formaPagoId: formaPagoId ? Number(formaPagoId) : null,
+              descuentoGlobalPct: num(descuento),
+              retencionPct: num(retencion),
+              campana,
+              descripcion,
+              notasCliente: notas,
+            }),
+          );
+          setGuardado(true);
+          router.refresh();
+        });
+      }}
+    >
+      <label className={etiqueta}>
+        Forma de pago
+        <select value={formaPagoId} onChange={(e) => setFormaPagoId(e.target.value)} className={CAMPO}>
+          <option value="">Sin especificar</option>
+          {formasPago.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.nombre}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="grid grid-cols-2 gap-esp3">
+        {esPresupuesto ? (
+          <label className={etiqueta}>
+            Válido hasta
+            <input type="date" value={validoHasta} onChange={(e) => setValidoHasta(e.target.value)} className={CAMPO} />
+          </label>
+        ) : (
+          <label className={etiqueta}>
+            Vencimiento
+            <input
+              type="date"
+              value={fechaVencimiento}
+              onChange={(e) => setFechaVencimiento(e.target.value)}
+              className={CAMPO}
+            />
+          </label>
+        )}
+        <div className="flex items-end pb-2 text-xs text-texto-terciario">Vacío = se calcula al emitir.</div>
+        <label className={etiqueta}>
+          Descuento global (%)
+          <input value={descuento} onChange={(e) => setDescuento(e.target.value)} inputMode="decimal" className={CAMPO} />
+        </label>
+        <label className={etiqueta}>
+          Retención IRPF (%)
+          <input value={retencion} onChange={(e) => setRetencion(e.target.value)} inputMode="decimal" className={CAMPO} />
+        </label>
+      </div>
+      <label className={etiqueta}>
+        Campaña / artista (sale en el documento)
+        <input value={campana} onChange={(e) => setCampana(e.target.value)} className={CAMPO} />
+      </label>
+      <label className={etiqueta}>
+        Descripción
+        <textarea value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={2} className={area} />
+      </label>
+      <label className={etiqueta}>
+        Notas para el cliente
+        <textarea value={notas} onChange={(e) => setNotas(e.target.value)} rows={2} className={area} />
+      </label>
+      <div className="flex items-center gap-esp3">
+        <Boton type="submit" variante="secundario" cargando={pendiente}>
+          Guardar condiciones
+        </Boton>
+        {guardado && !error && (
+          <span className="text-xs text-texto-exito" role="status">
+            Guardado
+          </span>
+        )}
+      </div>
+      {error && <p className="text-xs text-texto-peligro">{error}</p>}
+    </form>
   );
 }

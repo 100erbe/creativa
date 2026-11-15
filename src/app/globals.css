@@ -10,3 +10,13 @@
     @apply bg-fondo-lienzo text-texto-primario antialiased;
   }
 }
+
+/* iOS Safari hace zoom automático al enfocar un campo con letra menor de 16 px y no vuelve solo.
+   En móvil todos los campos de texto se quedan en 16 px, tengan la clase que tengan. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

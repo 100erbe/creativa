@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { fechaMedia } from "@/lib/formato";
 import type { Cabecera } from "./paso-lineas";
 import { anadirPunto, crearCampana, eliminarPunto, vincularCampana } from "./acciones";
+import { desenvolver } from "@/lib/accion";
+import { confirmar } from "@/components/ui/dialogos";
+import { useAccion } from "@/lib/use-accion";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
 type Articulo = { id: number; descripcion: string; artista: string | null; piezas: number; unidad: string };
@@ -42,26 +46,9 @@ const SOPORTES = [
 ] as const;
 const ETIQUETA_SOPORTE = Object.fromEntries(SOPORTES.map((s) => [s.valor, s.etiqueta])) as Record<string, string>;
 
-const entrada =
-  "h-9 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
-
-function useAccion() {
-  const router = useRouter();
-  const [pendiente, iniciar] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  function ejecutar(accion: () => Promise<void>) {
-    setError(null);
-    iniciar(async () => {
-      try {
-        await accion();
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo completar la acción.");
-      }
-    });
-  }
-  return { pendiente, error, setError, ejecutar, router };
-}
+const entrada = CAMPO;
+const areaTexto =
+  "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
 
 export function PasoCampana({
   documento,
@@ -106,24 +93,25 @@ export function PasoCampana({
         <ElegirCampana documento={documento} campanas={campanas} />
       )}
 
-      <div className="flex items-center gap-esp3 border-t border-borde-default pt-esp4">
+      <BarraAccion className="md:border-t md:border-borde-default md:pt-esp4">
         <Boton variante="secundario" onClick={() => router.push(`/admin/documentos/nuevo?documento=${documento.id}`)}>
           Atrás
         </Boton>
         <span className="flex-1" />
         {!campana && (
           <Boton variante="fantasma" onClick={() => router.push(`/admin/documentos/${documento.id}`)}>
-            Saltar, sin campaña
+            Saltar
+            <span className="hidden sm:inline">, sin campaña</span>
           </Boton>
         )}
         <Boton onClick={() => router.push(`/admin/documentos/${documento.id}`)}>Continuar</Boton>
-      </div>
+      </BarraAccion>
     </div>
   );
 }
 
 function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas: Campana[] }) {
-  const { pendiente, error, ejecutar } = useAccion();
+  const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
   const [nombre, setNombre] = useState("");
   const [inicio, setInicio] = useState("");
   const [fin, setFin] = useState("");
@@ -137,12 +125,12 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
         onSubmit={(e) => {
           e.preventDefault();
           ejecutar(async () => {
-            await crearCampana(documento.id, {
+            await desenvolver(crearCampana(documento.id, {
               nombre,
               fecha_inicio: inicio,
               fecha_fin: fin,
               descripcion,
-            });
+            }));
           });
         }}
       >
@@ -170,7 +158,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
             onChange={(e) => setDescripcion(e.target.value)}
             rows={2}
             placeholder="Ej. instalar de noche, pedir permiso al ayuntamiento…"
-            className="rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className={areaTexto}
           />
         </Etiqueta>
         {error && <p className="text-sm text-texto-peligro">{error}</p>}
@@ -185,19 +173,34 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
           <p className="text-sm text-texto-terciario">Este cliente aún no tiene campañas.</p>
         ) : (
           <>
-            <select value={existente} onChange={(e) => setExistente(e.target.value)} className={entrada}>
-              <option value="">Elige una campaña…</option>
-              {campanas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                  {c.fecha_inicio ? ` · ${fechaMedia(c.fecha_inicio)}` : ""}
-                </option>
-              ))}
-            </select>
+            <div role="radiogroup" aria-label="Campañas del cliente" className="flex max-h-64 flex-col gap-esp2 overflow-y-auto">
+              {campanas.map((c) => {
+                const activa = existente === String(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={activa}
+                    onClick={() => setExistente(String(c.id))}
+                    className={cn(
+                      "flex min-h-12 shrink-0 flex-col justify-center rounded-md border px-esp3 py-esp2 text-left",
+                      activa
+                        ? "border-borde-foco bg-fondo-marca-sutil"
+                        : "border-borde-fuerte bg-fondo-superficie hover:bg-fondo-sutil",
+                    )}
+                  >
+                    <span className="text-sm font-medium text-texto-primario">{c.nombre}</span>
+                    {c.fecha_inicio && <span className="text-xs text-texto-terciario">{fechaMedia(c.fecha_inicio)}</span>}
+                  </button>
+                );
+              })}
+            </div>
             <Boton
               variante="secundario"
+              className="min-h-11"
               disabled={!existente || pendiente}
-              onClick={() => ejecutar(() => vincularCampana(documento.id, Number(existente)))}
+              onClick={() => ejecutar(() => desenvolver(vincularCampana(documento.id, Number(existente))))}
             >
               Vincular
             </Boton>
@@ -219,7 +222,7 @@ function CampanaVinculada({
   articulos: Articulo[];
   puntos: Punto[];
 }) {
-  const { pendiente, error, ejecutar } = useAccion();
+  const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
 
   return (
     <div className="flex flex-col gap-esp4">
@@ -240,7 +243,7 @@ function CampanaVinculada({
         </Link>
         <button
           disabled={pendiente}
-          onClick={() => ejecutar(() => vincularCampana(documento.id, null))}
+          onClick={() => ejecutar(() => desenvolver(vincularCampana(documento.id, null)))}
           className="text-sm font-medium text-texto-secundario hover:text-texto-peligro"
         >
           Desvincular
@@ -297,9 +300,9 @@ function CampanaVinculada({
                 <button
                   aria-label={`Eliminar ${p.nombre}`}
                   disabled={pendiente}
-                  onClick={() => {
-                    if (!confirm(`¿Eliminar el punto «${p.nombre}»?`)) return;
-                    ejecutar(() => eliminarPunto(documento.id, campana.id, p.id));
+                  onClick={async () => {
+                    if (!(await confirmar(`¿Eliminar el punto «${p.nombre}»?`))) return;
+                    ejecutar(() => desenvolver(eliminarPunto(documento.id, campana.id, p.id)));
                   }}
                   className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
                 >
@@ -333,7 +336,7 @@ function NuevoPunto({
   articulos: Articulo[];
   puntos: Punto[];
 }) {
-  const { pendiente, error, setError, ejecutar } = useAccion();
+  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
   const [posicion, setPosicion] = useState<Posicion | null>(null);
   const [nombre, setNombre] = useState("");
   const [lineaId, setLineaId] = useState<string>(articulos.length === 1 ? String(articulos[0]!.id) : "");
@@ -381,8 +384,13 @@ function NuevoPunto({
     }
   }
 
+  const formulario = useRef<HTMLFormElement>(null);
   function elegirEnMapa(p: Posicion) {
     setPosicion(p);
+    // En móvil el formulario queda bajo el mapa: lo acercamos.
+    if (window.matchMedia("(max-width: 1279px)").matches) {
+      setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    }
     void direccionDe(p).then((d) => {
       if (d) setDireccion(d);
     });
@@ -408,13 +416,16 @@ function NuevoPunto({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
+                e.currentTarget.blur(); // esconde el teclado para ver los resultados
                 void buscar();
               }
             }}
             placeholder="Buscar dirección: Calle Larios 5, Málaga"
+            enterKeyHint="search"
+            type="search"
             className={entrada}
           />
-          <Boton variante="secundario" onClick={buscar} cargando={buscando}>
+          <Boton variante="secundario" className="min-h-11 md:min-h-0" onClick={buscar} cargando={buscando}>
             <Icono nombre="buscar" size={16} />
             Buscar
           </Boton>
@@ -424,12 +435,13 @@ function NuevoPunto({
             {resultados.map((r) => (
               <button
                 key={`${r.lat},${r.lon}`}
+                type="button"
                 onClick={() => {
                   setPosicion({ latitud: Number(r.lat), longitud: Number(r.lon) });
                   setDireccion(r.display_name.split(",").slice(0, 3).join(",").trim());
                   setResultados([]);
                 }}
-                className="px-esp3 py-esp2 text-left text-xs text-texto-primario hover:bg-fondo-sutil"
+                className="min-h-11 px-esp3 py-esp2 text-left text-sm text-texto-primario hover:bg-fondo-sutil active:bg-fondo-sutil md:text-xs"
               >
                 {r.display_name}
               </button>
@@ -453,8 +465,9 @@ function NuevoPunto({
       </div>
 
       <form
+        ref={formulario}
         className={cn(
-          "flex flex-col gap-esp3 rounded-lg border bg-fondo-superficie px-esp5 py-esp4",
+          "flex scroll-mt-esp3 flex-col gap-esp3 rounded-lg border bg-fondo-superficie px-esp5 py-esp4",
           posicion ? "border-borde-foco" : "border-borde-default",
         )}
         onSubmit={(e) => {
@@ -469,7 +482,7 @@ function NuevoPunto({
           }
           const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
           ejecutar(async () => {
-            await anadirPunto(documentoId, campana.id, {
+            await desenvolver(anadirPunto(documentoId, campana.id, {
               nombre,
               lineaId: lineaId ? Number(lineaId) : null,
               piezas: nPiezas,
@@ -479,7 +492,7 @@ function NuevoPunto({
               fecha_colocacion_prevista: colocacion,
               fecha_retirada_prevista: retirada,
               notas,
-            });
+            }));
             limpiar();
           });
         }}
@@ -500,17 +513,32 @@ function NuevoPunto({
           />
         </Etiqueta>
         {articulos.length > 0 ? (
-          <div className="grid grid-cols-[1fr_80px] gap-esp2">
-            <Etiqueta texto="Artículo / soporte *">
-              <select value={lineaId} onChange={(e) => setLineaId(e.target.value)} className={entrada}>
-                <option value="">Elige un artículo…</option>
-                {articulos.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {etiquetaArticulo(a)}
-                  </option>
-                ))}
-              </select>
-            </Etiqueta>
+          <div className="flex flex-col gap-esp2">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-texto-secundario">Artículo / soporte *</span>
+              <div role="radiogroup" aria-label="Artículo" className="flex flex-col gap-esp2">
+                {articulos.map((a) => {
+                  const activo = lineaId === String(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={activo}
+                      onClick={() => setLineaId(String(a.id))}
+                      className={cn(
+                        "min-h-11 rounded-md border px-esp3 py-esp2 text-left text-sm",
+                        activo
+                          ? "border-borde-foco bg-fondo-marca-sutil font-medium text-texto-marca"
+                          : "border-borde-fuerte bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil",
+                      )}
+                    >
+                      {etiquetaArticulo(a)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <Etiqueta texto="Piezas">
               <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
             </Etiqueta>
@@ -543,11 +571,11 @@ function NuevoPunto({
             onChange={(e) => setNotas(e.target.value)}
             rows={2}
             placeholder="Ej. 2 carteles 70x100 con bridas, cara hacia la rotonda"
-            className="rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className={areaTexto}
           />
         </Etiqueta>
         {error && <p className="text-xs text-texto-peligro">{error}</p>}
-        <Boton type="submit" cargando={pendiente} disabled={!posicion}>
+        <Boton type="submit" className="min-h-11" cargando={pendiente} disabled={!posicion}>
           <Icono nombre="ubicacion" size={16} />
           Añadir punto
         </Boton>

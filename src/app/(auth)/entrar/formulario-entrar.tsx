@@ -8,9 +8,12 @@ import { Campo } from "@/components/ui/campo";
 
 export function FormularioEntrar({
   cuentaInactiva,
+  sesionAbierta = false,
   volver,
 }: {
   cuentaInactiva: boolean;
+  /** Hay una sesión iniciada pero sin acceso: se ofrece cerrarla en vez del formulario. */
+  sesionAbierta?: boolean;
   volver?: string;
 }) {
   const router = useRouter();
@@ -36,8 +39,30 @@ export function FormularioEntrar({
       return;
     }
 
-    router.push(volver ?? "/entrar");
+    // /entrar reparte según el rol; `volver` ya llega validado desde el servidor.
+    router.push(volver || "/entrar");
     router.refresh();
+  }
+
+  async function cerrarSesion() {
+    setCargando(true);
+    await supabase.auth.signOut();
+    router.push("/entrar");
+    router.refresh();
+  }
+
+  if (sesionAbierta) {
+    return (
+      <div className="flex flex-col gap-esp4">
+        <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-sm text-texto-peligro">
+          Esta cuenta no tiene acceso a Creativa (está desactivada o no tiene perfil). Contacta con tu
+          administrador o entra con otra cuenta.
+        </p>
+        <Boton variante="secundario" cargando={cargando} onClick={cerrarSesion} className="w-full">
+          Cerrar sesión
+        </Boton>
+      </div>
+    );
   }
 
   return (

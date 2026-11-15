@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
-import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 
 const ENLACES = [
@@ -13,14 +12,6 @@ const ENLACES = [
 
 export function BarraInferior() {
   const pathname = usePathname();
-  const router = useRouter();
-  const supabase = createClient();
-
-  async function salir() {
-    await supabase.auth.signOut();
-    router.push("/entrar");
-    router.refresh();
-  }
 
   return (
     <nav className="fixed inset-x-0 bottom-0 flex items-center justify-around border-t border-borde-default bg-fondo-superficie py-esp2 pb-[calc(env(safe-area-inset-bottom)+8px)]">
@@ -40,13 +31,6 @@ export function BarraInferior() {
           </Link>
         );
       })}
-      <button
-        onClick={salir}
-        className="flex flex-col items-center gap-1 px-esp4 py-1 text-xs text-texto-terciario"
-      >
-        <Icono nombre="salir" size={22} />
-        Salir
-      </button>
     </nav>
   );
 }

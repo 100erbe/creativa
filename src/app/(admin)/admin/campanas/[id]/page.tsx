@@ -1,38 +1,17 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { fechaCorta } from "@/lib/formato";
-import { ControlesPunto, EnlaceCliente } from "./controles";
+import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
+import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
 
 export const dynamic = "force-dynamic";
-
-const ETIQUETA_SOPORTE: Record<string, string> = {
-  valla: "Valla",
-  totem: "Tótem",
-  lona: "Lona",
-  cartel: "Cartel",
-  mobiliario_urbano: "Mobiliario urbano",
-  marquesina: "Marquesina",
-  pantalla: "Pantalla",
-  otro: "Soporte",
-};
-
-const ETIQUETA_ESTADO: Record<string, string> = {
-  planificada: "Planificada",
-  en_curso: "En curso",
-  finalizada: "Finalizada",
-  cancelada: "Cancelada",
-  pendiente: "Pendiente",
-  instalado: "Instalado",
-  verificado: "Verificado",
-  incidencia: "Incidencia",
-  retirado: "Retirado",
-};
 
 function nombreCompleto(u: { nombre: string; apellidos: string | null }) {
   return `${u.nombre} ${u.apellidos ?? ""}`.trim();
@@ -58,7 +37,7 @@ export default async function PaginaCampana({
 
   const supabase = await createClient();
 
-  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }] =
+  const resultadosBase =
     await Promise.all([
       supabase
         .from("campanas")
@@ -67,7 +46,7 @@ export default async function PaginaCampana({
         .maybeSingle(),
       supabase
         .from("puntos_campana")
-        .select("id, nombre, tipo_soporte, direccion, latitud, longitud, estado, notas")
+        .select("id, nombre, tipo_soporte, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia")
         .eq("campana_id", campanaId)
         .order("id"),
       supabase
@@ -77,22 +56,24 @@ export default async function PaginaCampana({
         .order("nombre"),
       supabase
         .from("enlaces_cliente")
-        .select("token, vistas")
+        .select("token, vistas, expira_en")
         .eq("campana_id", campanaId)
         .eq("activo", true)
         .order("creado_en", { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
+  lanzarSiError(...resultadosBase);
+  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }] = resultadosBase;
 
   if (!campana) notFound();
 
   const idsPuntos = (puntos ?? []).map((p) => p.id);
-  const [{ data: asignaciones }, { data: fotos }] = idsPuntos.length
+  const [resAsignaciones, resFotos] = idsPuntos.length
     ? await Promise.all([
         supabase
           .from("asignaciones_punto")
-          .select("id, punto_id, usuario_id, estado")
+          .select("id, punto_id, usuario_id, estado, rol_asignacion")
           .in("punto_id", idsPuntos)
           .neq("estado", "cancelada"),
         supabase
@@ -101,7 +82,10 @@ export default async function PaginaCampana({
           .in("punto_id", idsPuntos)
           .order("tomada_en", { ascending: false }),
       ])
-    : [{ data: [] }, { data: [] }];
+    : [{ data: [], error: null }, { data: [], error: null }];
+  lanzarSiError(resAsignaciones, resFotos);
+  const asignaciones = resAsignaciones.data;
+  const fotos = resFotos.data;
 
   // URLs firmadas para las fotos (el bucket es privado; el admin puede leerlas todas).
   const rutas = (fotos ?? []).map((f) => f.url_foto);
@@ -118,10 +102,18 @@ export default async function PaginaCampana({
     nombre: nombreCompleto(u) + (u.rol === "admin" ? " (admin)" : ""),
   }));
 
+  const fechasCampana = { inicio: campana.fecha_inicio, fin: campana.fecha_fin };
+  const puntosParaMapa = (puntos ?? []).map((p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    latitud: Number(p.latitud),
+    longitud: Number(p.longitud),
+  }));
+
   const cliente = Array.isArray(campana.clientes) ? campana.clientes[0] : campana.clientes;
   const lista = puntos ?? [];
   const contar = (estado: string) => lista.filter((p) => p.estado === estado).length;
-  const hechos = contar("instalado") + contar("verificado");
+  const hechos = contar("instalado") + contar("verificado") + contar("retirado");
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -156,6 +148,16 @@ export default async function PaginaCampana({
         {campana.descripcion && (
           <p className="max-w-3xl text-sm text-texto-secundario">{campana.descripcion}</p>
         )}
+        <EditarCampana
+          campanaId={campanaId}
+          inicial={{
+            nombre: campana.nombre,
+            estado: campana.estado,
+            fechaInicio: campana.fecha_inicio,
+            fechaFin: campana.fecha_fin,
+            descripcion: campana.descripcion,
+          }}
+        />
       </div>
 
       <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[140px]">
@@ -167,6 +169,7 @@ export default async function PaginaCampana({
           colorDetalle="text-texto-exito"
         />
         <TarjetaKpi etiqueta="Pendientes" valor={String(contar("pendiente"))} />
+        {contar("retirado") > 0 && <TarjetaKpi etiqueta="Retirados" valor={`${contar("retirado")}/${lista.length}`} />}
         <TarjetaKpi
           etiqueta="Incidencias"
           valor={String(contar("incidencia"))}
@@ -174,6 +177,10 @@ export default async function PaginaCampana({
         />
         <TarjetaKpi etiqueta="Fotos" valor={String((fotos ?? []).length)} />
       </div>
+
+      {lista.length > 0 && contar("retirado") === lista.length && campana.estado !== "finalizada" && (
+        <AvisoFinalizar campanaId={campanaId} />
+      )}
 
       <div className="flex flex-col-reverse gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
@@ -189,6 +196,7 @@ export default async function PaginaCampana({
           />
 
           <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>
+          <BotonAnadirPunto campanaId={campanaId} fechasCampana={fechasCampana} otrosPuntos={puntosParaMapa} />
           {lista.map((p) => {
             const asignados = (asignaciones ?? [])
               .filter((a) => a.punto_id === p.id)
@@ -199,6 +207,7 @@ export default async function PaginaCampana({
                   usuarioId: a.usuario_id,
                   nombre: u ? nombreCompleto(u) : "Usuario",
                   estado: a.estado,
+                  rol: a.rol_asignacion,
                 };
               });
             const fotosPunto = (fotos ?? []).filter((f) => f.punto_id === p.id);
@@ -229,17 +238,12 @@ export default async function PaginaCampana({
                   </Insignia>
                 </div>
 
-                {p.notas && (
-                  <p
-                    className={
-                      p.estado === "incidencia"
-                        ? "rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario"
-                        : "text-xs text-texto-secundario"
-                    }
-                  >
-                    {p.notas}
+                {p.estado === "incidencia" && p.incidencia && (
+                  <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario">
+                    <strong className="text-texto-peligro">Incidencia:</strong> {p.incidencia}
                   </p>
                 )}
+                {p.notas && <p className="text-xs text-texto-secundario">Instrucciones: {p.notas}</p>}
 
                 <ControlesPunto
                   campanaId={campanaId}
@@ -247,6 +251,21 @@ export default async function PaginaCampana({
                   estado={p.estado}
                   asignados={asignados}
                   candidatos={candidatos}
+                  punto={{
+                    id: p.id,
+                    nombre: p.nombre,
+                    tipo_soporte: p.tipo_soporte,
+                    direccion: p.direccion,
+                    latitud: Number(p.latitud),
+                    longitud: Number(p.longitud),
+                    piezas: p.piezas == null ? null : Number(p.piezas),
+                    fecha_colocacion_prevista: p.fecha_colocacion_prevista,
+                    fecha_retirada_prevista: p.fecha_retirada_prevista,
+                    notas: p.notas,
+                  }}
+                  tieneFotos={fotosPunto.length > 0}
+                  fechasCampana={fechasCampana}
+                  otrosPuntos={puntosParaMapa}
                 />
 
                 {fotosPunto.length > 0 && (
@@ -314,6 +333,7 @@ export default async function PaginaCampana({
               campanaId={campanaId}
               url={urlEnlace}
               vistas={Number(enlace?.vistas ?? 0)}
+              expiraEn={enlace?.expira_en ?? null}
             />
           </div>
         </div>

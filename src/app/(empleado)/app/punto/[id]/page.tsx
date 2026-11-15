@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { PanelPunto } from "./panel-punto";
@@ -15,10 +16,12 @@ export default async function PaginaPunto({
   const supabase = await createClient();
   const usuario = await obtenerUsuarioActual();
 
-  const [{ data: punto }, { data: asignacion }, { data: fotos }] = await Promise.all([
+  const resultados = await Promise.all([
     supabase
       .from("puntos_campana")
-      .select("id, nombre, tipo_soporte, direccion, latitud, longitud, estado, notas, campana_id, campanas(nombre)")
+      .select(
+        "id, nombre, tipo_soporte, direccion, latitud, longitud, estado, notas, incidencia, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, campana_id, campanas(nombre, descripcion)",
+      )
       .eq("id", puntoId)
       .single(),
     supabase
@@ -35,6 +38,10 @@ export default async function PaginaPunto({
       .eq("punto_id", puntoId)
       .order("tomada_en", { ascending: false }),
   ]);
+
+  // "No se encuentra" (PGRST116) es un 404 normal; cualquier otro fallo es un error de verdad.
+  if (resultados[0].error?.code !== "PGRST116") lanzarSiError(...resultados);
+  const [{ data: punto }, { data: asignacion }, { data: fotos }] = resultados;
 
   if (!punto) notFound();
 

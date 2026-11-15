@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import type { Database } from "@/lib/supabase/types";
+import { accion } from "@/lib/accion";
 
 type Alcance = Database["public"]["Enums"]["alcance_servicio"];
 type TipoSoporte = Database["public"]["Enums"]["tipo_soporte"];
 export type TipoNuevoDocumento = "presupuesto" | "albaran" | "factura";
 
 const TIPOS_PERMITIDOS: TipoNuevoDocumento[] = ["presupuesto", "albaran", "factura"];
+const UNIDADES_LIBRES = ["ud", "m2", "ml", "millar", "mes", "servicio", "km"];
+const IVAS_PERMITIDOS = [0, 4, 10, 21];
 
 function refrescar(documentoId?: number) {
   revalidatePath("/admin/documentos/nuevo");
@@ -34,7 +37,7 @@ async function condicionesCliente(supabase: Awaited<ReturnType<typeof createClie
 }
 
 /** Paso 1 → 2: crea el borrador del tipo elegido con la serie por defecto. */
-export async function crearBorrador(clienteId: number, tipo: TipoNuevoDocumento = "presupuesto") {
+export const crearBorrador = accion(async (clienteId: number, tipo: TipoNuevoDocumento = "presupuesto") => {
   await exigirAdmin();
   if (!TIPOS_PERMITIDOS.includes(tipo)) throw new Error("Tipo de documento no válido.");
   const supabase = await createClient();
@@ -59,10 +62,10 @@ export async function crearBorrador(clienteId: number, tipo: TipoNuevoDocumento 
 
   refrescar();
   return data.id as number;
-}
+});
 
 /** "Cambiar" cliente de un borrador ya creado (mantiene las líneas). */
-export async function cambiarCliente(documentoId: number, clienteId: number) {
+export const cambiarCliente = accion(async (documentoId: number, clienteId: number) => {
   await exigirAdmin();
   const supabase = await createClient();
   const condiciones = await condicionesCliente(supabase, clienteId);
@@ -73,7 +76,7 @@ export async function cambiarCliente(documentoId: number, clienteId: number) {
     .eq("estado", "borrador");
   if (error) throw new Error(error.message);
   refrescar(documentoId);
-}
+});
 
 type ArgsLinea = {
   productoId: number;
@@ -85,7 +88,7 @@ type ArgsLinea = {
 };
 
 /** Precio de tarifa (cliente > tipo de cliente > volumen > formato > producto). */
-export async function previsualizarPrecio(args: ArgsLinea & { clienteId: number }) {
+export const previsualizarPrecio = accion(async (args: ArgsLinea & { clienteId: number }) => {
   await exigirAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("previsualizar_precio", {
@@ -100,16 +103,16 @@ export async function previsualizarPrecio(args: ArgsLinea & { clienteId: number 
   if (error) throw new Error(error.message);
   const fila = data?.[0];
   return { precio: Number(fila?.precio ?? 0), cantidad: Number(fila?.cantidad ?? args.piezas) };
-}
+});
 
 /**
  * Añade una línea del catálogo. Si `precio` es null se usa la tarifa;
  * si el admin lo ha cambiado a mano se guarda el precio escrito.
  */
-export async function anadirLinea(
+export const anadirLinea = accion(async (
   documentoId: number,
   args: ArgsLinea & { precio: number | null; descuento: number; descripcion?: string; artista?: string },
-) {
+) => {
   await exigirAdmin();
   validarNumeros(args.piezas, args.precio, args.descuento);
   const supabase = await createClient();
@@ -128,10 +131,61 @@ export async function anadirLinea(
   });
   if (error) throw new Error(error.message);
   refrescar(documentoId);
-}
+});
+
+/** Concepto que no está en el catálogo (un desplazamiento, un trabajo suelto…): sin tarifa, con precio manual. */
+export const anadirLineaLibre = accion(
+  async (
+    documentoId: number,
+    args: {
+      descripcion: string;
+      artista?: string;
+      unidad: string;
+      piezas: number;
+      precio: number;
+      descuento: number;
+      iva: number;
+    },
+  ) => {
+    await exigirAdmin();
+    const descripcion = args.descripcion.trim();
+    if (!descripcion) throw new Error("Escribe el concepto.");
+    if (!UNIDADES_LIBRES.includes(args.unidad)) throw new Error("Unidad no válida.");
+    if (!IVAS_PERMITIDOS.includes(args.iva)) throw new Error("IVA no válido.");
+    validarNumeros(args.piezas, args.precio, args.descuento);
+    if (!Number.isFinite(args.precio)) throw new Error("Indica el precio.");
+    const supabase = await createClient();
+
+    const { data: doc } = await supabase.from("documentos").select("estado").eq("id", documentoId).maybeSingle();
+    if (!doc) throw new Error("No se ha encontrado el documento.");
+    if (doc.estado !== "borrador") throw new Error("Solo se pueden añadir líneas a un borrador.");
+
+    const { data: ultima } = await supabase
+      .from("lineas_documento")
+      .select("orden")
+      .eq("documento_id", documentoId)
+      .order("orden", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { error } = await supabase.from("lineas_documento").insert({
+      documento_id: documentoId,
+      orden: (ultima?.orden ?? 0) + 1,
+      descripcion,
+      artista: args.artista?.trim() || null,
+      unidad: args.unidad as Database["public"]["Enums"]["unidad_venta"],
+      piezas: args.piezas,
+      precio_unitario: args.precio,
+      descuento_pct: args.descuento,
+      iva_pct: args.iva,
+    });
+    if (error) throw new Error(error.message);
+    refrescar(documentoId);
+  },
+);
 
 /** Edición en la tabla de líneas: cantidad, precio unitario, descuento y concepto. */
-export async function actualizarLinea(
+export const actualizarLinea = accion(async (
   documentoId: number,
   lineaId: number,
   cambios: {
@@ -141,7 +195,7 @@ export async function actualizarLinea(
     descripcion?: string;
     artista?: string | null;
   },
-) {
+) => {
   await exigirAdmin();
   validarNumeros(cambios.piezas, cambios.precio_unitario, cambios.descuento_pct);
   if (cambios.descripcion !== undefined && !cambios.descripcion.trim()) {
@@ -155,7 +209,7 @@ export async function actualizarLinea(
     .eq("documento_id", documentoId);
   if (error) throw new Error(error.message);
   refrescar(documentoId);
-}
+});
 
 function validarNumeros(piezas?: number, precio?: number | null, descuento?: number) {
   if (piezas !== undefined && (!Number.isFinite(piezas) || piezas === 0)) {
@@ -169,7 +223,7 @@ function validarNumeros(piezas?: number, precio?: number | null, descuento?: num
   }
 }
 
-export async function eliminarLinea(documentoId: number, lineaId: number) {
+export const eliminarLinea = accion(async (documentoId: number, lineaId: number) => {
   await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase
@@ -179,14 +233,14 @@ export async function eliminarLinea(documentoId: number, lineaId: number) {
     .eq("documento_id", documentoId);
   if (error) throw new Error(error.message);
   refrescar(documentoId);
-}
+});
 
 // ---------------------------------------------------------------------
 //  Paso 3 · Campaña: dónde y cómo se instala la publicidad
 // ---------------------------------------------------------------------
 
 /** Enlaza el documento con una campaña existente del cliente (o la desenlaza con null). */
-export async function vincularCampana(documentoId: number, campanaId: number | null) {
+export const vincularCampana = accion(async (documentoId: number, campanaId: number | null) => {
   await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("documentos").update({ campana_id: campanaId }).eq("id", documentoId);
@@ -196,12 +250,12 @@ export async function vincularCampana(documentoId: number, campanaId: number | n
     await supabase.from("campanas").update({ documento_id: documentoId }).eq("id", campanaId).is("documento_id", null);
   }
   refrescar(documentoId);
-}
+});
 
-export async function crearCampana(
+export const crearCampana = accion(async (
   documentoId: number,
   datos: { nombre: string; fecha_inicio?: string; fecha_fin?: string; descripcion?: string },
-) {
+) => {
   const admin = await exigirAdmin();
   const nombre = datos.nombre.trim();
   if (!nombre) throw new Error("La campaña necesita un nombre.");
@@ -231,9 +285,9 @@ export async function crearCampana(
   refrescar(documentoId);
   revalidatePath("/admin/campanas");
   return data.id as number;
-}
+});
 
-export async function anadirPunto(
+export const anadirPunto = accion(async (
   documentoId: number,
   campanaId: number,
   datos: {
@@ -247,7 +301,7 @@ export async function anadirPunto(
     fecha_retirada_prevista?: string;
     notas?: string;
   },
-) {
+) => {
   await exigirAdmin();
   if (!datos.nombre.trim()) throw new Error("Pon un nombre al punto (ej. «Farola Av. Andalucía 12»).");
   if (!Number.isFinite(datos.latitud) || !Number.isFinite(datos.longitud)) {
@@ -288,9 +342,9 @@ export async function anadirPunto(
   if (error) throw new Error(error.message);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
-}
+});
 
-export async function eliminarPunto(documentoId: number, campanaId: number, puntoId: number) {
+export const eliminarPunto = accion(async (documentoId: number, campanaId: number, puntoId: number) => {
   await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase
@@ -302,7 +356,7 @@ export async function eliminarPunto(documentoId: number, campanaId: number, punt
   if (error) throw new Error(error.message);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
-}
+});
 
 /** Tipo de soporte (enum de la campaña) que corresponde a un producto del catálogo. */
 function soporteDe(producto: string): TipoSoporte {

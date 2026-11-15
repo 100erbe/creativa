@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { VALORES_TIPO_CLIENTE, VALORES_REGIMEN_IVA, TIPOS_DOCUMENTO_ID } from "@/lib/clientes";
+import { accion } from "@/lib/accion";
 
 export type EstadoFormulario = { error?: string };
 
@@ -193,7 +194,7 @@ function mensajeError(error: { code?: string; message: string }) {
 }
 
 /** Los clientes con documentos no se borran: se desactivan y dejan de salir al crear documentos. */
-export async function cambiarActivo(clienteId: number, activo: boolean) {
+export const cambiarActivo = accion(async (clienteId: number, activo: boolean) => {
   await exigirAdmin();
   const supabase = await createClient();
 
@@ -202,12 +203,12 @@ export async function cambiarActivo(clienteId: number, activo: boolean) {
 
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${clienteId}`);
-}
+});
 
-export async function anadirContacto(
+export const anadirContacto = accion(async (
   clienteId: number,
   datos: { nombre: string; cargo?: string; email?: string; telefono?: string; recibeFacturas: boolean },
-) {
+) => {
   await exigirAdmin();
   const nombre = datos.nombre.trim();
   if (!nombre) throw new Error("El nombre del contacto es obligatorio.");
@@ -226,9 +227,9 @@ export async function anadirContacto(
   if (error) throw new Error(error.message);
 
   revalidatePath(`/admin/clientes/${clienteId}`);
-}
+});
 
-export async function eliminarContacto(clienteId: number, contactoId: number) {
+export const eliminarContacto = accion(async (clienteId: number, contactoId: number) => {
   await exigirAdmin();
   const supabase = await createClient();
 
@@ -240,4 +241,62 @@ export async function eliminarContacto(clienteId: number, contactoId: number) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/admin/clientes/${clienteId}`);
-}
+});
+
+/** Corrige un contacto ya guardado. */
+export const actualizarContacto = accion(
+  async (
+    clienteId: number,
+    contactoId: number,
+    datos: { nombre: string; cargo?: string; email?: string; telefono?: string; recibeFacturas: boolean },
+  ) => {
+    await exigirAdmin();
+    const nombre = datos.nombre.trim();
+    if (!nombre) throw new Error("El nombre del contacto es obligatorio.");
+    const email = datos.email?.trim() || null;
+    if (email && !z.string().email().safeParse(email).success) throw new Error("El email no es válido.");
+
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("contactos_cliente")
+      .update({
+        nombre,
+        cargo: datos.cargo?.trim() || null,
+        email,
+        telefono: datos.telefono?.trim() || null,
+        recibe_facturas: datos.recibeFacturas,
+      })
+      .eq("id", contactoId)
+      .eq("cliente_id", clienteId)
+      .select("id");
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) throw new Error("No se ha encontrado el contacto.");
+
+    revalidatePath(`/admin/clientes/${clienteId}`);
+  },
+);
+
+/**
+ * Borra un cliente creado por error. Solo si no tiene documentos ni campañas (la base de datos lo
+ * impide si los hay); si ya tiene historial, lo correcto es desactivarlo.
+ */
+export const eliminarCliente = accion(async (clienteId: number) => {
+  await exigirAdmin();
+  const supabase = await createClient();
+
+  const [{ count: documentos }, { count: campanas }] = await Promise.all([
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("cliente_id", clienteId),
+    supabase.from("campanas").select("id", { count: "exact", head: true }).eq("cliente_id", clienteId),
+  ]);
+  if ((documentos ?? 0) > 0 || (campanas ?? 0) > 0) {
+    throw new Error("Este cliente tiene documentos o campañas: no se puede eliminar. Desactívalo en su lugar.");
+  }
+
+  const { error } = await supabase.from("clientes").delete().eq("id", clienteId);
+  if (error) {
+    if (error.code === "23503") throw new Error("Este cliente tiene datos asociados: desactívalo en su lugar.");
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/admin/clientes");
+});

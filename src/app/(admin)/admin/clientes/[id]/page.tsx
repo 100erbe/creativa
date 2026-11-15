@@ -9,7 +9,8 @@ import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
-import { BotonActivo, Contactos } from "./controles";
+import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
+import { BotonActivo, BotonEliminarCliente, Contactos } from "./controles";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,19 @@ export default async function PaginaCliente({
           <Link href={`/admin/clientes/${clienteId}/editar`}>
             <Boton variante="secundario">Editar</Boton>
           </Link>
+          {cliente.activo && (
+            <>
+              <Link href={`/admin/campanas/nueva?cliente=${clienteId}`} className="hidden sm:block">
+                <Boton variante="secundario">Nueva campaña</Boton>
+              </Link>
+              <Link href={`/admin/documentos/nuevo?cliente=${clienteId}`}>
+                <Boton>
+                  <Icono nombre="mas" size={16} />
+                  Nuevo documento
+                </Boton>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -154,7 +168,7 @@ export default async function PaginaCliente({
               )}
             </div>
             <Link
-              href={`/admin/documentos?q=${encodeURIComponent(cliente.razon_social)}`}
+              href={`/admin/documentos?cliente=${clienteId}`}
               className="text-sm font-medium text-texto-marca"
             >
               Ver todos los documentos
@@ -168,7 +182,7 @@ export default async function PaginaCliente({
                 {(campanas ?? []).map((c) => (
                   <Link key={c.id} href={`/admin/campanas/${c.id}`} className="flex items-center gap-esp3 py-esp3">
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-texto-primario">{c.nombre}</span>
-                    <Insignia tono={TONO_POR_ESTADO[c.estado] ?? "neutro"}>{c.estado.replace("_", " ")}</Insignia>
+                    <Insignia tono={TONO_POR_ESTADO[c.estado] ?? "neutro"}>{ETIQUETA_ESTADO_CAMPANA[c.estado] ?? c.estado}</Insignia>
                   </Link>
                 ))}
               </div>
@@ -231,6 +245,10 @@ export default async function PaginaCliente({
           <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Estado</h2>
             <BotonActivo clienteId={clienteId} activo={cliente.activo} />
+            <BotonEliminarCliente
+              clienteId={clienteId}
+              puedeEliminar={(documentos ?? []).length === 0 && (campanas ?? []).length === 0}
+            />
             <p className="text-xs text-texto-terciario">
               Los clientes con documentos no se pueden eliminar; al desactivarlos dejan de aparecer al crear
               documentos nuevos.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
@@ -36,7 +37,7 @@ export default async function PaginaContabilidad({
   const filtros = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: iva }, { data: libroAnio }] = await Promise.all([
+  const resultados = await Promise.all([
     supabase
       .from("v_resumen_iva_trimestral")
       .select("*")
@@ -45,6 +46,8 @@ export default async function PaginaContabilidad({
       .order("iva_pct"),
     supabase.from("v_libro_registro").select("*").order("fecha_expedicion").order("numero").limit(5000),
   ]);
+  lanzarSiError(...resultados);
+  const [{ data: iva }, { data: libroAnio }] = resultados;
 
   const ejercicios = [
     ...new Set([...(iva ?? []).map((r) => r.ejercicio), ...(libroAnio ?? []).map((r) => r.ejercicio)]),

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { Icono } from "@/components/ui/iconos";
+import { etiquetaEstado } from "@/lib/etiquetas";
 
 type Punto = {
   punto_id: number;
@@ -28,21 +30,29 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
       />
       <div className="flex flex-col gap-esp2">
         {puntos.map((p) => (
-          <a
+          <div
             key={p.punto_id}
-            href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3"
+            className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie pr-esp3"
           >
-            <div className="flex-1">
-              <p className="text-sm font-medium text-texto-primario">{p.punto}</p>
-              <p className="text-xs text-texto-terciario">Abrir en Google Maps</p>
-            </div>
-            <Insignia tono={TONO_POR_ESTADO[p.estado_punto] ?? "neutro"}>
-              {p.estado_punto}
-            </Insignia>
-          </a>
+            <Link href={`/app/punto/${p.punto_id}`} className="flex min-w-0 flex-1 items-center gap-esp3 px-esp4 py-esp3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-texto-primario">{p.punto}</p>
+                <p className="text-xs text-texto-terciario">Abrir ficha del punto</p>
+              </div>
+              <Insignia tono={TONO_POR_ESTADO[p.estado_punto] ?? "neutro"}>
+                {etiquetaEstado(p.estado_punto)}
+              </Insignia>
+            </Link>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Cómo llegar a ${p.punto}`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default text-icono-marca"
+            >
+              <Icono nombre="ubicacion" size={20} />
+            </a>
+          </div>
         ))}
         <Link href="/app/agenda" className="text-center text-sm font-medium text-texto-marca">
           Ver lista completa

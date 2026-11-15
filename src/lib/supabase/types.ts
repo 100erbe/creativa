@@ -1319,6 +1319,8 @@ export type Database = {
           fecha_colocacion_prevista: string | null
           fecha_retirada_prevista: string | null
           id: number
+          incidencia: string | null
+          incidencia_en: string | null
           linea_id: number | null
           piezas: number | null
           latitud: number
@@ -1336,6 +1338,8 @@ export type Database = {
           fecha_colocacion_prevista?: string | null
           fecha_retirada_prevista?: string | null
           id?: number
+          incidencia?: string | null
+          incidencia_en?: string | null
           linea_id?: number | null
           piezas?: number | null
           latitud: number
@@ -1353,6 +1357,8 @@ export type Database = {
           fecha_colocacion_prevista?: string | null
           fecha_retirada_prevista?: string | null
           id?: number
+          incidencia?: string | null
+          incidencia_en?: string | null
           linea_id?: number | null
           piezas?: number | null
           latitud?: number
@@ -1729,6 +1735,7 @@ export type Database = {
           puntos_pendientes: number | null
           puntos_totales: number | null
           puntos_verificados: number | null
+          puntos_retirados: number | null
         }
         Relationships: []
       }
@@ -1897,7 +1904,7 @@ export type Database = {
         | "compensacion"
         | "otro"
       regimen_iva: "general" | "reducido" | "intracomunitario" | "exento"
-      rol_asignacion: "instalador" | "supervisor" | "fotografo"
+      rol_asignacion: "instalador" | "supervisor" | "fotografo" | "retirador"
       rol_usuario: "admin" | "empleado"
       tipo_cliente:
         | "agencia_revendedor"
@@ -2084,7 +2091,7 @@ export const Constants = {
         "otro",
       ],
       regimen_iva: ["general", "reducido", "intracomunitario", "exento"],
-      rol_asignacion: ["instalador", "supervisor", "fotografo"],
+      rol_asignacion: ["instalador", "supervisor", "fotografo", "retirador"],
       rol_usuario: ["admin", "empleado"],
       tipo_cliente: [
         "agencia_revendedor",

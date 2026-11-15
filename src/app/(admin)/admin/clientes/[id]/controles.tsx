@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { anadirContacto, eliminarContacto, cambiarActivo } from "../acciones";
+import { actualizarContacto, anadirContacto, eliminarCliente, eliminarContacto, cambiarActivo } from "../acciones";
+import { desenvolver } from "@/lib/accion";
+import { confirmar } from "@/components/ui/dialogos";
 
 type Contacto = {
   id: number;
@@ -25,6 +27,17 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
   const [email, setEmail] = useState("");
   const [telefono, setTelefono] = useState("");
   const [recibeFacturas, setRecibeFacturas] = useState(false);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+
+  function abrir(c?: Contacto) {
+    setEditandoId(c?.id ?? null);
+    setNombre(c?.nombre ?? "");
+    setCargo(c?.cargo ?? "");
+    setEmail(c?.email ?? "");
+    setTelefono(c?.telefono ?? "");
+    setRecibeFacturas(c?.recibe_facturas ?? false);
+    setAbierto(true);
+  }
 
   function ejecutar(accion: () => Promise<void>) {
     setError(null);
@@ -58,11 +71,19 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
                 {c.recibe_facturas && <p className="text-xs text-texto-exito">Recibe las facturas</p>}
               </div>
               <button
+                aria-label={`Editar a ${c.nombre}`}
+                disabled={pendiente}
+                onClick={() => abrir(c)}
+                className="text-xs font-medium text-texto-marca disabled:opacity-50"
+              >
+                Editar
+              </button>
+              <button
                 aria-label={`Eliminar a ${c.nombre}`}
                 disabled={pendiente}
-                onClick={() => {
-                  if (!confirm(`¿Eliminar el contacto ${c.nombre}?`)) return;
-                  ejecutar(() => eliminarContacto(clienteId, c.id));
+                onClick={async () => {
+                  if (!(await confirmar(`¿Eliminar el contacto ${c.nombre}?`))) return;
+                  ejecutar(() => desenvolver(eliminarContacto(clienteId, c.id)));
                 }}
                 className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
               >
@@ -82,7 +103,10 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
           onSubmit={(e) => {
             e.preventDefault();
             ejecutar(async () => {
-              await anadirContacto(clienteId, { nombre, cargo, email, telefono, recibeFacturas });
+              const datos = { nombre, cargo, email, telefono, recibeFacturas };
+              if (editandoId != null) await desenvolver(actualizarContacto(clienteId, editandoId, datos));
+              else await desenvolver(anadirContacto(clienteId, datos));
+              setEditandoId(null);
               setNombre("");
               setCargo("");
               setEmail("");
@@ -102,7 +126,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
           </label>
           <div className="flex gap-esp2">
             <Boton type="submit" tamano="s" cargando={pendiente}>
-              Añadir contacto
+              {editandoId != null ? "Guardar contacto" : "Añadir contacto"}
             </Boton>
             <Boton type="button" tamano="s" variante="secundario" onClick={() => setAbierto(false)}>
               Cancelar
@@ -110,7 +134,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
           </div>
         </form>
       ) : (
-        <Boton variante="secundario" tamano="s" onClick={() => setAbierto(true)}>
+        <Boton variante="secundario" tamano="s" onClick={() => abrir()}>
           <Icono nombre="mas" size={14} />
           Añadir contacto
         </Boton>
@@ -132,12 +156,12 @@ export function BotonActivo({ clienteId, activo }: { clienteId: number; activo: 
       <Boton
         variante={activo ? "secundario" : "primario"}
         cargando={pendiente}
-        onClick={() => {
-          if (activo && !confirm("¿Desactivar este cliente? Dejará de salir al crear documentos nuevos.")) return;
+        onClick={async () => {
+          if (activo && !(await confirmar("¿Desactivar este cliente? Dejará de salir al crear documentos nuevos."))) return;
           setError(null);
           iniciar(async () => {
             try {
-              await cambiarActivo(clienteId, !activo);
+              await desenvolver(cambiarActivo(clienteId, !activo));
               router.refresh();
             } catch (e) {
               setError(e instanceof Error ? e.message : "No se pudo cambiar el estado.");
@@ -146,6 +170,44 @@ export function BotonActivo({ clienteId, activo }: { clienteId: number; activo: 
         }}
       >
         {activo ? "Desactivar cliente" : "Reactivar cliente"}
+      </Boton>
+      {error && <p className="text-xs text-texto-peligro">{error}</p>}
+    </div>
+  );
+}
+
+/** Borrado de un cliente creado por error (solo si no tiene historial). */
+export function BotonEliminarCliente({ clienteId, puedeEliminar }: { clienteId: number; puedeEliminar: boolean }) {
+  const router = useRouter();
+  const [pendiente, iniciar] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!puedeEliminar) return null;
+  return (
+    <div className="flex flex-col gap-esp2 border-t border-fondo-hover pt-esp3">
+      <p className="text-xs text-texto-terciario">
+        ¿Lo creaste por error? Como no tiene documentos ni campañas, puedes eliminarlo del todo.
+      </p>
+      <Boton
+        variante="peligro"
+        tamano="s"
+        className="w-fit"
+        cargando={pendiente}
+        onClick={async () => {
+          if (!(await confirmar("¿Eliminar este cliente y sus contactos? No se puede deshacer."))) return;
+          setError(null);
+          iniciar(async () => {
+            try {
+              await desenvolver(eliminarCliente(clienteId));
+              router.push("/admin/clientes");
+              router.refresh();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "No se pudo eliminar el cliente.");
+            }
+          });
+        }}
+      >
+        Eliminar cliente
       </Boton>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
     </div>

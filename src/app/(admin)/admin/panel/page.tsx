@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { lanzarSiError } from "@/lib/supabase/consulta";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { euros, fechaCorta, fechaLarga } from "@/lib/formato";
+import { euros, fechaLarga } from "@/lib/formato";
+import { saludo } from "@/lib/saludo";
+import { ETIQUETA_ESTADO_DOC } from "@/lib/documentos";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +20,7 @@ export default async function PaginaPanel() {
     .toISOString()
     .slice(0, 10);
 
-  const [
-    { data: facturadoMes },
-    { data: pendientesCobro },
-    { data: campanasActivas },
-    { data: documentosRecientes },
-  ] = await Promise.all([
+  const resultados = await Promise.all([
     supabase
       .from("documentos")
       .select("total")
@@ -43,6 +41,13 @@ export default async function PaginaPanel() {
       .order("fecha", { ascending: false })
       .limit(5),
   ]);
+  lanzarSiError(...resultados);
+  const [
+    { data: facturadoMes },
+    { data: pendientesCobro },
+    { data: campanasActivas },
+    { data: documentosRecientes },
+  ] = resultados;
 
   const totalFacturado = (facturadoMes ?? []).reduce((s, d) => s + Number(d.total), 0);
   const totalPendiente = (pendientesCobro ?? []).reduce((s, d) => s + Number(d.pendiente), 0);
@@ -53,7 +58,7 @@ export default async function PaginaPanel() {
       <div className="flex items-center gap-esp3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-texto-primario">
-            Buenos días, {usuario?.nombre}
+            {saludo()}, {usuario?.nombre}
           </h1>
           <p className="text-sm capitalize text-texto-secundario">
             {fechaLarga(hoy)}
@@ -71,20 +76,24 @@ export default async function PaginaPanel() {
         <TarjetaKpi
           etiqueta="Facturado este mes"
           valor={euros(totalFacturado)}
+          href="/admin/documentos?tipo=factura"
         />
         <TarjetaKpi
           etiqueta="Pendiente de cobro"
           valor={euros(totalPendiente)}
+          href={facturasVencidas > 0 ? "/admin/documentos?cobro=vencida" : "/admin/documentos?cobro=pendiente"}
           detalle={facturasVencidas > 0 ? `${facturasVencidas} vencidas` : "al día"}
           colorDetalle={facturasVencidas > 0 ? "text-texto-peligro" : "text-texto-exito"}
         />
         <TarjetaKpi
           etiqueta="Campañas activas"
+          href="/admin/campanas?estado=en_curso"
           valor={String(campanasActivas?.length ?? 0)}
           detalle={`${(campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_totales), 0)} puntos en total`}
         />
         <TarjetaKpi
           etiqueta="Puntos con incidencia"
+          href="/admin/campanas?estado=en_curso"
           valor={String((campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_con_incidencia), 0))}
           colorDetalle="text-texto-peligro"
         />
@@ -103,7 +112,7 @@ export default async function PaginaPanel() {
           <div className="flex flex-col divide-y divide-fondo-hover">
             {(campanasActivas ?? []).map((c) => {
               const total = Number(c.puntos_totales) || 1;
-              const hechos = Number(c.puntos_instalados) + Number(c.puntos_verificados);
+              const hechos = Number(c.puntos_instalados) + Number(c.puntos_verificados) + Number(c.puntos_retirados);
               return (
                 <Link
                   key={c.campana_id}
@@ -174,7 +183,7 @@ export default async function PaginaPanel() {
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <p className="whitespace-nowrap text-sm font-medium text-texto-primario">{euros(Number(d.total))}</p>
                   <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
-                    {d.estado}
+                    {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
                   </Insignia>
                 </div>
               </Link>
