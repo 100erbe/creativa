@@ -19,7 +19,7 @@ import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
-type Articulo = { id: number; descripcion: string; artista: string | null; piezas: number; unidad: string };
+type Articulo = { id: number; descripcion: string; nombre: string; artista: string | null; piezas: number; unidad: string };
 type Punto = {
   id: number;
   nombre: string;
@@ -262,8 +262,15 @@ function CampanaVinculada({
               const usadas = puntos.filter((p) => p.linea_id === a.id).reduce((t, p) => t + (p.piezas ?? 0), 0);
               return (
                 <p key={a.id} className="text-xs text-texto-secundario">
-                  <span className="font-medium text-texto-primario">{etiquetaArticulo(a)}</span> · repartidas {usadas}
-                  {a.unidad === "ud" ? " de " + a.piezas : ""}
+                  <span className="font-medium text-texto-primario">{etiquetaArticulo(a)}</span> ·{" "}
+                  {formatoPiezas(usadas)} / {formatoPiezas(a.piezas)}
+                  {usadas > a.piezas ? (
+                    <span className="text-texto-aviso"> · te pasas en {formatoPiezas(usadas - a.piezas)}</span>
+                  ) : usadas === a.piezas ? (
+                    " · completo"
+                  ) : (
+                    ` · quedan ${formatoPiezas(a.piezas - usadas)}`
+                  )}
                 </p>
               );
             })}
@@ -322,8 +329,10 @@ function CampanaVinculada({
 
 
 function etiquetaArticulo(a: Articulo) {
-  return a.artista ? `${a.artista} — ${a.descripcion}` : a.descripcion;
+  return a.artista ? `${a.nombre} — ${a.artista}` : a.nombre;
 }
+
+const formatoPiezas = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
 
 function NuevoPunto({
   documentoId,
@@ -341,6 +350,12 @@ function NuevoPunto({
   const [nombre, setNombre] = useState("");
   const [lineaId, setLineaId] = useState<string>(articulos.length === 1 ? String(articulos[0]!.id) : "");
   const [piezas, setPiezas] = useState("");
+  // Piezas del artículo elegido: ya repartidas en otros puntos + las de este.
+  const articuloElegido = articulos.find((x) => String(x.id) === lineaId) ?? null;
+  const yaRepartidas = articuloElegido
+    ? puntos.filter((p) => p.linea_id === articuloElegido.id).reduce((t, p) => t + (p.piezas ?? 0), 0)
+    : 0;
+  const restantes = articuloElegido ? articuloElegido.piezas - yaRepartidas - (Number(piezas.replace(",", ".")) || 0) : 0;
   const [direccion, setDireccion] = useState("");
   const [colocacion, setColocacion] = useState(campana.fecha_inicio ?? "");
   const [retirada, setRetirada] = useState(campana.fecha_fin ?? "");
@@ -458,33 +473,27 @@ function NuevoPunto({
         </Etiqueta>
         {articulos.length > 0 ? (
           <div className="flex flex-col gap-esp2">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-texto-secundario">Artículo / soporte *</span>
-              <div role="radiogroup" aria-label="Artículo" className="flex flex-col gap-esp2">
-                {articulos.map((a) => {
-                  const activo = lineaId === String(a.id);
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={activo}
-                      onClick={() => setLineaId(String(a.id))}
-                      className={cn(
-                        "min-h-11 rounded-md border px-esp3 py-esp2 text-left text-sm",
-                        activo
-                          ? "border-borde-foco bg-fondo-marca-sutil font-medium text-texto-marca"
-                          : "border-borde-fuerte bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil",
-                      )}
-                    >
-                      {etiquetaArticulo(a)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <Etiqueta texto="Piezas">
+            <Etiqueta texto="Artículo *">
+              <select value={lineaId} onChange={(e) => setLineaId(e.target.value)} className={entrada}>
+                <option value="">Elige un artículo…</option>
+                {articulos.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {etiquetaArticulo(a)}
+                  </option>
+                ))}
+              </select>
+            </Etiqueta>
+            <Etiqueta texto="Piezas de este punto">
               <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
+              {articuloElegido && (
+                <span className={restantes < 0 ? "text-xs text-texto-aviso" : "text-xs text-texto-terciario"} role="status">
+                  {restantes < 0
+                    ? `Con este punto te pasas ${formatoPiezas(-restantes)} del total (${formatoPiezas(articuloElegido.piezas)}). Puedes guardarlo igualmente.`
+                    : restantes === 0
+                      ? `Con este punto se reparte todo el artículo (${formatoPiezas(articuloElegido.piezas)}).`
+                      : `Quedan ${formatoPiezas(restantes)} de ${formatoPiezas(articuloElegido.piezas)}`}
+                </span>
+              )}
             </Etiqueta>
           </div>
         ) : (

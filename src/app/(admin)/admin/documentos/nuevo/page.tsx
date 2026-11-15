@@ -102,7 +102,7 @@ export default async function PaginaNuevoDocumento({
         : Promise.resolve({ data: [] }),
       supabase
         .from("lineas_documento")
-        .select("id, descripcion, artista, piezas, unidad")
+        .select("id, descripcion, articulo, artista, piezas, unidad, productos(nombre)")
         .eq("documento_id", documentoId)
         .order("orden"),
     ]);
@@ -110,13 +110,18 @@ export default async function PaginaNuevoDocumento({
       <PasoCampana
         documento={cabecera}
         campanas={campanas ?? []}
-        articulos={(lineasDoc ?? []).map((l) => ({
+        articulos={(lineasDoc ?? []).map((l) => {
+          const producto = Array.isArray(l.productos) ? l.productos[0] : l.productos;
+          return {
           id: l.id,
           descripcion: l.descripcion,
+          // Nombre corto para elegir el artículo: producto y formato, no el texto largo de la factura.
+          nombre: producto?.nombre ? `${producto.nombre}${l.articulo ? ` · ${l.articulo}` : ""}` : l.descripcion,
           artista: l.artista,
           piezas: Number(l.piezas),
           unidad: l.unidad,
-        }))}
+          };
+        })}
         puntos={(puntos ?? []).map((p) => ({
           ...p,
           piezas: p.piezas == null ? null : Number(p.piezas),
