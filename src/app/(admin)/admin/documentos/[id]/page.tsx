@@ -125,6 +125,13 @@ export default async function PaginaDocumento({
     : `mailto:${destinatarios.join(",")}?subject=${encodeURIComponent(`${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim())}&body=${encodeURIComponent(
         `Hola,\n\nTe adjunto ${doc.tipo === "factura" || doc.tipo === "rectificativa" ? "la" : "el"} ${etiquetaTipo.toLowerCase()} ${doc.numero_completo ?? ""} por importe de ${euros(Number(doc.total))}.\n\nUn saludo,\n${empresa?.nombre_comercial ?? ""}`,
       )}`;
+  const compartir = esBorrador
+    ? null
+    : {
+        archivo: `${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim(),
+        titulo: `${etiquetaTipo} ${doc.numero_completo ?? ""}`.trim(),
+        texto: `${etiquetaTipo} ${doc.numero_completo ?? ""} por importe de ${euros(Number(doc.total))}.`,
+      };
   const filasLineas = lineas ?? [];
 
   return (
@@ -340,6 +347,7 @@ export default async function PaginaDocumento({
               estado={doc.estado}
               etiquetaTipo={etiquetaTipo}
               mailto={mailto}
+              compartir={compartir}
               hayDestinatario={destinatarios.length > 0}
             />
           </div>

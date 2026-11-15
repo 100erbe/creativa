@@ -20,6 +20,7 @@ import { CAMPO } from "@/components/ui/panel-busqueda";
 import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
+import { BotonCompartir } from "./boton-compartir";
 
 const hoy = () => new Date().toISOString().slice(0, 10);
 
@@ -33,6 +34,7 @@ export function AccionesDocumento({
   etiquetaTipo,
   mailto,
   hayDestinatario,
+  compartir,
 }: {
   documentoId: number;
   tipo: string;
@@ -41,6 +43,8 @@ export function AccionesDocumento({
   /** Enlace mailto: ya preparado (null en los borradores). */
   mailto: string | null;
   hayDestinatario: boolean;
+  /** Datos para compartir el PDF (null en los borradores). */
+  compartir: { archivo: string; titulo: string; texto: string } | null;
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [fecha, setFecha] = useState(hoy());
@@ -58,6 +62,8 @@ export function AccionesDocumento({
           Imprimir / PDF
         </Boton>
       </Link>
+
+      {compartir && <BotonCompartir documentoId={documentoId} {...compartir} />}
 
       {mailto && (
         <div className="flex flex-col gap-1">

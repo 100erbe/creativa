@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
+    "@sparticuz/chromium": "^153.0.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.47.10",
     "clsx": "^2.1.1",
@@ -22,6 +23,7 @@
     "leaflet": "^1.9.4",
     "maplibre-gl": "^6.18.0",
     "next": "^15.5.29",
+    "puppeteer-core": "^25.17.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-leaflet": "^5.0.0",

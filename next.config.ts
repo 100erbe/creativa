@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Chrome sin interfaz para generar PDF: no se empaqueta, se carga tal cual en el servidor.
+  serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
   async headers() {
     return [
       {
