@@ -14,19 +14,27 @@ export function BotonCompartir({
   archivo,
   titulo,
   texto,
+  alCompartir,
+  pagada = false,
+  etiqueta = "Compartir PDF",
 }: {
   documentoId: number;
   /** Nombre del archivo, sin extensión. */
   archivo: string;
   titulo: string;
   texto: string;
+  /** Se llama cuando el PDF se ha compartido o descargado. */
+  alCompartir?: () => void;
+  /** PDF con el sello «PAGADA». */
+  pagada?: boolean;
+  etiqueta?: string;
 }) {
   const [generando, setGenerando] = useState(false);
 
   async function compartir() {
     setGenerando(true);
     try {
-      const respuesta = await fetch(`/api/documentos/${documentoId}/pdf`);
+      const respuesta = await fetch(`/api/documentos/${documentoId}/pdf${pagada ? "?pagada=1" : ""}`);
       if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
       const nombre = `${archivo.replace(/[\/:*?"<>|]+/g, "-")}.pdf`;
       const fichero = new File([await respuesta.blob()], nombre, { type: "application/pdf" });
@@ -41,6 +49,7 @@ export function BotonCompartir({
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 10_000);
       }
+      alCompartir?.();
     } catch (e) {
       // Cancelar el menú de compartir no es un error.
       if (!(e instanceof DOMException && e.name === "AbortError")) {
@@ -54,7 +63,7 @@ export function BotonCompartir({
   return (
     <Boton variante="secundario" onClick={compartir} disabled={generando}>
       <Icono nombre="enviar" size={16} />
-      {generando ? "Preparando PDF…" : "Compartir PDF"}
+      {generando ? "Preparando PDF…" : etiqueta}
     </Boton>
   );
 }

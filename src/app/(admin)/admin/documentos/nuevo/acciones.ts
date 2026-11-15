@@ -65,6 +65,53 @@ export const crearBorrador = accion(async (clienteId: number, tipo: TipoNuevoDoc
   return data.id as number;
 });
 
+/**
+ * Cambia el tipo de un borrador (presupuesto ↔ albarán ↔ factura) manteniendo líneas y cliente.
+ * Es seguro porque el número se asigna al emitir. No vale para documentos que vienen de otro
+ * (una factura convertida o una versión de presupuesto), que deben conservar su tipo.
+ */
+export const cambiarTipo = accion(async (documentoId: number, tipo: TipoNuevoDocumento) => {
+  await exigirAdmin();
+  if (!TIPOS_PERMITIDOS.includes(tipo)) throw new Error("Tipo de documento no válido.");
+  const supabase = await createClient();
+
+  const { data: doc } = await supabase
+    .from("documentos")
+    .select("tipo, estado, documento_origen_id")
+    .eq("id", documentoId)
+    .maybeSingle();
+  if (!doc) throw new Error("No se ha encontrado el documento.");
+  if (doc.tipo === tipo) return;
+  if (doc.estado !== "borrador") throw new Error("Solo se puede cambiar el tipo de un borrador.");
+  if (doc.documento_origen_id) {
+    throw new Error("Este documento viene de otro (conversión o versión) y no puede cambiar de tipo.");
+  }
+  if (!(TIPOS_PERMITIDOS as string[]).includes(doc.tipo)) {
+    throw new Error("Este tipo de documento no se puede cambiar.");
+  }
+
+  const { data: serie } = await supabase
+    .from("series")
+    .select("id")
+    .eq("tipo", tipo)
+    .eq("por_defecto", true)
+    .maybeSingle();
+  if (!serie) throw new Error(`No hay una serie por defecto configurada para ${tipo}.`);
+
+  const { error } = await supabase
+    .from("documentos")
+    .update({
+      tipo,
+      serie_id: serie.id,
+      // Un presupuesto tiene «válido hasta»; los demás, vencimiento: se limpia lo que ya no aplica.
+      ...(tipo === "presupuesto" ? { fecha_vencimiento: null, plazo_dias: null } : { valido_hasta: null }),
+    })
+    .eq("id", documentoId)
+    .eq("estado", "borrador");
+  if (error) throw new Error(error.message);
+  refrescar(documentoId);
+});
+
 /** "Cambiar" cliente de un borrador ya creado (mantiene las líneas). */
 export const cambiarCliente = accion(async (documentoId: number, clienteId: number) => {
   await exigirAdmin();

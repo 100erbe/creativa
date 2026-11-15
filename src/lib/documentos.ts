@@ -33,8 +33,18 @@ export const ETIQUETA_ESTADO_DOC: Record<string, string> = {
   rechazado: "Rechazado",
   caducado: "Caducado",
   facturado: "Facturado",
+  sustituido: "Sustituido",
   anulado: "Anulado",
 };
+
+/**
+ * Presupuesto emitido o enviado cuyo «válido hasta» ya pasó y nadie ha marcado aún como aceptado,
+ * rechazado o caducado. Se calcula al vuelo (no cambia el estado guardado).
+ */
+export function validezVencida(tipo: string, estado: string, validoHasta: string | null, hoy = new Date()) {
+  if (tipo !== "presupuesto" || !validoHasta || (estado !== "emitido" && estado !== "enviado")) return false;
+  return validoHasta < hoy.toISOString().slice(0, 10);
+}
 
 export const ETIQUETA_COBRO: Record<string, string> = {
   cobrada: "Cobrada",

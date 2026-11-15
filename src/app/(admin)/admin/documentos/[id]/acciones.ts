@@ -50,6 +50,21 @@ export const convertirDocumento = accion(async (
   return data as number;
 });
 
+/**
+ * Versión nueva de un presupuesto emitido: un borrador enlazado para modificarlo y reenviarlo.
+ * Al emitirla, el presupuesto anterior pasa a «Sustituido». Si ya hay una en borrador, devuelve esa.
+ */
+export const nuevaVersionPresupuesto = accion(async (documentoId: number) => {
+  await exigirAdmin();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("nueva_version_presupuesto", { p_origen: documentoId });
+  if (error) throw new Error(error.message);
+
+  refrescar(documentoId);
+  return data as number;
+});
+
 export const duplicarDocumento = accion(async (documentoId: number) => {
   await exigirAdmin();
   const supabase = await createClient();

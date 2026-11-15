@@ -5,7 +5,7 @@ import { Icono } from "@/components/ui/iconos";
 type Paso = { numero: number; etiqueta: string; ruta: (id: number) => string };
 
 const PASOS: Paso[] = [
-  { numero: 1, etiqueta: "Cliente", ruta: (id) => `/admin/documentos/nuevo?documento=${id}&paso=cliente` },
+  { numero: 1, etiqueta: "Tipo y cliente", ruta: (id) => `/admin/documentos/nuevo?documento=${id}&paso=cliente` },
   { numero: 2, etiqueta: "Artículos", ruta: (id) => `/admin/documentos/nuevo?documento=${id}` },
   { numero: 3, etiqueta: "Campaña", ruta: (id) => `/admin/documentos/nuevo?documento=${id}&paso=campana` },
   { numero: 4, etiqueta: "Revisar y emitir", ruta: (id) => `/admin/documentos/${id}` },

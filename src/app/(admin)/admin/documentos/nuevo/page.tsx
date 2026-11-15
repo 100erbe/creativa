@@ -39,7 +39,7 @@ export default async function PaginaNuevoDocumento({
   const { data: doc } = await supabase
     .from("documentos")
     .select(
-      "id, tipo, estado, cliente_id, suma_lineas, base_imponible, cuota_iva, total, campana_id, clientes(razon_social, nombre_comercial, descuento_habitual)",
+      "id, tipo, estado, cliente_id, documento_origen_id, suma_lineas, base_imponible, cuota_iva, total, campana_id, clientes(razon_social, nombre_comercial, descuento_habitual)",
     )
     .eq("id", documentoId)
     .maybeSingle();
@@ -77,7 +77,13 @@ export default async function PaginaNuevoDocumento({
     return (
       <PasoCliente
         clientes={await cargarClientes()}
-        documento={{ id: doc.id, tipo: doc.tipo, cliente_id: doc.cliente_id }}
+        documento={{
+          id: doc.id,
+          tipo: doc.tipo,
+          cliente_id: doc.cliente_id,
+          // Una factura convertida o una versión de presupuesto conserva su tipo.
+          tipoFijo: doc.documento_origen_id != null || !["presupuesto", "albaran", "factura"].includes(doc.tipo),
+        }}
       />
     );
   }

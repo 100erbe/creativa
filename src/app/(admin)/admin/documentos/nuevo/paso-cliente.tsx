@@ -9,7 +9,7 @@ import { cn } from "@/lib/cn";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { TIPOS_CLIENTE, TIPOS_DOCUMENTO_ID } from "@/lib/clientes";
 import { crearClienteRapido } from "../../clientes/acciones";
-import { cambiarCliente, crearBorrador, type TipoNuevoDocumento } from "./acciones";
+import { cambiarCliente, cambiarTipo, crearBorrador, type TipoNuevoDocumento } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 
 type Cliente = {
@@ -32,8 +32,8 @@ export function PasoCliente({
   clienteInicialId,
 }: {
   clientes: Cliente[];
-  /** Si viene, estamos cambiando el cliente de un borrador ya creado. */
-  documento?: { id: number; tipo: string; cliente_id: number };
+  /** Si viene, estamos cambiando el tipo o el cliente de un borrador ya creado. */
+  documento?: { id: number; tipo: string; cliente_id: number; tipoFijo: boolean };
   tipoInicial?: TipoNuevoDocumento;
   /** Cliente ya elegido (se llega desde su ficha). */
   clienteInicialId?: number;
@@ -41,7 +41,10 @@ export function PasoCliente({
   const router = useRouter();
   const [clientes, setClientes] = useState(clientesIniciales);
   const [busqueda, setBusqueda] = useState("");
-  const [tipo, setTipo] = useState<TipoNuevoDocumento>(tipoInicial ?? "presupuesto");
+  const [tipo, setTipo] = useState<TipoNuevoDocumento>(
+    tipoInicial ?? (TIPOS.find((t) => t.valor === documento?.tipo)?.valor || "presupuesto"),
+  );
+  const tipoEditable = !documento?.tipoFijo;
   const [seleccionado, setSeleccionado] = useState<Cliente | null>(
     clientesIniciales.find((c) => c.id === (documento?.cliente_id ?? clienteInicialId)) ?? null,
   );
@@ -60,7 +63,9 @@ export function PasoCliente({
     cerrar();
   }
 
-  const etiquetaTipo = ETIQUETA_TIPO[documento?.tipo ?? tipo] ?? "documento";
+  const tipoMostrado = tipoEditable ? tipo : (documento?.tipo ?? tipo);
+  const etiquetaTipo = ETIQUETA_TIPO[tipoMostrado] ?? "documento";
+  const femenino = tipoMostrado === "factura" || tipoMostrado === "rectificativa";
 
   function continuar() {
     if (!seleccionado) return;
@@ -68,6 +73,7 @@ export function PasoCliente({
     iniciar(async () => {
       try {
         if (documento) {
+          if (tipoEditable && tipo !== documento.tipo) await desenvolver(cambiarTipo(documento.id, tipo));
           if (seleccionado.id !== documento.cliente_id) await desenvolver(cambiarCliente(documento.id, seleccionado.id));
           router.push(`/admin/documentos/nuevo?documento=${documento.id}`);
         } else {
@@ -87,12 +93,20 @@ export function PasoCliente({
       <div>
         <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
         <h1 className="text-2xl font-semibold text-texto-primario">
-          {documento ? `Cambiar cliente del ${etiquetaTipo.toLowerCase()}` : `Nuevo ${etiquetaTipo.toLowerCase()}`}
+          {documento
+            ? `Tipo y cliente ${femenino ? "de la" : "del"} ${etiquetaTipo.toLowerCase()}`
+            : `${femenino ? "Nueva" : "Nuevo"} ${etiquetaTipo.toLowerCase()}`}
         </h1>
       </div>
       <PasosDocumento actual={1} documentoId={documento?.id} />
 
-      {!documento && (
+      {documento && !tipoEditable && (
+        <p className="text-xs text-texto-terciario">
+          Este documento viene de otro (conversión o versión), así que conserva su tipo.
+        </p>
+      )}
+
+      {tipoEditable && (
         <div className="flex flex-col gap-esp2">
           <span id="tipo-documento" className="text-xs font-medium text-texto-secundario">
             Tipo de documento

@@ -619,6 +619,7 @@ export type Database = {
           fecha_operacion: string | null
           fecha_vencimiento: string | null
           plazo_dias: number | null
+          version: number
           firmado: boolean
           forma_pago_id: number | null
           iban_cobro: string | null
@@ -673,6 +674,7 @@ export type Database = {
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
+          version?: number
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -727,6 +729,7 @@ export type Database = {
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
+          version?: number
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -2030,6 +2033,10 @@ export type Database = {
         Args: { p_fecha?: string; p_origen: number }
         Returns: number
       }
+      nueva_version_presupuesto: {
+        Args: { p_origen: number }
+        Returns: number
+      }
       emitir_documento: {
         Args: { p_doc: number; p_fecha?: string }
         Returns: string
@@ -2098,6 +2105,7 @@ export type Database = {
         | "rechazado"
         | "caducado"
         | "facturado"
+        | "sustituido"
         | "anulado"
       estado_punto:
         | "pendiente"
@@ -2282,6 +2290,7 @@ export const Constants = {
         "rechazado",
         "caducado",
         "facturado",
+        "sustituido",
         "anulado",
       ],
       estado_punto: [

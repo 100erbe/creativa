@@ -5,7 +5,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, validezVencida } from "@/lib/documentos";
 import { LimpiarBorradores } from "./limpiar-borradores";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,12 @@ const ESTADOS = [
   { valor: "", etiqueta: "Cualquier estado" },
   { valor: "borrador", etiqueta: "Borradores" },
   { valor: "emitido", etiqueta: "Emitidos" },
+  { valor: "enviado", etiqueta: "Enviados" },
+  { valor: "aceptado", etiqueta: "Aceptados" },
+  { valor: "rechazado", etiqueta: "Rechazados" },
+  { valor: "caducado", etiqueta: "Caducados" },
   { valor: "facturado", etiqueta: "Facturados" },
+  { valor: "sustituido", etiqueta: "Sustituidos" },
 ];
 
 type Filtros = { tipo?: string; estado?: string; q?: string; cliente?: string; cobro?: string; pagina?: string };
@@ -70,7 +75,7 @@ export default async function PaginaDocumentos({
   let consulta = supabase
     .from("documentos")
     .select(
-      "id, tipo, estado, numero_completo, fecha, creado_en, total, cliente_razon_social, clientes(razon_social)",
+      "id, tipo, estado, numero_completo, fecha, valido_hasta, version, creado_en, total, cliente_razon_social, clientes(razon_social)",
       { count: "exact" },
     )
     .order("fecha", { ascending: false })
@@ -179,6 +184,23 @@ export default async function PaginaDocumentos({
               {c.etiqueta}
             </Link>
           ))}
+          {(() => {
+            // Lo que toca facturar: presupuestos que el cliente ya ha aceptado.
+            const activo = tipo === "presupuesto" && estado === "aceptado";
+            return (
+              <Link
+                href={enlace(actual, activo ? { tipo: "", estado: "", pagina: "" } : { tipo: "presupuesto", estado: "aceptado", cobro: "", pagina: "" })}
+                aria-pressed={activo}
+                className={
+                  activo
+                    ? "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-exito bg-fondo-exito-sutil px-esp3 text-sm font-medium text-texto-exito md:min-h-0 md:py-esp1"
+                    : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
+                }
+              >
+                Aceptados sin facturar
+              </Link>
+            );
+          })()}
         </div>
         <form action="/admin/documentos" className="flex flex-wrap items-center gap-esp2 md:ml-auto md:flex-nowrap">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
@@ -224,6 +246,7 @@ export default async function PaginaDocumentos({
               <div className="min-w-0 lg:flex-1">
                 <p className="truncate text-sm font-medium text-texto-primario">
                   {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
+                  {d.version > 1 && <span className="font-normal text-texto-terciario"> · v{d.version}</span>}
                 </p>
                 <p className="truncate text-xs text-texto-terciario">
                   {d.cliente_razon_social ?? cliente?.razon_social ?? "Sin cliente"}
@@ -251,6 +274,7 @@ export default async function PaginaDocumentos({
                 <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
                   {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
                 </Insignia>
+                {validezVencida(d.tipo, d.estado, d.valido_hasta) && <Insignia tono="aviso">Validez vencida</Insignia>}
                 {cobro && cobro !== "cobrada" && (
                   <Insignia tono={TONO_POR_ESTADO[cobro] ?? "neutro"}>
                     {ETIQUETA_COBRO[cobro] ?? cobro}

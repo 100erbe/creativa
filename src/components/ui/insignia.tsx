@@ -38,6 +38,7 @@ export const TONO_POR_ESTADO: Record<string, TonoInsignia> = {
   cobrada: "exito",
   parcial: "info",
   facturado: "neutro",
+  sustituido: "neutro",
   rechazado: "peligro",
   caducado: "neutro",
   incidencia: "peligro",

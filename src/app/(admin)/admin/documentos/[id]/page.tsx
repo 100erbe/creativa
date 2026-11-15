@@ -5,10 +5,10 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { euros, fechaMedia } from "@/lib/formato";
-import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, validezVencida } from "@/lib/documentos";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
-import { AccionesDocumento, CondicionesDocumento, Cobros } from "./controles";
+import { AccionesDocumento, CondicionesDocumento, Cobros, ProveedorCondiciones } from "./controles";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 
 export const dynamic = "force-dynamic";
@@ -132,6 +132,26 @@ export default async function PaginaDocumento({
     texto: `${nombreDocumento} por importe de ${euros(Number(doc.total))}.`,
   };
   const filasLineas = lineas ?? [];
+  // Factura en borrador ya creada desde este presupuesto/albarán: se sigue con ella en lugar de convertir otra vez.
+  const facturaEnBorradorId = (derivados ?? []).find((d) => d.tipo === "factura" && !d.numero_completo)?.id ?? null;
+  // Versión nueva de este presupuesto aún en borrador.
+  const versionEnBorradorId =
+    doc.tipo === "presupuesto"
+      ? ((derivados ?? []).find((d) => d.tipo === "presupuesto" && !d.numero_completo)?.id ?? null)
+      : null;
+  const vencido = validezVencida(doc.tipo, doc.estado, doc.valido_hasta);
+  // El tipo se puede cambiar en un borrador propio (no en una factura convertida ni en una versión).
+  const tipoCambiable =
+    esBorrador && !doc.documento_origen_id && ["presupuesto", "albaran", "factura"].includes(doc.tipo);
+  // Origen y derivados del mismo tipo (presupuesto → presupuesto) son versiones.
+  const etiquetaRelacion = (tipo: string, esOrigen: boolean) =>
+    tipo === "presupuesto" && doc.tipo === "presupuesto"
+      ? esOrigen
+        ? "Versión anterior"
+        : "Nueva versión"
+      : esOrigen
+        ? "Origen"
+        : (ETIQUETA_TIPO[tipo] ?? tipo);
 
   return (
     <div className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}>
@@ -152,9 +172,23 @@ export default async function PaginaDocumento({
           <div className="flex-1">
             <h1 className="text-2xl font-semibold text-texto-primario">{titulo}</h1>
             <p className="text-sm text-texto-secundario">
-              {etiquetaTipo} · {fechaMedia(doc.fecha)}
-              {doc.fecha_vencimiento && !esBorrador ? ` · vence ${fechaMedia(doc.fecha_vencimiento)}` : ""}
+              {etiquetaTipo}
+              {doc.version > 1 ? ` · versión ${doc.version}` : ""} · {fechaMedia(doc.fecha)}
+              {doc.fecha_vencimiento && !esBorrador && doc.tipo !== "presupuesto"
+                ? ` · vence ${fechaMedia(doc.fecha_vencimiento)}`
+                : ""}
               {doc.valido_hasta ? ` · válido hasta ${fechaMedia(doc.valido_hasta)}` : ""}
+              {tipoCambiable && (
+                <>
+                  {" · "}
+                  <Link
+                    href={`/admin/documentos/nuevo?documento=${doc.id}&paso=cliente`}
+                    className="font-medium text-texto-marca"
+                  >
+                    Cambiar tipo
+                  </Link>
+                </>
+              )}
             </p>
           </div>
           {estadoCobro?.estado_cobro && (
@@ -162,6 +196,7 @@ export default async function PaginaDocumento({
               {ETIQUETA_COBRO[estadoCobro.estado_cobro] ?? estadoCobro.estado_cobro}
             </Insignia>
           )}
+          {vencido && <Insignia tono="aviso">Validez vencida</Insignia>}
           <Insignia tono={TONO_POR_ESTADO[doc.estado] ?? "neutro"}>
             {ETIQUETA_ESTADO_DOC[doc.estado] ?? doc.estado}
           </Insignia>
@@ -171,7 +206,7 @@ export default async function PaginaDocumento({
           <div className="flex flex-wrap gap-esp3 text-xs text-texto-secundario">
             {origen && (
               <span>
-                Origen:{" "}
+                {etiquetaRelacion(origen.tipo, true)}:{" "}
                 <Link href={`/admin/documentos/${origen.id}`} className="font-medium text-texto-marca">
                   {origen.numero_completo ?? ETIQUETA_TIPO[origen.tipo]}
                 </Link>
@@ -179,7 +214,7 @@ export default async function PaginaDocumento({
             )}
             {(derivados ?? []).map((d) => (
               <span key={d.id}>
-                {ETIQUETA_TIPO[d.tipo] ?? d.tipo}:{" "}
+                {etiquetaRelacion(d.tipo, false)}:{" "}
                 <Link href={`/admin/documentos/${d.id}`} className="font-medium text-texto-marca">
                   {d.numero_completo ?? "borrador"}
                 </Link>
@@ -285,6 +320,7 @@ export default async function PaginaDocumento({
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
+          <ProveedorCondiciones>
           <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-base font-semibold text-texto-primario">Resumen</h2>
             <Fila etiqueta="Suma de líneas" valor={euros(Number(doc.suma_lineas))} />
@@ -349,6 +385,9 @@ export default async function PaginaDocumento({
               mailto={mailto}
               compartir={compartir}
               hayDestinatario={destinatarios.length > 0}
+              facturaEnBorradorId={facturaEnBorradorId}
+              versionEnBorradorId={versionEnBorradorId}
+              vencido={vencido}
             />
           </div>
 
@@ -358,6 +397,7 @@ export default async function PaginaDocumento({
               <Cobros
                 key={`${cobros?.length ?? 0}-${estadoCobro.pendiente}`}
                 documentoId={doc.id}
+                compartir={compartir}
                 pendiente={Number(estadoCobro.pendiente)}
                 cobros={(cobros ?? []).map((c) => ({
                   id: c.id,
@@ -369,6 +409,7 @@ export default async function PaginaDocumento({
               />
             </div>
           )}
+          </ProveedorCondiciones>
         </div>
       </div>
 

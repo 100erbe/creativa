@@ -55,7 +55,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       });
     if (cookies.length) await pagina.setCookie(...cookies);
 
-    const respuesta = await pagina.goto(`${origen}/admin/documentos/${documentoId}/imprimir`, {
+    // ?pagada=1 → con el sello «PAGADA» (la pantalla de impresión decide si la factura lo admite).
+    const sello = request.nextUrl.searchParams.get("pagada") === "1" ? "?pagada=1" : "";
+    const respuesta = await pagina.goto(`${origen}/admin/documentos/${documentoId}/imprimir${sello}`, {
       waitUntil: "networkidle0",
       timeout: 45_000,
     });
