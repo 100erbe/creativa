@@ -38,7 +38,7 @@ export type DatosCliente = {
 type Opcion = { id: number; etiqueta: string };
 
 const entrada =
-  "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
 function Campo({
   etiqueta,
@@ -52,7 +52,7 @@ function Campo({
   className?: string;
 }) {
   return (
-    <label className={`flex flex-col gap-1 ${className ?? ""}`}>
+    <label className={`flex flex-col gap-1.5 ${className ?? ""}`}>
       <span className="text-xs font-medium text-texto-secundario">{etiqueta}</span>
       {children}
       {ayuda && <span className="text-xs text-texto-terciario">{ayuda}</span>}
@@ -60,12 +60,23 @@ function Campo({
   );
 }
 
-function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Seccion({
+  titulo,
+  subtitulo,
+  children,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
-      <h2 className="text-base font-semibold text-texto-primario">{titulo}</h2>
+    <section className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp4 shadow-xs md:px-esp6 md:py-esp5">
+      <div>
+        <h2 className="text-base font-semibold text-texto-primario">{titulo}</h2>
+        {subtitulo && <p className="text-xs text-texto-terciario">{subtitulo}</p>}
+      </div>
       <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2">{children}</div>
-    </div>
+    </section>
   );
 }
 
@@ -89,7 +100,7 @@ export function FormularioCliente({
     <form action={accion} className="flex flex-col gap-esp5">
       {editando && <input type="hidden" name="id" value={inicial?.id} />}
 
-      <Seccion titulo="Datos fiscales">
+      <Seccion titulo="Datos fiscales" subtitulo="Identificación legal del cliente para presupuestos y facturas.">
         <Campo etiqueta="Razón social *" className="md:col-span-2">
           <input name="razon_social" defaultValue={inicial?.razon_social} required className={entrada} />
         </Campo>
@@ -112,16 +123,24 @@ export function FormularioCliente({
           </select>
         </Campo>
         <Campo etiqueta="Número de documento">
-          <input name="numero_documento" defaultValue={inicial?.numero_documento ?? ""} className={entrada} />
+          <input
+            name="numero_documento"
+            defaultValue={inicial?.numero_documento ?? ""}
+            className={`${entrada} tabular-nums`}
+          />
         </Campo>
       </Seccion>
 
-      <Seccion titulo="Dirección y contacto">
+      <Seccion titulo="Dirección y contacto" subtitulo="Datos postales y canales principales de comunicación.">
         <Campo etiqueta="Dirección" className="md:col-span-2">
           <input name="direccion" defaultValue={inicial?.direccion ?? ""} className={entrada} />
         </Campo>
         <Campo etiqueta="Código postal">
-          <input name="codigo_postal" defaultValue={inicial?.codigo_postal ?? ""} className={entrada} />
+          <input
+            name="codigo_postal"
+            defaultValue={inicial?.codigo_postal ?? ""}
+            className={`${entrada} tabular-nums`}
+          />
         </Campo>
         <Campo etiqueta="Municipio">
           <input name="municipio" defaultValue={inicial?.municipio ?? ""} className={entrada} />
@@ -133,17 +152,26 @@ export function FormularioCliente({
           <input name="pais" defaultValue={inicial?.pais?.trim() || "ES"} maxLength={2} className={entrada} />
         </Campo>
         <Campo etiqueta="Email de facturación">
-          <input name="email_facturacion" type="email" defaultValue={inicial?.email_facturacion ?? ""} className={entrada} />
+          <input
+            name="email_facturacion"
+            type="email"
+            defaultValue={inicial?.email_facturacion ?? ""}
+            className={entrada}
+          />
         </Campo>
         <Campo etiqueta="Teléfono">
-          <input name="telefono" defaultValue={inicial?.telefono ?? ""} className={entrada} />
+          <input
+            name="telefono"
+            defaultValue={inicial?.telefono ?? ""}
+            className={`${entrada} tabular-nums`}
+          />
         </Campo>
         <Campo etiqueta="Web" className="md:col-span-2">
           <input name="web" defaultValue={inicial?.web ?? ""} className={entrada} />
         </Campo>
       </Seccion>
 
-      <Seccion titulo="Condiciones comerciales">
+      <Seccion titulo="Condiciones comerciales" subtitulo="Segmento, impuestos, forma de cobro y descuentos por defecto.">
         <Campo etiqueta="Tipo de cliente">
           <select name="tipo_cliente" defaultValue={inicial?.tipo_cliente ?? "marca_empresa"} className={entrada}>
             {TIPOS_CLIENTE.map((t) => (
@@ -179,14 +207,18 @@ export function FormularioCliente({
         </Campo>
         <Campo
           etiqueta={necesitaMotivo ? "Motivo de la exención *" : "Motivo de la exención"}
-          ayuda={necesitaMotivo ? "Obligatorio para este régimen; sale en la factura." : "Solo se usa en exentos e intracomunitarios."}
+          ayuda={
+            necesitaMotivo
+              ? "Obligatorio para este régimen; sale en la factura."
+              : "Solo se usa en exentos e intracomunitarios."
+          }
         >
           <input
             name="motivo_exencion"
             defaultValue={inicial?.motivo_exencion ?? ""}
             disabled={!necesitaMotivo}
             required={necesitaMotivo}
-            className={entrada + " disabled:bg-fondo-sutil disabled:opacity-60"}
+            className={`${entrada} disabled:bg-fondo-sutil disabled:opacity-60`}
           />
         </Campo>
         <Campo etiqueta="Forma de pago">
@@ -214,29 +246,32 @@ export function FormularioCliente({
             name="descuento_habitual"
             inputMode="decimal"
             defaultValue={String(inicial?.descuento_habitual ?? 0)}
-            className={entrada}
+            className={`${entrada} tabular-nums`}
           />
         </Campo>
       </Seccion>
 
-      <Seccion titulo="Notas internas">
+      <Seccion titulo="Notas internas" subtitulo="Solo visibles para el equipo de administración.">
         <Campo etiqueta="Notas" className="md:col-span-2">
           <textarea
             name="notas"
             rows={3}
             defaultValue={inicial?.notas ?? ""}
-            className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:text-sm"
           />
         </Campo>
       </Seccion>
 
       {estado.error && (
-        <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3 text-sm text-texto-peligro">
+        <p
+          role="alert"
+          className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3 text-sm text-texto-peligro"
+        >
           {estado.error}
         </p>
       )}
 
-      <div className="flex gap-esp3">
+      <div className="flex flex-wrap items-center justify-end gap-esp3 border-t border-borde-default pt-esp4">
         <Link href={editando ? `/admin/clientes/${inicial?.id}` : "/admin/clientes"}>
           <Boton type="button" variante="secundario">
             Cancelar

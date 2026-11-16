@@ -6,13 +6,19 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
-import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE } from "@/lib/clientes";
+import { clasificarAgingCobro, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { BotonActivo, BotonEliminarCliente, Contactos } from "./controles";
 
 export const dynamic = "force-dynamic";
+
+function normalizarWeb(url: string): string | null {
+  const limpia = url.trim();
+  if (!limpia || /^javascript:/i.test(limpia)) return null;
+  return /^https?:\/\//i.test(limpia) ? limpia : `https://${limpia}`;
+}
 
 export default async function PaginaCliente({
   params,
@@ -24,6 +30,7 @@ export default async function PaginaCliente({
   if (!Number.isInteger(clienteId)) notFound();
 
   const supabase = await createClient();
+  const hoy = new Date();
 
   const { data: cliente } = await supabase.from("clientes").select("*").eq("id", clienteId).maybeSingle();
   if (!cliente) notFound();
@@ -66,7 +73,10 @@ export default async function PaginaCliente({
       .eq("cliente_id", clienteId)
       .in("tipo", ["factura", "rectificativa"])
       .neq("estado", "borrador"),
-    supabase.from("v_estado_cobro").select("pendiente, estado_cobro").eq("cliente_id", clienteId),
+    supabase
+      .from("v_estado_cobro")
+      .select("id, numero_completo, pendiente, estado_cobro, fecha_vencimiento")
+      .eq("cliente_id", clienteId),
     supabase
       .from("campanas")
       .select("id, nombre, estado, fecha_inicio")
@@ -79,8 +89,20 @@ export default async function PaginaCliente({
   ]);
 
   const facturado = (facturas ?? []).reduce((s, f) => s + Number(f.total), 0);
-  const pendiente = (cobros ?? []).reduce((s, c) => s + Number(c.pendiente), 0);
-  const vencidas = (cobros ?? []).filter((c) => c.estado_cobro === "vencida").length;
+  const pendiente = (cobros ?? []).reduce((s, c) => s + Number(c.pendiente ?? 0), 0);
+
+  const cobrosConAging = (cobros ?? [])
+    .filter((c) => Number(c.pendiente ?? 0) > 0.01)
+    .map((c) => ({
+      ...c,
+      pendienteNum: Number(c.pendiente ?? 0),
+      aging: clasificarAgingCobro(c.estado_cobro, c.fecha_vencimiento, hoy),
+    }));
+
+  const vencidas = cobrosConAging.filter((c) => c.aging.diasVencido > 0 || c.estado_cobro === "vencida");
+  const criticas90 = cobrosConAging.filter((c) => c.aging.esCritica90);
+  const sumaCriticas90 = criticas90.reduce((s, c) => s + c.pendienteNum, 0);
+  const maxDiasVencido = cobrosConAging.reduce((m, c) => Math.max(m, c.aging.diasVencido), 0);
 
   const direccion = componerDireccion({
     direccion: cliente.direccion,
@@ -88,10 +110,11 @@ export default async function PaginaCliente({
     municipio: cliente.municipio,
     provincia: cliente.provincia,
   });
+  const webUrl = cliente.web ? normalizarWeb(cliente.web) : null;
 
   return (
     <div className="flex flex-col gap-esp6">
-      <div className="flex flex-col gap-esp2">
+      <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/clientes"
           className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
@@ -99,65 +122,158 @@ export default async function PaginaCliente({
           <Icono nombre="atras" size={16} />
           Clientes
         </Link>
-        <div className="flex flex-wrap items-center gap-esp3">
-          <div className="min-w-0 flex-1">
-            <h1 className="break-words text-2xl font-semibold text-texto-primario">{cliente.razon_social}</h1>
-            <p className="text-sm text-texto-secundario">
-              {cliente.codigo} · {ETIQUETA_TIPO_CLIENTE[cliente.tipo_cliente] ?? cliente.tipo_cliente}
-              {grupo ? ` · ${grupo.nombre}` : ""}
-            </p>
+
+        <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:flex-row md:items-center md:p-esp5">
+          <div className="flex min-w-0 flex-1 items-start gap-esp3 sm:items-center">
+            <div
+              aria-hidden="true"
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
+                criticas90.length > 0
+                  ? "bg-fondo-critico text-texto-inverso"
+                  : "border border-borde-marca bg-fondo-marca-sutil text-texto-marca"
+              }`}
+            >
+              {inicialesCliente(cliente.razon_social)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-esp2">
+                <h1 className="break-words text-xl font-semibold tracking-tight text-texto-primario md:text-2xl">
+                  {cliente.razon_social}
+                </h1>
+                {!cliente.activo ? (
+                  <Insignia tono="neutro">Inactivo</Insignia>
+                ) : (
+                  <Insignia tono="exito">Activo</Insignia>
+                )}
+                {criticas90.length > 0 && (
+                  <Insignia tono="critico" solido>
+                    90+ días · {maxDiasVencido}d
+                  </Insignia>
+                )}
+              </div>
+              <p className="mt-0.5 text-sm text-texto-secundario">
+                {cliente.codigo} · {ETIQUETA_TIPO_CLIENTE[cliente.tipo_cliente] ?? cliente.tipo_cliente}
+                {grupo ? ` · ${grupo.nombre}` : ""}
+                {cliente.nombre_comercial && cliente.nombre_comercial !== cliente.razon_social
+                  ? ` · Com.: ${cliente.nombre_comercial}`
+                  : ""}
+              </p>
+            </div>
           </div>
-          {!cliente.activo && <Insignia tono="neutro">Inactivo</Insignia>}
-          <Link href={`/admin/clientes/${clienteId}/editar`}>
-            <Boton variante="secundario">Editar</Boton>
-          </Link>
-          {cliente.activo && (
-            <>
-              <Link href={`/admin/campanas/nueva?cliente=${clienteId}`} className="hidden sm:block">
-                <Boton variante="secundario">Nueva campaña</Boton>
-              </Link>
-              <Link href={`/admin/documentos/nuevo?cliente=${clienteId}`}>
-                <Boton>
-                  <Icono nombre="mas" size={16} />
-                  Nuevo documento
-                </Boton>
-              </Link>
-            </>
-          )}
+
+          <div className="flex flex-wrap items-center gap-esp2">
+            <Link href={`/admin/clientes/${clienteId}/editar`}>
+              <Boton variante="secundario">Editar</Boton>
+            </Link>
+            {cliente.activo && (
+              <>
+                <Link href={`/admin/campanas/nueva?cliente=${clienteId}`}>
+                  <Boton variante="secundario">Nueva campaña</Boton>
+                </Link>
+                <Link href={`/admin/documentos/nuevo?cliente=${clienteId}`}>
+                  <Boton>
+                    <Icono nombre="mas" size={16} />
+                    Nuevo documento
+                  </Boton>
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[150px]">
-        <TarjetaKpi etiqueta="Facturado (total)" valor={euros(facturado)} detalle={`${(facturas ?? []).length} facturas`} />
+      {/* Banner de alerta crítica 90+ días */}
+      {criticas90.length > 0 && (
+        <div
+          role="region"
+          aria-label="Alerta de facturas insolutas con más de 90 días"
+          className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-critico text-texto-inverso">
+            <Icono nombre="alerta" size={18} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-texto-critico">
+              {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} insoluta
+              {criticas90.length === 1 ? "" : "s"} con 90+ días de retraso
+            </p>
+            <p className="tabular-nums text-xs text-texto-primario">
+              Saldo en riesgo crítico: <strong className="text-texto-critico">{euros(sumaCriticas90)}</strong> (máximo{" "}
+              {maxDiasVencido} días vencida).
+            </p>
+          </div>
+          <Link href={`/admin/documentos?cliente=${clienteId}&cobro=vencida_90`}>
+            <Boton variante="critico" tamano="s">
+              Ver facturas 90+ días
+            </Boton>
+          </Link>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-esp3 md:gap-esp4 xl:grid-cols-4">
+        <TarjetaKpi
+          etiqueta="Facturado (total)"
+          valor={euros(facturado)}
+          detalle={`${(facturas ?? []).length} factura${(facturas ?? []).length === 1 ? "" : "s"}`}
+          href={`/admin/documentos?cliente=${clienteId}&tipo=factura`}
+        />
         <TarjetaKpi
           etiqueta="Pendiente de cobro"
           valor={euros(pendiente)}
-          detalle={vencidas > 0 ? `${vencidas} vencidas` : "al día"}
-          colorDetalle={vencidas > 0 ? "text-texto-peligro" : "text-texto-exito"}
+          detalle={
+            criticas90.length > 0
+              ? `${criticas90.length} con 90+ días`
+              : vencidas.length > 0
+                ? `${vencidas.length} vencida${vencidas.length === 1 ? "" : "s"}`
+                : "al día"
+          }
+          colorDetalle={
+            criticas90.length > 0
+              ? "text-texto-critico font-medium"
+              : vencidas.length > 0
+                ? "text-texto-peligro"
+                : "text-texto-exito"
+          }
+          tono={criticas90.length > 0 ? "critico" : vencidas.length > 0 ? "aviso" : "default"}
+          href={`/admin/documentos?cliente=${clienteId}&cobro=${criticas90.length > 0 ? "vencida_90" : "pendiente"}`}
         />
         <TarjetaKpi etiqueta="Campañas" valor={String((campanas ?? []).length)} />
-        <TarjetaKpi
-          etiqueta="Descuento habitual"
-          valor={`${Number(cliente.descuento_habitual ?? 0)} %`}
-        />
+        <TarjetaKpi etiqueta="Descuento habitual" valor={`${Number(cliente.descuento_habitual ?? 0)} %`} />
       </div>
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Documentos recientes</h2>
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
+            <div className="flex items-center justify-between gap-esp2">
+              <h2 className="text-base font-semibold text-texto-primario">Documentos recientes</h2>
+              <Link
+                href={`/admin/documentos?cliente=${clienteId}`}
+                className="text-sm font-medium text-texto-marca hover:underline"
+              >
+                Ver todos
+              </Link>
+            </div>
             <div className="flex flex-col divide-y divide-fondo-hover">
               {(documentos ?? []).map((d) => (
-                <Link key={d.id} href={`/admin/documentos/${d.id}`} className="flex items-center gap-esp3 py-esp3">
+                <Link
+                  key={d.id}
+                  href={`/admin/documentos/${d.id}`}
+                  className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                >
+                  <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
+                    <Icono nombre="documentos" size={18} className="text-icono-default" />
+                  </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-texto-primario">
                       {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
                     </p>
-                    <p className="text-xs text-texto-terciario">
+                    <p className="tabular-nums text-xs text-texto-terciario">
                       {ETIQUETA_TIPO[d.tipo] ?? d.tipo} · {fechaMedia(d.fecha)}
                     </p>
                   </div>
-                  <span className="whitespace-nowrap text-sm font-medium text-texto-primario">{euros(Number(d.total))}</span>
+                  <span className="tabular-nums whitespace-nowrap text-sm font-medium text-texto-primario">
+                    {euros(Number(d.total))}
+                  </span>
                   <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
                     {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
                   </Insignia>
@@ -167,22 +283,27 @@ export default async function PaginaCliente({
                 <p className="py-esp3 text-sm text-texto-terciario">Este cliente aún no tiene documentos.</p>
               )}
             </div>
-            <Link
-              href={`/admin/documentos?cliente=${clienteId}`}
-              className="text-sm font-medium text-texto-marca"
-            >
-              Ver todos los documentos
-            </Link>
           </div>
 
           {(campanas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Campañas</h2>
               <div className="flex flex-col divide-y divide-fondo-hover">
                 {(campanas ?? []).map((c) => (
-                  <Link key={c.id} href={`/admin/campanas/${c.id}`} className="flex items-center gap-esp3 py-esp3">
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-texto-primario">{c.nombre}</span>
-                    <Insignia tono={TONO_POR_ESTADO[c.estado] ?? "neutro"}>{ETIQUETA_ESTADO_CAMPANA[c.estado] ?? c.estado}</Insignia>
+                  <Link
+                    key={c.id}
+                    href={`/admin/campanas/${c.id}`}
+                    className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-texto-primario">{c.nombre}</p>
+                      {c.fecha_inicio && (
+                        <p className="tabular-nums text-xs text-texto-terciario">Inicio: {fechaMedia(c.fecha_inicio)}</p>
+                      )}
+                    </div>
+                    <Insignia tono={TONO_POR_ESTADO[c.estado] ?? "neutro"}>
+                      {ETIQUETA_ESTADO_CAMPANA[c.estado] ?? c.estado}
+                    </Insignia>
                   </Link>
                 ))}
               </div>
@@ -190,23 +311,30 @@ export default async function PaginaCliente({
           )}
 
           {(tarifas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Tarifas especiales</h2>
               <div className="flex flex-col divide-y divide-fondo-hover">
                 {(tarifas ?? []).map((t) => {
                   const producto = Array.isArray(t.productos) ? t.productos[0] : t.productos;
                   const formato = Array.isArray(t.formatos) ? t.formatos[0] : t.formatos;
                   return (
-                    <div key={t.id} className="flex items-center gap-esp3 py-esp3 text-sm">
-                      <span className="flex-1 text-texto-primario">
+                    <div key={t.id} className="flex flex-wrap items-center justify-between gap-esp2 py-esp3 text-sm">
+                      <span className="min-w-0 flex-1 font-medium text-texto-primario">
                         {producto?.nombre ?? "Producto"}
-                        {formato ? ` · ${formato.nombre}` : ""}
+                        {formato ? <span className="font-normal text-texto-terciario"> · {formato.nombre}</span> : ""}
                       </span>
-                      <span className="text-texto-secundario">
-                        {t.precio_fabricacion != null ? `fab. ${euros(Number(t.precio_fabricacion))}` : ""}
-                        {t.precio_fabricacion != null && t.precio_instalacion != null ? " · " : ""}
-                        {t.precio_instalacion != null ? `inst. ${euros(Number(t.precio_instalacion))}` : ""}
-                      </span>
+                      <div className="tabular-nums flex flex-wrap gap-esp2 text-xs text-texto-secundario">
+                        {t.precio_fabricacion != null && (
+                          <span className="rounded bg-fondo-sutil px-2 py-0.5">
+                            Fab. <strong className="text-texto-primario">{euros(Number(t.precio_fabricacion))}</strong>
+                          </span>
+                        )}
+                        {t.precio_instalacion != null && (
+                          <span className="rounded bg-fondo-sutil px-2 py-0.5">
+                            Inst. <strong className="text-texto-primario">{euros(Number(t.precio_instalacion))}</strong>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -216,34 +344,54 @@ export default async function PaginaCliente({
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Datos</h2>
-            <Dato etiqueta="Documento" valor={cliente.numero_documento ? `${cliente.tipo_documento} ${cliente.numero_documento}` : null} />
-            <Dato etiqueta="Dirección" valor={direccion || null} />
-            <Dato etiqueta="País" valor={cliente.pais?.trim() || null} />
-            <Dato etiqueta="Email facturación" valor={cliente.email_facturacion} />
-            <Dato etiqueta="Teléfono" valor={cliente.telefono} />
-            <Dato etiqueta="Web" valor={cliente.web} />
-            <Dato
-              etiqueta="IVA"
-              valor={`${ETIQUETA_REGIMEN[cliente.regimen_iva] ?? cliente.regimen_iva}${cliente.motivo_exencion ? ` — ${cliente.motivo_exencion}` : ""}`}
-            />
-            <Dato etiqueta="Forma de pago" valor={formaPago?.nombre ?? null} />
-            <Dato etiqueta="Cuenta de cobro" valor={cuenta ? `${cuenta.banco} · ${cuenta.iban}` : null} />
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
+            <h2 className="text-base font-semibold text-texto-primario">Ficha fiscal y comercial</h2>
+            <dl className="grid grid-cols-1 gap-esp3 sm:grid-cols-2 xl:grid-cols-1">
+              <Dato
+                etiqueta="Documento"
+                valor={cliente.numero_documento ? `${cliente.tipo_documento} ${cliente.numero_documento}` : null}
+                tabular
+              />
+              <Dato etiqueta="Dirección" valor={direccion || null} />
+              <Dato etiqueta="País" valor={cliente.pais?.trim() || null} />
+              <Dato
+                etiqueta="Email facturación"
+                valor={cliente.email_facturacion}
+                href={cliente.email_facturacion ? `mailto:${cliente.email_facturacion}` : undefined}
+              />
+              <Dato
+                etiqueta="Teléfono"
+                valor={cliente.telefono}
+                href={cliente.telefono ? `tel:${cliente.telefono.replace(/\s+/g, "")}` : undefined}
+                tabular
+              />
+              <Dato etiqueta="Web" valor={cliente.web} href={webUrl ?? undefined} externo />
+              <Dato
+                etiqueta="Régimen de IVA"
+                valor={`${ETIQUETA_REGIMEN[cliente.regimen_iva] ?? cliente.regimen_iva}${cliente.motivo_exencion ? ` — ${cliente.motivo_exencion}` : ""}`}
+              />
+              <Dato etiqueta="Forma de pago" valor={formaPago?.nombre ?? null} />
+              <Dato
+                etiqueta="Cuenta de cobro"
+                valor={cuenta ? `${cuenta.banco} · ${cuenta.iban}` : null}
+                mono
+              />
+            </dl>
             {cliente.notas && (
-              <p className="mt-esp2 rounded-md bg-fondo-sutil px-esp3 py-esp2 text-xs text-texto-secundario">
-                {cliente.notas}
-              </p>
+              <div className="rounded-md border border-borde-default bg-fondo-sutil/70 px-esp3 py-esp2 text-xs text-texto-secundario">
+                <p className="mb-0.5 text-micro font-semibold uppercase tracking-wider text-texto-terciario">Notas</p>
+                <p className="whitespace-pre-line">{cliente.notas}</p>
+              </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Contactos</h2>
             <Contactos clienteId={clienteId} contactos={contactos ?? []} />
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Estado</h2>
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
+            <h2 className="text-base font-semibold text-texto-primario">Estado de la cuenta</h2>
             <BotonActivo clienteId={clienteId} activo={cliente.activo} />
             <BotonEliminarCliente
               clienteId={clienteId}
@@ -260,12 +408,42 @@ export default async function PaginaCliente({
   );
 }
 
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null | undefined }) {
+function Dato({
+  etiqueta,
+  valor,
+  href,
+  externo,
+  tabular,
+  mono,
+}: {
+  etiqueta: string;
+  valor: string | null | undefined;
+  href?: string;
+  externo?: boolean;
+  tabular?: boolean;
+  mono?: boolean;
+}) {
   if (!valor) return null;
+  const claseValor = `mt-0.5 block break-words text-sm ${
+    mono ? "font-mono text-xs tabular-nums" : tabular ? "tabular-nums" : ""
+  }`;
   return (
-    <div className="flex gap-esp3 text-sm">
-      <span className="w-[96px] shrink-0 text-texto-terciario sm:w-[110px]">{etiqueta}</span>
-      <span className="min-w-0 flex-1 break-words text-texto-primario">{valor}</span>
+    <div className="min-w-0">
+      <dt className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">{etiqueta}</dt>
+      <dd>
+        {href ? (
+          <a
+            href={href}
+            target={externo ? "_blank" : undefined}
+            rel={externo ? "noreferrer" : undefined}
+            className={`${claseValor} font-medium text-texto-marca hover:underline`}
+          >
+            {valor}
+          </a>
+        ) : (
+          <span className={`${claseValor} text-texto-primario`}>{valor}</span>
+        )}
+      </dd>
     </div>
   );
 }

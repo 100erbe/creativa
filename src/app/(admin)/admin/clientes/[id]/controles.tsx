@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
+import { Insignia } from "@/components/ui/insignia";
 import { actualizarContacto, anadirContacto, eliminarCliente, eliminarContacto, cambiarActivo } from "../acciones";
 import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
+import { inicialesCliente } from "@/lib/clientes";
 
 type Contacto = {
   id: number;
@@ -52,43 +54,66 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
   }
 
   const entrada =
-    "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+    "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
   return (
     <div className="flex flex-col gap-esp3">
       {contactos.length > 0 && (
         <div className="flex flex-col divide-y divide-fondo-hover">
           {contactos.map((c) => (
-            <div key={c.id} className="flex items-start gap-esp2 py-esp3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-texto-primario">
-                  {c.nombre}
-                  {c.cargo ? <span className="font-normal text-texto-terciario"> · {c.cargo}</span> : null}
-                </p>
-                <p className="truncate text-xs text-texto-secundario">
-                  {[c.email, c.telefono].filter(Boolean).join(" · ") || "Sin datos de contacto"}
-                </p>
-                {c.recibe_facturas && <p className="text-xs text-texto-exito">Recibe las facturas</p>}
+            <div key={c.id} className="flex items-start gap-esp3 py-esp3">
+              <div
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fondo-sutil text-xs font-semibold text-texto-secundario"
+              >
+                {inicialesCliente(c.nombre)}
               </div>
-              <button
-                aria-label={`Editar a ${c.nombre}`}
-                disabled={pendiente}
-                onClick={() => abrir(c)}
-                className="text-xs font-medium text-texto-marca disabled:opacity-50"
-              >
-                Editar
-              </button>
-              <button
-                aria-label={`Eliminar a ${c.nombre}`}
-                disabled={pendiente}
-                onClick={async () => {
-                  if (!(await confirmar(`¿Eliminar el contacto ${c.nombre}?`))) return;
-                  ejecutar(() => desenvolver(eliminarContacto(clienteId, c.id)));
-                }}
-                className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
-              >
-                <Icono nombre="eliminar" size={16} />
-              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-texto-primario">{c.nombre}</p>
+                  {c.recibe_facturas && <Insignia tono="exito">Facturación</Insignia>}
+                </div>
+                {c.cargo && <p className="text-xs text-texto-terciario">{c.cargo}</p>}
+                <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                  {c.email && (
+                    <a href={`mailto:${c.email}`} className="truncate text-texto-marca hover:underline">
+                      {c.email}
+                    </a>
+                  )}
+                  {c.telefono && (
+                    <a
+                      href={`tel:${c.telefono.replace(/\s+/g, "")}`}
+                      className="tabular-nums text-texto-secundario hover:text-texto-primario"
+                    >
+                      {c.telefono}
+                    </a>
+                  )}
+                  {!c.email && !c.telefono && <span className="text-texto-terciario">Sin datos de contacto</span>}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  aria-label={`Editar a ${c.nombre}`}
+                  disabled={pendiente}
+                  onClick={() => abrir(c)}
+                  className="inline-flex min-h-9 items-center rounded-md border border-borde-default px-esp2 text-xs font-medium text-texto-primario hover:bg-fondo-sutil disabled:opacity-50"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Eliminar a ${c.nombre}`}
+                  disabled={pendiente}
+                  onClick={async () => {
+                    if (!(await confirmar(`¿Eliminar el contacto ${c.nombre}?`))) return;
+                    ejecutar(() => desenvolver(eliminarContacto(clienteId, c.id)));
+                  }}
+                  className="flex min-h-9 min-w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
+                >
+                  <Icono nombre="eliminar" size={16} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -99,7 +124,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
 
       {abierto ? (
         <form
-          className="flex flex-col gap-esp2"
+          className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-sutil/60 p-esp3"
           onSubmit={(e) => {
             e.preventDefault();
             ejecutar(async () => {
@@ -116,15 +141,18 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
             });
           }}
         >
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre *" required className={entrada} />
-          <input value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Cargo" className={entrada} />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className={entrada} />
-          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Teléfono" className={entrada} />
-          <label className="flex items-center gap-esp2 text-xs text-texto-secundario">
-            <input type="checkbox" checked={recibeFacturas} onChange={(e) => setRecibeFacturas(e.target.checked)} />
-            Recibe las facturas
+          <p className="text-xs font-semibold text-texto-primario">
+            {editandoId != null ? "Editar contacto" : "Nuevo contacto"}
+          </p>
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre *" aria-label="Nombre" required className={entrada} />
+          <input value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Cargo" aria-label="Cargo" className={entrada} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" aria-label="Email" type="email" className={entrada} />
+          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Teléfono" aria-label="Teléfono" className={entrada} />
+          <label className="inline-flex min-h-9 cursor-pointer items-center gap-esp2 text-xs text-texto-secundario">
+            <input type="checkbox" checked={recibeFacturas} onChange={(e) => setRecibeFacturas(e.target.checked)} className="h-4 w-4" />
+            Recibe las facturas por email
           </label>
-          <div className="flex gap-esp2">
+          <div className="flex gap-esp2 pt-1">
             <Boton type="submit" tamano="s" cargando={pendiente}>
               {editandoId != null ? "Guardar contacto" : "Añadir contacto"}
             </Boton>

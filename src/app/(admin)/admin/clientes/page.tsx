@@ -128,6 +128,13 @@ export default async function PaginaClientes({
     con_deuda: conDeuda ? "1" : "",
   };
 
+  const chips: { clave: keyof Filtros; texto: string }[] = [];
+  if (tipo) chips.push({ clave: "tipo", texto: ETIQUETA_TIPO_CLIENTE[tipo] ?? tipo });
+  if (conDeuda) chips.push({ clave: "con_deuda", texto: "Con deuda pendiente" });
+  if (inactivos) chips.push({ clave: "inactivos", texto: "Incluye inactivos" });
+  if (q) chips.push({ clave: "q", texto: `"${q}"` });
+  const hayFiltros = chips.length > 0;
+
   return (
     <div className="flex flex-col gap-esp5">
       <div className="flex flex-wrap items-center gap-esp3">
@@ -158,41 +165,9 @@ export default async function PaginaClientes({
         </Link>
       </div>
 
+      {/* Barra de búsqueda y filtros compacta */}
       <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
-        <div className="flex flex-wrap items-center gap-esp2">
-          {[{ valor: "", etiqueta: "Todos" }, ...TIPOS_CLIENTE].map((t) => {
-            const activo = (tipo ?? "") === t.valor;
-            return (
-              <Link
-                key={t.valor}
-                href={enlace(actual, { tipo: t.valor, pagina: "" })}
-                aria-current={activo ? "true" : undefined}
-                className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
-                  activo
-                    ? "bg-fondo-marca text-texto-sobre-marca"
-                    : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
-                }`}
-              >
-                {t.etiqueta}
-              </Link>
-            );
-          })}
-
-          <Link
-            href={enlace(actual, { con_deuda: conDeuda ? "" : "1", pagina: "" })}
-            aria-pressed={conDeuda}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-completo border px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
-              conDeuda
-                ? "border-borde-critico bg-fondo-critico text-texto-inverso"
-                : "border-borde-critico-sutil bg-fondo-critico-sutil text-texto-critico hover:border-borde-critico"
-            }`}
-          >
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-completo bg-current" />
-            Con deuda pendiente
-          </Link>
-        </div>
-
-        <form action="/admin/clientes" className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3">
+        <form action="/admin/clientes" className="flex flex-wrap items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {conDeuda && <input type="hidden" name="con_deuda" value="1" />}
           <div className="relative min-w-[200px] flex-1 md:max-w-sm">
@@ -210,22 +185,82 @@ export default async function PaginaClientes({
               className="min-h-11 h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
             />
           </div>
+          <Boton type="submit" variante="secundario">
+            Buscar
+          </Boton>
           <label className="inline-flex min-h-10 cursor-pointer items-center gap-esp2 px-esp2 text-xs text-texto-secundario md:min-h-8">
             <input type="checkbox" name="inactivos" value="1" defaultChecked={inactivos} className="h-4 w-4" />
             Ver inactivos
           </label>
-          <Boton type="submit" variante="secundario">
-            Buscar
-          </Boton>
+          <Link
+            href={enlace(actual, { con_deuda: conDeuda ? "" : "1", pagina: "" })}
+            aria-pressed={conDeuda}
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-completo border px-esp3 text-xs font-medium transition-colors md:ml-auto md:min-h-8 ${
+              conDeuda
+                ? "border-borde-critico bg-fondo-critico text-texto-inverso"
+                : "border-borde-critico-sutil bg-fondo-critico-sutil text-texto-critico hover:border-borde-critico"
+            }`}
+          >
+            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-completo bg-current" />
+            Con deuda pendiente
+          </Link>
         </form>
+
+        <div className="flex flex-col gap-esp1 border-t border-borde-default pt-esp3">
+          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Segmento</p>
+          <div className="flex flex-wrap items-center gap-esp2" role="group" aria-label="Filtrar por tipo de cliente">
+            {[{ valor: "", etiqueta: "Todos" }, ...TIPOS_CLIENTE].map((t) => {
+              const activo = (tipo ?? "") === t.valor;
+              return (
+                <Link
+                  key={t.valor}
+                  href={enlace(actual, { tipo: t.valor, pagina: "" })}
+                  aria-current={activo ? "true" : undefined}
+                  className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+                    activo
+                      ? "bg-fondo-marca text-texto-sobre-marca"
+                      : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
+                  }`}
+                >
+                  {t.etiqueta}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {hayFiltros && (
+          <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3 text-sm">
+            <span className="text-xs text-texto-terciario">Filtrando por:</span>
+            {chips.map((c) => (
+              <Link
+                key={c.clave}
+                href={enlace(actual, { [c.clave]: "", pagina: "" })}
+                aria-label={`Quitar filtro ${c.texto}`}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-xs text-texto-primario md:min-h-8"
+              >
+                <span className="max-w-[60vw] truncate">{c.texto}</span>
+                <span aria-hidden="true" className="text-sm leading-none text-texto-terciario">
+                  ×
+                </span>
+              </Link>
+            ))}
+            <Link
+              href="/admin/clientes"
+              className="inline-flex min-h-10 items-center px-esp2 text-xs font-medium text-texto-marca md:min-h-8"
+            >
+              Quitar todos
+            </Link>
+          </div>
+        )}
       </div>
 
-      {/* Data Grid estilo Attio */}
+      {/* Data Grid estilo Attio con anchura garantizada para el nombre en tablet/desktop */}
       <div className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
-        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario md:grid md:grid-cols-[minmax(0,1.6fr)_120px_130px_150px] lg:grid-cols-[minmax(0,1.6fr)_165px_130px_120px_155px]">
+        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp5 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6">
           <span>Cliente</span>
-          <span className="hidden lg:block">Segmento</span>
-          <span>Ubicación</span>
+          <span className="hidden xl:block">Segmento</span>
+          <span className="hidden xl:block">Ubicación</span>
           <span className="text-right">Facturado</span>
           <span className="text-right">Pendiente / Riesgo</span>
         </div>
@@ -237,12 +272,13 @@ export default async function PaginaClientes({
             const tieneDeuda = pend > 0.005;
             const esCritico90 = critica90.has(c.id);
             const diasMax = maxDiasVencido.get(c.id) ?? 0;
+            const etiquetaTipo = ETIQUETA_TIPO_CLIENTE[c.tipo_cliente] ?? c.tipo_cliente;
 
             return (
               <Link
                 key={c.id}
                 href={`/admin/clientes/${c.id}`}
-                className={`flex flex-col gap-esp2 px-esp4 py-esp3 transition-colors md:grid md:grid-cols-[minmax(0,1.6fr)_120px_130px_150px] md:items-center md:gap-esp4 md:px-esp6 lg:grid-cols-[minmax(0,1.6fr)_165px_130px_120px_155px] ${
+                className={`flex flex-col gap-esp2 px-esp4 py-esp3 transition-colors md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] md:items-center md:gap-esp4 md:px-esp5 xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6 ${
                   esCritico90
                     ? "border-l-4 border-l-borde-critico bg-fondo-critico-sutil/40 hover:bg-fondo-critico-sutil/70"
                     : "hover:bg-fondo-sutil/60"
@@ -251,7 +287,7 @@ export default async function PaginaClientes({
                 <div className="flex min-w-0 items-center gap-esp3">
                   <div
                     aria-hidden="true"
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-xs font-semibold ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-xs font-semibold md:h-9 md:w-9 ${
                       esCritico90
                         ? "bg-fondo-critico text-texto-inverso"
                         : "border border-borde-marca bg-fondo-marca-sutil text-texto-marca"
@@ -267,25 +303,22 @@ export default async function PaginaClientes({
                     <p className="truncate text-xs text-texto-terciario">
                       {c.codigo}
                       {c.numero_documento ? ` · ${c.numero_documento}` : ""}
-                      {c.nombre_comercial && c.nombre_comercial !== c.razon_social ? ` · ${c.nombre_comercial}` : ""}
+                      {c.municipio ? <span className="xl:hidden"> · {c.municipio}</span> : null}
+                      <span className="hidden md:inline xl:hidden"> · {etiquetaTipo}</span>
                     </p>
                   </div>
                 </div>
 
-                <span className="hidden truncate text-xs text-texto-secundario lg:block">
-                  {ETIQUETA_TIPO_CLIENTE[c.tipo_cliente] ?? c.tipo_cliente}
-                </span>
+                <span className="hidden truncate text-xs text-texto-secundario xl:block">{etiquetaTipo}</span>
 
-                <span className="hidden truncate text-xs text-texto-terciario md:block">
-                  {c.municipio ?? "—"}
-                </span>
+                <span className="hidden truncate text-xs text-texto-terciario xl:block">{c.municipio ?? "—"}</span>
 
-                {/* Desktop: Facturado */}
+                {/* Desktop/Tablet: Facturado */}
                 <span className="tabular-nums hidden text-right text-sm font-medium text-texto-primario md:block">
                   {euros(fact)}
                 </span>
 
-                {/* Desktop: Pendiente / Riesgo */}
+                {/* Desktop/Tablet: Pendiente / Riesgo */}
                 <div className="hidden flex-col items-end gap-0.5 md:flex">
                   {tieneDeuda ? (
                     <>
@@ -305,12 +338,12 @@ export default async function PaginaClientes({
                       ) : null}
                     </>
                   ) : (
-                    <span className="tabular-nums text-xs text-texto-terciario">Al día</span>
+                    <span className="tabular-nums text-xs text-texto-exito">Al día</span>
                   )}
                 </div>
 
-                {/* Móvil: información financiera siempre visible */}
-                <div className="flex flex-wrap items-center justify-between gap-esp2 pl-12 text-xs md:hidden">
+                {/* Móvil: barra financiera compacta sin compresión */}
+                <div className="flex flex-wrap items-center justify-between gap-esp2 rounded-md bg-fondo-sutil/70 px-esp3 py-esp1.5 text-xs md:hidden">
                   <span className="tabular-nums text-texto-secundario">
                     Facturado: <strong className="font-medium text-texto-primario">{euros(fact)}</strong>
                   </span>
@@ -330,7 +363,7 @@ export default async function PaginaClientes({
                       )}
                     </div>
                   ) : (
-                    <span className="text-texto-exito">Al día</span>
+                    <span className="font-medium text-texto-exito">Al día</span>
                   )}
                 </div>
               </Link>
