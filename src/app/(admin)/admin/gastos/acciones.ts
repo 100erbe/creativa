@@ -74,8 +74,9 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
   if (!analisis.success) return { error: analisis.error.issues[0]?.message ?? "Revisa los datos del formulario." };
   const d = analisis.data;
 
-  // El empleado solo da de alta gastos menores (los deducibles con factura los registra la administración).
-  if (!esAdmin && !id && d.tipo !== "menor") return { error: "Desde el móvil solo se registran gastos menores." };
+  // El empleado solo da de alta y corrige gastos menores (los deducibles con factura los registra
+  // la administración). La RLS lo impone también en la base de datos.
+  if (!esAdmin && d.tipo !== "menor") return { error: "Desde el móvil solo se registran gastos menores." };
 
   const responsable = esAdmin ? d.usuario_id : usuario.id;
   const estado: EstadoGasto = esAdmin ? d.estado : "pendiente";
@@ -125,8 +126,16 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
 
   let destino: number;
   if (id) {
-    const { error } = await supabase.from("gastos").update(datos).eq("id", id);
+    const { data: actualizados, error } = await supabase.from("gastos").update(datos).eq("id", id).select("id");
     if (error) return { error: error.message };
+    // La RLS no da error si no deja tocar la fila: simplemente no la actualiza.
+    if (!actualizados || actualizados.length === 0) {
+      return {
+        error: esAdmin
+          ? "No se ha encontrado el gasto."
+          : "Este gasto ya no se puede modificar (solo los pendientes o rechazados que son tuyos).",
+      };
+    }
     destino = id;
   } else {
     const { data, error } = await supabase

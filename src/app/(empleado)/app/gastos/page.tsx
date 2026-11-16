@@ -159,7 +159,7 @@ export default async function PaginaMisGastos({
       <div className="flex flex-col gap-esp3">
         {visibles.map((g) => {
           const rechazado = g.estado === "rechazado";
-          const editable = g.estado === "pendiente" || rechazado;
+          const editable = g.tipo === "menor" && (g.estado === "pendiente" || rechazado);
           const contenido = (
             <div
               className={`flex flex-col gap-1.5 rounded-lg border px-esp4 py-esp3 shadow-xs transition-colors ${

@@ -33,7 +33,25 @@ const ESTADOS = [
   { valor: "caducado", etiqueta: "Caducado" },
   { valor: "facturado", etiqueta: "Facturado" },
   { valor: "sustituido", etiqueta: "Sustituido" },
+  { valor: "anulado", etiqueta: "Anulado" },
 ];
+
+/** Pendientes de la importación y datos incompletos que conviene repasar. */
+const REVISION = [
+  { valor: "revisar", etiqueta: "Por revisar" },
+  { valor: "sin_pdf", etiqueta: "Sin PDF" },
+  { valor: "sin_vencimiento", etiqueta: "Facturas sin vencimiento" },
+] as const;
+
+type PdfSinAsignar = {
+  id: number;
+  archivo: string;
+  drive_file_id: string | null;
+  tipo: string | null;
+  numero: number | null;
+  total: number | null;
+  motivo: string | null;
+};
 
 const COBROS = [
   { valor: "pendiente", etiqueta: "Por cobrar", critico: false },
@@ -50,6 +68,7 @@ type Filtros = {
   q?: string;
   cliente?: string;
   cobro?: string;
+  revision?: string;
   vista?: string;
   pagina?: string;
 };
@@ -80,6 +99,7 @@ export default async function PaginaDocumentos({
     filtros.cobro === "pendiente" || filtros.cobro === "vencida" || filtros.cobro === "vencida_90"
       ? filtros.cobro
       : "";
+  const revision = REVISION.some((r) => r.valor === filtros.revision) ? (filtros.revision ?? "") : "";
   const clienteId =
     Number.isInteger(Number(filtros.cliente)) && Number(filtros.cliente) > 0 ? Number(filtros.cliente) : null;
 
@@ -104,7 +124,7 @@ export default async function PaginaDocumentos({
   let consulta = supabase
     .from("documentos")
     .select(
-      "id, tipo, estado, numero_completo, fecha, valido_hasta, version, creado_en, total, cliente_razon_social, clientes(razon_social)",
+      "id, tipo, estado, numero_completo, fecha, valido_hasta, fecha_vencimiento, version, creado_en, total, revisar, sin_pdf, cliente_razon_social, clientes(razon_social)",
       { count: "exact" },
     )
     .order("fecha", { ascending: false })
@@ -114,6 +134,11 @@ export default async function PaginaDocumentos({
   if (estado) consulta = consulta.eq("estado", estado as "borrador");
   if (condicionBusqueda) consulta = consulta.or(condicionBusqueda);
   if (clienteId) consulta = consulta.eq("cliente_id", clienteId);
+  if (revision === "revisar") consulta = consulta.eq("revisar", true);
+  else if (revision === "sin_pdf") consulta = consulta.eq("sin_pdf", true);
+  else if (revision === "sin_vencimiento") {
+    consulta = consulta.eq("tipo", "factura").neq("estado", "borrador").is("fecha_vencimiento", null);
+  }
   if (cobro) {
     let qCobro = supabase
       .from("v_estado_cobro")
@@ -128,7 +153,16 @@ export default async function PaginaDocumentos({
     consulta = consulta.in("id", ids.length ? ids : [-1]);
   }
 
-  const [{ data: documentos, count, error: errorLista }, { data: criticas90Global }] = await Promise.all([
+  const sinPdfs: { data: PdfSinAsignar[] } = { data: [] };
+  const [
+    { data: documentos, count, error: errorLista },
+    { data: criticas90Global },
+    { count: nRevisar },
+    { count: nSinPdf },
+    { count: nSinVencimiento },
+    { count: nSinVencimientoPendientes },
+    { data: pdfsSinAsignar },
+  ] = await Promise.all([
     consulta,
     supabase
       .from("v_estado_cobro")
@@ -136,8 +170,31 @@ export default async function PaginaDocumentos({
       .in("estado_cobro", ["pendiente", "parcial", "vencida"])
       .gt("pendiente", 0.01)
       .lte("fecha_vencimiento", limite90),
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("revisar", true),
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("sin_pdf", true),
+    supabase
+      .from("documentos")
+      .select("id", { count: "exact", head: true })
+      .eq("tipo", "factura")
+      .neq("estado", "borrador")
+      .is("fecha_vencimiento", null),
+    supabase
+      .from("v_estado_cobro")
+      .select("id", { count: "exact", head: true })
+      .eq("tipo", "factura")
+      .is("fecha_vencimiento", null)
+      .gt("pendiente", 0.01),
+    revision === "revisar" || revision === "sin_pdf"
+      ? supabase.from("pdfs_sin_asignar").select("id, archivo, drive_file_id, tipo, numero, total, motivo").order("archivo")
+      : Promise.resolve(sinPdfs),
   ]);
   lanzarSiError({ error: errorLista });
+  const conteoRevision: Record<string, number> = {
+    revisar: nRevisar ?? 0,
+    sin_pdf: nSinPdf ?? 0,
+    sin_vencimiento: nSinVencimiento ?? 0,
+  };
+  const facturasSinVencimiento = nSinVencimientoPendientes ?? 0;
 
   const filas = documentos ?? [];
   const total = count ?? 0;
@@ -158,6 +215,7 @@ export default async function PaginaDocumentos({
     estado,
     q,
     cobro,
+    revision,
     vista: vista === "pipeline" ? "pipeline" : "",
     cliente: clienteId ? String(clienteId) : "",
   };
@@ -178,6 +236,7 @@ export default async function PaginaDocumentos({
   if (tipo) chips.push({ clave: "tipo", texto: TIPOS.find((t) => t.valor === tipo)?.etiqueta ?? tipo });
   if (estado) chips.push({ clave: "estado", texto: ESTADOS.find((e) => e.valor === estado)?.etiqueta ?? estado });
   if (cobro) chips.push({ clave: "cobro", texto: COBROS.find((c) => c.valor === cobro)?.etiqueta ?? cobro });
+  if (revision) chips.push({ clave: "revision", texto: REVISION.find((r) => r.valor === revision)?.etiqueta ?? revision });
   if (q) chips.push({ clave: "q", texto: `"${q}"` });
   if (clienteId) chips.push({ clave: "cliente", texto: clienteFiltrado?.razon_social ?? `Cliente #${clienteId}` });
   const hayFiltros = chips.length > 0;
@@ -344,6 +403,26 @@ export default async function PaginaDocumentos({
         </div>
       )}
 
+      {facturasSinVencimiento > 0 && revision !== "sin_vencimiento" && (
+        <div
+          role="region"
+          aria-label="Facturas pendientes sin fecha de vencimiento"
+          className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3"
+        >
+          <Icono nombre="alerta" size={18} className="shrink-0 text-texto-aviso" />
+          <p className="min-w-0 flex-1 text-sm text-texto-primario">
+            <strong className="font-semibold">{facturasSinVencimiento}</strong> factura
+            {facturasSinVencimiento === 1 ? "" : "s"} pendiente{facturasSinVencimiento === 1 ? "" : "s"} de cobro sin
+            fecha de vencimiento: no cuentan como vencidas ni en «Insolutas 90+».
+          </p>
+          <Link href={enlace(actual, { revision: "sin_vencimiento", cobro: "pendiente", tipo: "factura", estado: "", pagina: "" })}>
+            <Boton variante="secundario" tamano="s">
+              Ver cuáles
+            </Boton>
+          </Link>
+        </div>
+      )}
+
       {borradoresVacios > 0 && <LimpiarBorradores cantidad={borradoresVacios} />}
 
       <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
@@ -351,6 +430,7 @@ export default async function PaginaDocumentos({
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {estado && <input type="hidden" name="estado" value={estado} />}
           {cobro && <input type="hidden" name="cobro" value={cobro} />}
+          {revision && <input type="hidden" name="revision" value={revision} />}
           {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
           {vista === "pipeline" && <input type="hidden" name="vista" value="pipeline" />}
           <div className="relative min-w-0 flex-1 md:max-w-sm">
@@ -457,6 +537,34 @@ export default async function PaginaDocumentos({
           </div>
         </div>
 
+        {/* Nivel 3: pendientes de revisión (importación) */}
+        <div className="flex flex-col gap-esp1">
+          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Revisión</p>
+          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Revisión">
+            {REVISION.map((r) => {
+              const activo = revision === r.valor;
+              const n = conteoRevision[r.valor] ?? 0;
+              return (
+                <Link
+                  key={r.valor}
+                  href={enlace(actual, { revision: activo ? "" : r.valor, pagina: "" })}
+                  aria-pressed={activo}
+                  className={`${PILDORA} border ${
+                    activo
+                      ? "border-borde-marca bg-fondo-marca-sutil font-medium text-texto-marca"
+                      : n > 0
+                        ? "border-borde-aviso bg-fondo-aviso-sutil text-texto-aviso hover:opacity-90"
+                        : "border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
+                  }`}
+                >
+                  {r.etiqueta}
+                  <span className="tabular-nums">({n})</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Filtros activos */}
         {hayFiltros && (
           <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3 text-sm">
@@ -483,6 +591,42 @@ export default async function PaginaDocumentos({
           </div>
         )}
       </div>
+
+      {(pdfsSinAsignar ?? []).length > 0 && (
+        <details className="rounded-lg border border-borde-aviso bg-fondo-superficie px-esp4 py-esp3 shadow-xs">
+          <summary className="cursor-pointer text-sm font-semibold text-texto-primario">
+            PDF de la importación sin documento asignado ({(pdfsSinAsignar ?? []).length})
+          </summary>
+          <p className="mt-esp2 text-xs text-texto-secundario">
+            Archivos de Drive que no se pudieron emparejar con ningún documento. Compáralos con los documentos «Sin PDF».
+          </p>
+          <div className="mt-esp2 flex flex-col divide-y divide-fondo-hover">
+            {(pdfsSinAsignar ?? []).map((p) => (
+              <div key={p.id} className="flex flex-wrap items-center gap-x-esp3 gap-y-1 py-esp2 text-xs">
+                <span className="min-w-0 flex-1 break-all font-medium text-texto-primario">{p.archivo}</span>
+                {p.tipo && (
+                  <span className="text-texto-secundario">
+                    {p.tipo}
+                    {p.numero != null ? ` n.º ${p.numero}` : ""}
+                  </span>
+                )}
+                {p.total != null && <span className="tabular-nums text-texto-secundario">{euros(Number(p.total))}</span>}
+                {p.motivo && <span className="text-texto-aviso">{p.motivo}</span>}
+                {p.drive_file_id && (
+                  <a
+                    href={`https://drive.google.com/file/d/${encodeURIComponent(p.drive_file_id)}/view`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-texto-marca"
+                  >
+                    Abrir
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       {vista === "pipeline" ? (
         <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
@@ -676,6 +820,12 @@ export default async function PaginaDocumentos({
                         {validezVencida(d.tipo, d.estado, d.valido_hasta) && (
                           <Insignia tono="aviso">Validez vencida</Insignia>
                         )}
+                        {d.revisar && <Insignia tono="aviso">Por revisar</Insignia>}
+                        {d.tipo === "factura" &&
+                          d.estado !== "borrador" &&
+                          !d.fecha_vencimiento &&
+                          cobroEstado &&
+                          cobroEstado !== "cobrada" && <Insignia tono="aviso">Sin vencimiento</Insignia>}
                         {cobroEstado && cobroEstado !== "cobrada" && (
                           <Insignia tono={TONO_POR_ESTADO[cobroEstado] ?? "neutro"}>
                             {d.aging && d.aging.diasVencido > 0

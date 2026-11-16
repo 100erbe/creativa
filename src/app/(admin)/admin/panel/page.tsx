@@ -27,7 +27,7 @@ export default async function PaginaPanel() {
       .gte("fecha", inicioMes),
     supabase
       .from("v_estado_cobro")
-      .select("id, numero_completo, cliente_id, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
+      .select("id, tipo, numero_completo, cliente_id, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
       .in("estado_cobro", ["pendiente", "parcial", "vencida"]),
     supabase.from("v_progreso_campana").select("*").eq("estado_campana", "en_curso"),
     supabase
@@ -35,10 +35,16 @@ export default async function PaginaPanel() {
       .select("id, numero_completo, tipo, estado, total, cliente_razon_social, fecha, clientes(razon_social)")
       .order("fecha", { ascending: false })
       .limit(5),
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("revisar", true),
   ]);
   lanzarSiError(...resultados);
-  const [{ data: facturadoMes }, { data: pendientesCobro }, { data: campanasActivas }, { data: documentosRecientes }] =
-    resultados;
+  const [
+    { data: facturadoMes },
+    { data: pendientesCobro },
+    { data: campanasActivas },
+    { data: documentosRecientes },
+    { count: porRevisar },
+  ] = resultados;
 
   const totalFacturado = (facturadoMes ?? []).reduce((s, d) => s + Number(d.total), 0);
   const totalPendiente = (pendientesCobro ?? []).reduce((s, d) => s + Number(d.pendiente ?? 0), 0);
@@ -66,6 +72,10 @@ export default async function PaginaPanel() {
   const totalAging = Math.max(0.01, sumaAlDia + suma1a30 + suma31a89 + sumaCriticas90);
 
   const vencidasTotales = vencidas1a30.length + vencidas31a89.length + criticas90.length;
+  // Sin fecha de vencimiento una factura nunca cuenta como vencida: los KPI a cero no significan «al día».
+  const sinVencimiento = conSaldo.filter((d) => d.tipo === "factura" && !d.fecha_vencimiento);
+  const sumaSinVencimiento = sumarPendiente(sinVencimiento);
+  const nPorRevisar = porRevisar ?? 0;
   const totalPuntos = (campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_totales), 0);
   const totalIncidencias = (campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_con_incidencia), 0);
 
@@ -173,6 +183,41 @@ export default async function PaginaPanel() {
           tono={totalIncidencias > 0 ? "peligro" : "default"}
         />
       </div>
+
+      {(sinVencimiento.length > 0 || nPorRevisar > 0) && (
+        <section
+          aria-label="Datos pendientes de completar"
+          className="flex flex-col gap-esp2 rounded-lg border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3"
+        >
+          <div className="flex items-center gap-esp2">
+            <Icono nombre="alerta" size={18} className="shrink-0 text-texto-aviso" />
+            <h2 className="text-sm font-semibold text-texto-primario">Las cifras de cobros no están completas</h2>
+          </div>
+          {sinVencimiento.length > 0 && (
+            <p className="text-sm text-texto-primario">
+              <strong className="font-semibold">{sinVencimiento.length}</strong> factura
+              {sinVencimiento.length === 1 ? "" : "s"} pendiente{sinVencimiento.length === 1 ? "" : "s"} (
+              <span className="tabular-nums">{euros(sumaSinVencimiento)}</span>) sin fecha de vencimiento: no aparecen
+              como vencidas ni en «90+ días».{" "}
+              <Link
+                href="/admin/documentos?revision=sin_vencimiento&cobro=pendiente&tipo=factura"
+                className="font-medium text-texto-marca hover:underline"
+              >
+                Ver facturas
+              </Link>
+            </p>
+          )}
+          {nPorRevisar > 0 && (
+            <p className="text-sm text-texto-primario">
+              <strong className="font-semibold">{nPorRevisar}</strong> documento{nPorRevisar === 1 ? "" : "s"} de la
+              importación por revisar.{" "}
+              <Link href="/admin/documentos?revision=revisar" className="font-medium text-texto-marca hover:underline">
+                Abrir la cola
+              </Link>
+            </p>
+          )}
+        </section>
+      )}
 
       {/* Sección prioritaria de Aging y facturas insolutas 90+ días */}
       <section
@@ -303,9 +348,16 @@ export default async function PaginaPanel() {
             </div>
           </div>
         ) : (
-          <p className="rounded-md bg-fondo-exito-sutil px-esp3 py-esp2 text-xs font-medium text-texto-exito">
-            Todas las facturas emitidas están al día o sin vencimientos pendientes.
-          </p>
+          sinVencimiento.length > 0 ? (
+            <p className="rounded-md bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs font-medium text-texto-aviso">
+              No hay facturas vencidas con fecha, pero {sinVencimiento.length} pendiente
+              {sinVencimiento.length === 1 ? "" : "s"} no tiene{sinVencimiento.length === 1 ? "" : "n"} vencimiento.
+            </p>
+          ) : (
+            <p className="rounded-md bg-fondo-exito-sutil px-esp3 py-esp2 text-xs font-medium text-texto-exito">
+              Todas las facturas emitidas están al día o sin vencimientos pendientes.
+            </p>
+          )
         )}
       </section>
 

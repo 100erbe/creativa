@@ -14,8 +14,8 @@ export type UsuarioActual = {
 
 /**
  * Devuelve el usuario autenticado junto con su fila en `public.usuarios`
- * (donde vive el rol admin/empleado), o null si no hay sesión.
- * Pensado para Server Components y Route Handlers.
+ * (donde vive el rol admin/empleado), o null si no hay sesión o la cuenta
+ * está desactivada. Pensado para Server Components, Route Handlers y Server Actions.
  */
 export const obtenerUsuarioActual = cache(async function obtenerUsuarioActual(): Promise<UsuarioActual | null> {
   const supabase = await createClient();
@@ -27,11 +27,12 @@ export const obtenerUsuarioActual = cache(async function obtenerUsuarioActual():
 
   const { data: fila, error } = await supabase
     .from("usuarios")
-    .select("id, nombre, apellidos, email, rol, avatar_url")
+    .select("id, nombre, apellidos, email, rol, avatar_url, activo")
     .eq("id", user.id)
     .single();
 
-  if (error || !fila) return null;
+  // Una cuenta desactivada no cuenta como sesión válida aunque su token siga vivo.
+  if (error || !fila || !fila.activo) return null;
 
   return {
     id: fila.id,

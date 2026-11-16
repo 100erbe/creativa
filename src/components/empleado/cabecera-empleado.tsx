@@ -211,6 +211,13 @@ export function CabeceraEmpleado({
                 <p className="truncate text-sm font-medium text-texto-primario">{nombre}</p>
                 <p className="truncate text-xs text-texto-terciario">Instalador</p>
               </div>
+              <Link
+                href="/cuenta/contrasena"
+                aria-label="Cambiar mi contraseña"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover"
+              >
+                <Icono nombre="candado" size={18} />
+              </Link>
               <button
                 type="button"
                 onClick={salir}

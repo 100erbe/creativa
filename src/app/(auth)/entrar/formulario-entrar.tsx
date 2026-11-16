@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Boton } from "@/components/ui/boton";
@@ -95,6 +96,9 @@ export function FormularioEntrar({
       <Boton type="submit" cargando={cargando} className="mt-esp2 w-full">
         Entrar
       </Boton>
+      <Link href="/entrar/recuperar" className="text-center text-sm font-medium text-texto-marca">
+        He olvidado mi contraseña
+      </Link>
     </form>
   );
 }

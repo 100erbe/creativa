@@ -9,6 +9,7 @@ import { CAMPO } from "@/components/ui/panel-busqueda";
 import { desenvolver } from "@/lib/accion";
 import { actualizarPersona, cambiarContrasena, crearPersona } from "./acciones";
 import { enviarPruebaA } from "@/lib/push/acciones";
+import { MIN_CONTRASENA } from "@/lib/contrasena";
 
 type Persona = {
   id: string;
@@ -153,13 +154,13 @@ function FormularioPersona({ persona, esYo, onCerrar }: { persona?: Persona; esY
         </label>
         {esAlta && (
           <label className={etiqueta}>
-            Contraseña inicial * (mín. 8)
+            Contraseña inicial * (mín. {MIN_CONTRASENA})
             <input
               type="text"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={8}
+              minLength={MIN_CONTRASENA}
               autoComplete="off"
               className={CAMPO}
             />
@@ -204,7 +205,7 @@ function CambiarContrasena({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-esp2 border-t border-fondo-hover pt-esp3">
       <label className={etiqueta}>
-        Nueva contraseña (mín. 8)
+        Nueva contraseña (mín. {MIN_CONTRASENA})
         <input
           type="text"
           value={password}
@@ -219,7 +220,7 @@ function CambiarContrasena({ id }: { id: string }) {
           tamano="s"
           variante="secundario"
           cargando={pendiente}
-          disabled={password.length < 8}
+          disabled={password.length < MIN_CONTRASENA}
           onClick={() =>
             ejecutar(async () => {
               await desenvolver(cambiarContrasena(id, password));

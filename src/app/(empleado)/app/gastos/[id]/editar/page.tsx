@@ -14,7 +14,8 @@ export default async function PaginaEditarGastoEmpleado({ params }: { params: Pr
     supabase.from("gastos").select("*").eq("id", Number(id)).eq("usuario_id", usuario?.id ?? "").maybeSingle(),
     cargarOpcionesGasto(supabase),
   ]);
-  if (!gasto || (gasto.estado !== "pendiente" && gasto.estado !== "rechazado")) notFound();
+  // Desde el móvil solo se corrigen gastos menores (los deducibles los gestiona la administración).
+  if (!gasto || gasto.tipo !== "menor" || (gasto.estado !== "pendiente" && gasto.estado !== "rechazado")) notFound();
 
   return (
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">

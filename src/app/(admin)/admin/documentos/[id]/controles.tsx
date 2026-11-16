@@ -16,6 +16,9 @@ import {
   eliminarCobro,
   cambiarEstadoPresupuesto,
   guardarCabecera,
+  compensarRectificativa,
+  anularDocumento,
+  marcarRevisado,
 } from "./acciones";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { desenvolver } from "@/lib/accion";
@@ -379,6 +382,26 @@ export function AccionesDocumento({
         </div>
       )}
 
+      {(tipo === "presupuesto" || tipo === "albaran") && ESTADOS_SEGUIMIENTO.includes(estado) && (
+        <Boton
+          variante="peligro"
+          disabled={pendiente}
+          onClick={async () => {
+            const seguro = await confirmar(
+              `¿Anular este ${etiquetaTipo.toLowerCase()}? Quedará como «Anulado», ya no se podrá facturar y no se puede deshacer.`,
+              { aceptar: "Anular", peligro: true },
+            );
+            if (!seguro) return;
+            ejecutar(async () => {
+              await desenvolver(anularDocumento(documentoId));
+              router.refresh();
+            });
+          }}
+        >
+          Anular {etiquetaTipo.toLowerCase()}
+        </Boton>
+      )}
+
       <Boton
         variante="secundario"
         disabled={pendiente}
@@ -420,15 +443,24 @@ export function Cobros({
   pendiente: importePendiente,
   cobros,
   compartir,
+  esRectificativa = false,
+  compensables = [],
 }: {
   documentoId: number;
+  /** Negativo en una rectificativa: lo que queda por devolver (o compensar) al cliente. */
   pendiente: number;
+  esRectificativa?: boolean;
+  /** Factura ↔ rectificativa con importe abierto en sentido contrario: se pueden compensar. */
+  compensables?: { rectificativaId: number; facturaId: number; numero: string; importe: number }[];
   cobros: { id: number; fecha: string; importe: number; metodo: string; referencia: string | null }[];
   /** Datos para compartir el PDF (con sello «PAGADA» cuando está cobrada). */
   compartir?: { archivo: string; titulo: string; texto: string };
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
-  const [importe, setImporte] = useState(importePendiente > 0 ? importePendiente.toFixed(2) : "");
+  const abierto = Math.abs(importePendiente);
+  // En una rectificativa lo pendiente es a favor del cliente: se registra una devolución.
+  const esDevolucion = importePendiente < -0.005;
+  const [importe, setImporte] = useState(abierto > 0.005 ? abierto.toFixed(2) : "");
   const [fecha, setFecha] = useState(hoy());
   const [metodo, setMetodo] = useState<MetodoCobro>("transferencia");
   const [referencia, setReferencia] = useState("");
@@ -471,7 +503,36 @@ export function Cobros({
         </div>
       )}
 
-      {importePendiente > 0.005 ? (
+      {compensables.map((c) => (
+        <div key={c.rectificativaId + "-" + c.facturaId} className="flex flex-col gap-1 rounded-md bg-fondo-sutil px-esp3 py-esp3">
+          <p className="text-xs text-texto-secundario">
+            {esRectificativa
+              ? `La factura ${c.numero} sigue pendiente de cobro. Si el abono se descuenta de ella, compénsalos:`
+              : `La rectificativa ${c.numero} tiene importe a favor del cliente. Si se descuenta de esta factura, compénsalas:`}
+          </p>
+          <Boton
+            tamano="s"
+            variante="secundario"
+            cargando={pendiente}
+            onClick={async () => {
+              if (
+                !(await confirmar(
+                  `Se anotará una compensación de ${euros(c.importe)} en las dos facturas (a la misma fecha). ¿Continuar?`,
+                ))
+              )
+                return;
+              ejecutar(async () => {
+                await desenvolver(compensarRectificativa(c.rectificativaId, c.facturaId, fecha));
+                router.refresh();
+              });
+            }}
+          >
+            Compensar {euros(c.importe)} con {c.numero}
+          </Boton>
+        </div>
+      ))}
+
+      {abierto > 0.005 ? (
         <form
           className="flex flex-col gap-esp2"
           onSubmit={(e) => {
@@ -493,7 +554,7 @@ export function Cobros({
               value={importe}
               onChange={(e) => setImporte(e.target.value)}
               inputMode="decimal"
-              aria-label="Importe cobrado"
+              aria-label={esDevolucion ? "Importe devuelto" : "Importe cobrado"}
               className="h-11 md:h-9 w-[110px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
             />
             <input
@@ -523,12 +584,14 @@ export function Cobros({
             className="h-11 md:h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario" cargando={pendiente}>
-            Registrar cobro
+            {esDevolucion ? "Registrar devolución al cliente" : "Registrar cobro"}
           </Boton>
         </form>
       ) : (
         <div className="flex flex-col gap-esp2">
-          <p className="text-xs text-texto-exito">Factura cobrada por completo.</p>
+          <p className="text-xs text-texto-exito">
+            {esRectificativa ? "Rectificativa liquidada por completo." : "Factura cobrada por completo."}
+          </p>
           {compartir && (
             <>
               <p className="text-xs text-texto-terciario">
@@ -729,5 +792,70 @@ export function CondicionesDocumento({
       </div>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
     </form>
+  );
+}
+
+/**
+ * Pendientes de la importación: motivo de la revisión, si falta el PDF y de dónde salió el documento.
+ * «Marcar como revisado» solo quita la marca: no cambia ningún dato del documento.
+ */
+export function RevisionDocumento({
+  documentoId,
+  revisar,
+  motivo,
+  sinPdf,
+  origen,
+  archivo,
+  enlaceDrive,
+}: {
+  documentoId: number;
+  revisar: boolean;
+  motivo: string | null;
+  sinPdf: boolean;
+  origen: string | null;
+  archivo: string | null;
+  enlaceDrive: string | null;
+}) {
+  const { router, pendiente, error, ejecutar } = useAccion();
+  return (
+    <div
+      className={
+        revisar
+          ? "flex flex-col gap-esp2 rounded-lg border border-borde-aviso bg-fondo-aviso-sutil px-esp6 py-esp4"
+          : "flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4"
+      }
+    >
+      <p className="text-sm font-semibold text-texto-primario">{revisar ? "Por revisar" : "Datos de la importación"}</p>
+      {revisar && <p className="text-sm text-texto-primario">{motivo || "Marcado para revisar en la importación (sin motivo)."}</p>}
+      {!revisar && motivo && <p className="text-xs text-texto-secundario">Revisado. Motivo original: {motivo}</p>}
+      <div className="flex flex-wrap gap-x-esp4 gap-y-1 text-xs text-texto-secundario">
+        {sinPdf && <span className="font-medium text-texto-aviso">Sin PDF original</span>}
+        {origen && <span>Origen: {origen}</span>}
+        {archivo && <span className="break-all">Archivo: {archivo}</span>}
+        {enlaceDrive && (
+          <a href={enlaceDrive} target="_blank" rel="noopener noreferrer" className="font-medium text-texto-marca">
+            Abrir PDF original (Drive)
+          </a>
+        )}
+      </div>
+      {revisar && (
+        <Boton
+          tamano="s"
+          variante="secundario"
+          className="w-fit"
+          cargando={pendiente}
+          onClick={() =>
+            ejecutar(async () => {
+              await desenvolver(marcarRevisado(documentoId));
+              router.refresh();
+            })
+          }
+        >
+          <Icono nombre="check" size={16} />
+          Marcar como revisado
+        </Boton>
+      )}
+      {error && <p className="text-xs text-texto-peligro">{error}</p>}
+    </div>
   );
 }

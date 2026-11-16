@@ -36,18 +36,37 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
   await exigirAdmin();
   const supabase = await createClient();
 
+  // Ejercicios disponibles (primer y último gasto) y gastos pendientes de revisar de cualquier año:
+  // consultas ligeras. El listado completo se pide ya filtrado por ejercicio en la base de datos.
+  const [resPrimero, resUltimo, resPendientes] = await Promise.all([
+    supabase.from("gastos").select("fecha").order("fecha", { ascending: true }).limit(1),
+    supabase.from("gastos").select("fecha").order("fecha", { ascending: false }).limit(1),
+    supabase.from("gastos").select("id").eq("estado", "pendiente").order("fecha", { ascending: false }).order("id", { ascending: false }),
+  ]);
+  lanzarSiError(resPrimero, resUltimo, resPendientes);
+  const anioActual = new Date().getFullYear();
+  const desde = Number(resPrimero.data?.[0]?.fecha.slice(0, 4) ?? anioActual);
+  const hasta = Math.max(Number(resUltimo.data?.[0]?.fecha.slice(0, 4) ?? anioActual), anioActual);
+  const ejercicios = Array.from({ length: hasta - desde + 1 }, (_, i) => hasta - i);
+  const pedido = Number(filtros.ejercicio);
+  const ejercicio = ejercicios.includes(pedido)
+    ? pedido
+    : resUltimo.data?.[0]
+      ? Number(resUltimo.data[0].fecha.slice(0, 4))
+      : anioActual;
+
+  const SELECCION = "*, categorias_gasto(nombre), usuarios!gastos_usuario_id_fkey(nombre, apellidos)";
   const res = await supabase
     .from("gastos")
-    .select("*, categorias_gasto(nombre), usuarios!gastos_usuario_id_fkey(nombre, apellidos)")
+    .select(SELECCION)
+    .gte("fecha", `${ejercicio}-01-01`)
+    .lte("fecha", `${ejercicio}-12-31`)
     .order("fecha", { ascending: false })
     .order("id", { ascending: false })
     .limit(5000);
   lanzarSiError(res);
   const todos = res.data ?? [];
-
-  const ejercicios = [...new Set(todos.map((g) => Number(g.fecha.slice(0, 4))))].sort((a, b) => b - a);
-  const pedido = Number(filtros.ejercicio);
-  const ejercicio = ejercicios.includes(pedido) ? pedido : (ejercicios[0] ?? new Date().getFullYear());
+  const pendientes = resPendientes.data ?? [];
   const trimestre = TRIMESTRES.includes(Number(filtros.trimestre)) ? Number(filtros.trimestre) : 0;
   const tipo = filtros.tipo === "deducible" || filtros.tipo === "menor" ? filtros.tipo : "todos";
   const estado = (ESTADOS_GASTO as readonly string[]).includes(filtros.estado ?? "") ? filtros.estado : "";
@@ -88,7 +107,13 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
     q: filtros.q ?? "",
   };
   // Panel de revisión (se abre desde el aviso de la campana o con "Revisar"): ?revisar=ID
-  const aRevisar = todos.find((g) => String(g.id) === filtros.revisar);
+  // El gasto a revisar puede ser de otro ejercicio: si no está en la lista, se pide aparte.
+  const idRevisar = Number(filtros.revisar);
+  const aRevisar =
+    todos.find((g) => g.id === idRevisar) ??
+    (Number.isInteger(idRevisar) && idRevisar > 0
+      ? (await supabase.from("gastos").select(SELECCION).eq("id", idRevisar).maybeSingle()).data
+      : null);
   let revision: GastoRevision | null = null;
   if (aRevisar) {
     const firma = aRevisar.ticket_path
@@ -112,7 +137,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
       esPdf: aRevisar.ticket_path?.endsWith(".pdf") ?? false,
     };
   }
-  const primeraPendiente = todos.filter((g) => g.estado === "pendiente").at(-1);
+  const primeraPendiente = pendientes.at(-1);
 
   const chip = (activo: boolean) =>
     activo
@@ -161,7 +186,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         <div className="flex flex-wrap items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3">
           <Icono nombre="alerta" size={18} className="text-texto-aviso" />
           <p className="flex-1 text-sm text-texto-primario">
-            {todos.filter((g) => g.estado === "pendiente").length} gasto(s) esperan tu revisión.
+            {pendientes.length} gasto(s) esperan tu revisión.
           </p>
           <Link href={enlace(actual, { revisar: String(primeraPendiente.id) })}>
             <Boton tamano="s">Revisar el más antiguo</Boton>

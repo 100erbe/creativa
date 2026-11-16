@@ -6,12 +6,16 @@ import { createClient } from "@/lib/supabase/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { accion } from "@/lib/accion";
+import { errorContrasena } from "@/lib/contrasena";
 
 function refrescar() {
   revalidatePath("/admin/ajustes/equipo");
 }
 
 const ROLES = ["admin", "empleado"] as const;
+
+/** «Ban» de Supabase Auth sin fecha de fin práctica (100 años). */
+const BLOQUEO_INDEFINIDO = "876000h";
 type Rol = (typeof ROLES)[number];
 
 const esquemaPersona = z.object({
@@ -23,7 +27,10 @@ const esquemaPersona = z.object({
 
 const esquemaAlta = esquemaPersona.extend({
   email: z.string().trim().toLowerCase().email("El email no es válido."),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres."),
+  password: z.string().superRefine((p, ctx) => {
+    const error = errorContrasena(p);
+    if (error) ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+  }),
 });
 
 function clienteAdmin() {
@@ -116,14 +123,38 @@ export const actualizarPersona = accion(
       .eq("id", id);
     if (error) throw new Error(error.message);
 
+    // Desactivar no basta con la fila de `usuarios`: se bloquea también la cuenta de acceso
+    // y se cierran sus sesiones abiertas. Al reactivarla se desbloquea.
+    if (datos.activo !== actual.activo) {
+      await bloquearAcceso(id, !datos.activo);
+    }
+
     refrescar();
   },
 );
 
+/** Bloquea (ban indefinido + cierre de sesiones) o desbloquea la cuenta de acceso en Supabase Auth. */
+async function bloquearAcceso(id: string, bloquear: boolean) {
+  const admin = clienteAdmin();
+  const { error } = await admin.auth.admin.updateUserById(id, { ban_duration: bloquear ? BLOQUEO_INDEFINIDO : "none" });
+  if (error) {
+    throw new Error(
+      bloquear
+        ? `La persona queda desactivada en la app, pero no se pudo bloquear su acceso: ${error.message}`
+        : `La persona queda activa en la app, pero no se pudo desbloquear su acceso: ${error.message}`,
+    );
+  }
+  if (bloquear) {
+    const { error: errorSesiones } = await admin.rpc("cerrar_sesiones_usuario", { p_usuario: id });
+    if (errorSesiones) throw new Error(`Acceso bloqueado, pero no se pudieron cerrar sus sesiones: ${errorSesiones.message}`);
+  }
+}
+
 /** Para quien olvidó su contraseña: se le fija una nueva y se le comunica. */
 export const cambiarContrasena = accion(async (id: string, password: string) => {
   await exigirAdmin();
-  if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+  const errorPassword = errorContrasena(password);
+  if (errorPassword) throw new Error(errorPassword);
   const supabase = await createClient();
   const { data: persona } = await supabase.from("usuarios").select("id").eq("id", id).maybeSingle();
   if (!persona) throw new Error("No se ha encontrado a la persona.");

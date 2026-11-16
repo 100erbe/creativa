@@ -8,7 +8,7 @@ import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, validezVencida } from "@/lib/documentos";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
-import { AccionesDocumento, CondicionesDocumento, Cobros, ProveedorCondiciones } from "./controles";
+import { AccionesDocumento, CondicionesDocumento, Cobros, ProveedorCondiciones, RevisionDocumento } from "./controles";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 
 export const dynamic = "force-dynamic";
@@ -56,11 +56,36 @@ export default async function PaginaDocumento({
     ? (
         await supabase
           .from("documentos")
-          .select("id, tipo, numero_completo")
+          .select("id, tipo, numero_completo, total")
           .eq("id", doc.documento_origen_id)
           .maybeSingle()
       ).data
     : null;
+
+  // Rectificativa en borrador: lo ya rectificado de la factura por otras rectificativas emitidas y lo que queda.
+  // Al emitir, la base de datos rechaza la que supere lo que queda (ver emitir_documento).
+  const limiteRectificacion =
+    doc.tipo === "rectificativa" && doc.estado === "borrador" && origen?.tipo === "factura"
+      ? await (async () => {
+          const { data: emitidas } = await supabase
+            .from("documentos")
+            .select("numero_completo, total")
+            .eq("documento_origen_id", origen.id)
+            .eq("tipo", "rectificativa")
+            .neq("estado", "borrador")
+            .neq("id", doc.id);
+          const rectificado = -(emitidas ?? []).reduce((s, r) => s + Number(r.total), 0);
+          const restante = Math.max(0, Number(origen.total) - rectificado);
+          return {
+            factura: origen.numero_completo ?? "",
+            totalFactura: Number(origen.total),
+            rectificado,
+            restante,
+            numeros: (emitidas ?? []).map((r) => r.numero_completo).filter(Boolean).join(", "),
+            excede: -Number(doc.total) > restante + 0.005,
+          };
+        })()
+      : null;
 
   const campanaVinculada = doc.campana_id
     ? (
@@ -76,7 +101,9 @@ export default async function PaginaDocumento({
   const { data: formasPago } = esBorrador
     ? await supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre")
     : { data: [] };
-  const cobrable = doc.tipo === "factura" && !esBorrador;
+  // Facturas y rectificativas emitidas llevan cobros (en la rectificativa, devoluciones o compensaciones).
+  const cobrable = (doc.tipo === "factura" || doc.tipo === "rectificativa") && !esBorrador;
+  const esRectificativa = doc.tipo === "rectificativa";
 
   // Destinatarios del email: contactos marcados como "recibe las facturas" + el email de facturación.
   const [{ data: contactosFactura }, { data: empresa }] = esBorrador
@@ -100,6 +127,29 @@ export default async function PaginaDocumento({
           .order("fecha"),
       ])
     : [{ data: null }, { data: [] }];
+
+  // Factura ↔ rectificativas: estado de cobro de la otra parte, para el saldo neto y la compensación.
+  const idsRectificativas = (derivados ?? []).filter((d) => d.tipo === "rectificativa" && d.numero_completo).map((d) => d.id);
+  const relacionadas = cobrable
+    ? esRectificativa
+      ? doc.documento_origen_id
+        ? [doc.documento_origen_id]
+        : []
+      : idsRectificativas
+    : [];
+  const { data: estadosRelacionados } =
+    relacionadas.length > 0
+      ? await supabase
+          .from("v_estado_cobro")
+          .select("id, numero_completo, total, pendiente")
+          .in("id", relacionadas)
+      : { data: [] };
+  const otrasPartes = (estadosRelacionados ?? []).flatMap((r) => (r.id == null ? [] : [{ ...r, id: r.id }])).map((r) => ({
+    id: r.id,
+    numero: r.numero_completo ?? "",
+    total: Number(r.total),
+    pendiente: Number(r.pendiente),
+  }));
 
   const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
   // En un borrador los datos del cliente salen de la ficha; al emitir se congelan en el documento.
@@ -225,7 +275,44 @@ export default async function PaginaDocumento({
         {doc.motivo_rectificacion && (
           <p className="text-xs text-texto-secundario">Motivo: {doc.motivo_rectificacion}</p>
         )}
+        {limiteRectificacion && (limiteRectificacion.rectificado > 0.005 || limiteRectificacion.excede) && (
+          <div
+            className={`flex flex-col gap-1 rounded-md border px-esp3 py-esp2 text-xs text-texto-primario ${
+              limiteRectificacion.excede ? "border-borde-aviso bg-fondo-aviso-sutil" : "border-borde-default bg-fondo-superficie"
+            }`}
+          >
+            <p>
+              La factura {limiteRectificacion.factura} ({euros(limiteRectificacion.totalFactura)}) ya está rectificada en{" "}
+              {euros(limiteRectificacion.rectificado)}
+              {limiteRectificacion.numeros ? ` (${limiteRectificacion.numeros})` : ""}. Queda por rectificar{" "}
+              <strong>{euros(limiteRectificacion.restante)}</strong>.
+            </p>
+            {limiteRectificacion.excede && (
+              <p className="font-medium text-texto-aviso">
+                Esta rectificativa ({euros(Number(doc.total))}) supera lo que queda: ajusta las líneas hasta un máximo de{" "}
+                {euros(-limiteRectificacion.restante)} o no se podrá emitir.
+              </p>
+            )}
+          </div>
+        )}
+        {cobrable && !doc.fecha_vencimiento && doc.tipo === "factura" && (
+          <p className="text-xs text-texto-aviso">
+            Esta factura no tiene fecha de vencimiento: no aparecerá nunca como vencida.
+          </p>
+        )}
       </div>
+
+      {(doc.revisar || doc.sin_pdf || doc.origen_datos || doc.archivo_origen) && (
+        <RevisionDocumento
+          documentoId={doc.id}
+          revisar={doc.revisar}
+          motivo={doc.motivo_revision}
+          sinPdf={doc.sin_pdf}
+          origen={doc.origen_datos}
+          archivo={doc.archivo_origen}
+          enlaceDrive={doc.drive_file_id ? `https://drive.google.com/file/d/${encodeURIComponent(doc.drive_file_id)}/view` : null}
+        />
+      )}
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
@@ -347,8 +434,54 @@ export default async function PaginaDocumento({
             </div>
             {estadoCobro && (
               <>
-                <Fila etiqueta="Cobrado" valor={euros(Number(estadoCobro.cobrado))} />
-                <Fila etiqueta="Pendiente" valor={euros(Number(estadoCobro.pendiente))} />
+                <Fila
+                  etiqueta={esRectificativa ? "Devuelto / compensado" : "Cobrado"}
+                  valor={euros(Number(estadoCobro.cobrado))}
+                />
+                <Fila
+                  etiqueta={esRectificativa && Number(estadoCobro.pendiente) < 0 ? "Pendiente a favor del cliente" : "Pendiente"}
+                  valor={euros(Number(estadoCobro.pendiente))}
+                />
+              </>
+            )}
+            {/* Factura con rectificativas: lo que de verdad se debe, sumando los abonos. */}
+            {!esRectificativa && estadoCobro && otrasPartes.length > 0 && (
+              <>
+                <div className="h-px bg-fondo-hover" />
+                {otrasPartes.map((r) => (
+                  <div key={r.id} className="flex items-center">
+                    <span className="flex-1 text-sm text-texto-secundario">
+                      Rectificativa{" "}
+                      <Link href={`/admin/documentos/${r.id}`} className="font-medium text-texto-marca">
+                        {r.numero}
+                      </Link>
+                    </span>
+                    <span className="text-sm font-medium text-texto-primario">{euros(r.total)}</span>
+                  </div>
+                ))}
+                <Fila
+                  etiqueta="Saldo neto facturado"
+                  valor={euros(Number(doc.total) + otrasPartes.reduce((s, r) => s + r.total, 0))}
+                />
+                <Fila
+                  etiqueta="Pendiente neto"
+                  valor={euros(Number(estadoCobro.pendiente) + otrasPartes.reduce((s, r) => s + r.pendiente, 0))}
+                />
+              </>
+            )}
+            {esRectificativa && otrasPartes[0] && (
+              <>
+                <div className="h-px bg-fondo-hover" />
+                <div className="flex items-center">
+                  <span className="flex-1 text-sm text-texto-secundario">
+                    Factura rectificada{" "}
+                    <Link href={`/admin/documentos/${otrasPartes[0].id}`} className="font-medium text-texto-marca">
+                      {otrasPartes[0].numero}
+                    </Link>
+                  </span>
+                  <span className="text-sm font-medium text-texto-primario">{euros(otrasPartes[0].total)}</span>
+                </div>
+                <Fila etiqueta="Saldo neto" valor={euros(Number(doc.total) + otrasPartes[0].total)} />
               </>
             )}
           </div>
@@ -397,7 +530,20 @@ export default async function PaginaDocumento({
               <Cobros
                 key={`${cobros?.length ?? 0}-${estadoCobro.pendiente}`}
                 documentoId={doc.id}
-                compartir={compartir}
+                compartir={esRectificativa ? undefined : compartir}
+                esRectificativa={esRectificativa}
+                compensables={otrasPartes
+                  .filter((r) =>
+                    esRectificativa
+                      ? Number(estadoCobro.pendiente) < -0.005 && r.pendiente > 0.005
+                      : Number(estadoCobro.pendiente) > 0.005 && r.pendiente < -0.005,
+                  )
+                  .map((r) => ({
+                    rectificativaId: esRectificativa ? doc.id : r.id,
+                    facturaId: esRectificativa ? r.id : doc.id,
+                    numero: r.numero,
+                    importe: Math.min(Math.abs(Number(estadoCobro.pendiente)), Math.abs(r.pendiente)),
+                  }))}
                 pendiente={Number(estadoCobro.pendiente)}
                 cobros={(cobros ?? []).map((c) => ({
                   id: c.id,

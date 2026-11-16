@@ -182,6 +182,14 @@ export function BarraLateral({
         <p className="truncate text-xs font-medium text-texto-primario">{nombre}</p>
         <p className="truncate text-micro text-texto-terciario">{rolEtiqueta}</p>
       </div>
+      <Link
+        href="/cuenta/contrasena"
+        aria-label="Cambiar mi contraseña"
+        title="Cambiar mi contraseña"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover hover:text-texto-primario"
+      >
+        <Icono nombre="candado" size={16} />
+      </Link>
       <button
         type="button"
         onClick={salir}

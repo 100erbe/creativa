@@ -37,32 +37,45 @@ export default async function PaginaContabilidad({
   const filtros = await searchParams;
   const supabase = await createClient();
 
-  const resultados = await Promise.all([
+  // El resumen de IVA es pequeño (ejercicio × trimestre × tipo) y dice qué ejercicios hay;
+  // el libro registro y los gastos se piden ya filtrados por ejercicio en la base de datos.
+  const resultadosResumen = await Promise.all([
     supabase
       .from("v_resumen_iva_trimestral")
       .select("*")
       .order("ejercicio")
       .order("trimestre")
       .order("iva_pct"),
-    supabase.from("v_libro_registro").select("*").order("fecha_expedicion").order("numero").limit(5000),
     supabase.from("v_gastos_iva_trimestral").select("*"),
+  ]);
+  lanzarSiError(...resultadosResumen);
+  const [{ data: iva }, { data: ivaSoportado }] = resultadosResumen;
+
+  const ejercicios = [...new Set([...(iva ?? []).map((r) => r.ejercicio), new Date().getFullYear()])]
+    .filter((e): e is number => e != null)
+    .sort((a, b) => b - a);
+  const pedido = Number(filtros.ejercicio);
+  const ejercicio = ejercicios.includes(pedido) ? pedido : (ejercicios[0] ?? new Date().getFullYear());
+
+  const resultados = await Promise.all([
+    supabase
+      .from("v_libro_registro")
+      .select("*")
+      .eq("ejercicio", ejercicio)
+      .order("fecha_expedicion")
+      .order("numero")
+      .limit(5000),
     supabase
       .from("gastos")
       .select("fecha, total")
       .eq("tipo", "menor")
       .in("estado", ["aprobado", "reembolsado"])
+      .gte("fecha", `${ejercicio}-01-01`)
+      .lte("fecha", `${ejercicio}-12-31`)
       .limit(5000),
   ]);
   lanzarSiError(...resultados);
-  const [{ data: iva }, { data: libroAnio }, { data: ivaSoportado }, { data: menores }] = resultados;
-
-  const ejercicios = [
-    ...new Set([...(iva ?? []).map((r) => r.ejercicio), ...(libroAnio ?? []).map((r) => r.ejercicio)]),
-  ]
-    .filter((e): e is number => e != null)
-    .sort((a, b) => b - a);
-  const pedido = Number(filtros.ejercicio);
-  const ejercicio = ejercicios.includes(pedido) ? pedido : (ejercicios[0] ?? new Date().getFullYear());
+  const [{ data: libroAnio }, { data: menores }] = resultados;
   const trimestre = [1, 2, 3, 4].includes(Number(filtros.trimestre)) ? Number(filtros.trimestre) : 0;
   const q = (filtros.q ?? "").trim().toLowerCase();
   const pagina = Math.max(1, Number(filtros.pagina) || 1);

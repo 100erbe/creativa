@@ -20,9 +20,8 @@ const TIPOS_FOTO: Record<string, string> = { "image/webp": "webp", "image/jpeg":
  */
 export const subirFotoPunto = accion(async (formData: FormData) => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Sesión válida y cuenta activa (una cuenta desactivada no sube nada aunque su token siga vivo).
+  const user = await obtenerUsuarioActual();
   if (!user) throw new Error("Sesión no válida.");
 
   const archivo = formData.get("archivo") as File;

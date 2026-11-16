@@ -95,6 +95,10 @@ export const eliminarBorrador = accion(async (documentoId: number) => {
   refrescar();
 });
 
+/**
+ * Anota un cobro (factura) o una devolución al cliente (rectificativa con importe a su favor).
+ * El importe llega siempre en positivo; en una rectificativa se guarda en negativo.
+ */
 export const registrarCobro = accion(async (
   documentoId: number,
   datos: { importe: number; fecha: string; metodo: MetodoCobro; referencia?: string },
@@ -108,6 +112,7 @@ export const registrarCobro = accion(async (
   if (!METODOS_COBRO.some((m) => m.valor === datos.metodo)) {
     throw new Error("Método de cobro no válido.");
   }
+  if (!FECHA.test(datos.fecha)) throw new Error("Fecha no válida.");
 
   const { data: estado } = await supabase
     .from("v_estado_cobro")
@@ -115,14 +120,17 @@ export const registrarCobro = accion(async (
     .eq("id", documentoId)
     .maybeSingle();
   if (!estado) throw new Error("Solo se registran cobros de facturas emitidas.");
-  if (datos.importe > Number(estado.pendiente) + 0.005) {
-    throw new Error("El importe supera lo pendiente de cobro.");
+  const pendiente = Number(estado.pendiente);
+  // Pendiente negativo = abono a favor del cliente: lo que se anota es una devolución.
+  const signo = pendiente < 0 ? -1 : 1;
+  if (datos.importe > Math.abs(pendiente) + 0.005) {
+    throw new Error(signo < 0 ? "El importe supera lo pendiente de devolver." : "El importe supera lo pendiente de cobro.");
   }
 
   const { error } = await supabase.from("cobros").insert({
     documento_id: documentoId,
     fecha: datos.fecha,
-    importe: Math.round(datos.importe * 100) / 100,
+    importe: (signo * Math.round(datos.importe * 100)) / 100,
     metodo: datos.metodo,
     referencia: datos.referencia?.trim() || null,
   });
@@ -131,18 +139,143 @@ export const registrarCobro = accion(async (
   refrescar(documentoId);
 });
 
+/**
+ * Borra un cobro. Si es una compensación, borra también su pareja en el otro documento
+ * (la compensación siempre son dos cobros de signo opuesto: no se deja uno suelto).
+ */
 export const eliminarCobro = accion(async (documentoId: number, cobroId: number) => {
   await exigirAdmin();
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: cobro } = await supabase
     .from("cobros")
-    .delete()
+    .select("id, importe, metodo, referencia, fecha, documentos(numero_completo)")
     .eq("id", cobroId)
-    .eq("documento_id", documentoId);
+    .eq("documento_id", documentoId)
+    .maybeSingle();
+  if (!cobro) throw new Error("No se ha encontrado el cobro.");
+
+  let pareja: { id: number; documento_id: number } | null = null;
+  if (cobro.metodo === "compensacion" && cobro.referencia) {
+    const doc = Array.isArray(cobro.documentos) ? cobro.documentos[0] : cobro.documentos;
+    const { data: otro } = await supabase
+      .from("documentos")
+      .select("id")
+      .eq("numero_completo", cobro.referencia)
+      .in("tipo", ["factura", "rectificativa"])
+      .maybeSingle();
+    if (otro && doc?.numero_completo) {
+      const { data: candidatos } = await supabase
+        .from("cobros")
+        .select("id, documento_id")
+        .eq("documento_id", otro.id)
+        .eq("metodo", "compensacion")
+        .eq("referencia", doc.numero_completo)
+        .eq("importe", -Number(cobro.importe))
+        .eq("fecha", cobro.fecha)
+        .limit(1);
+      pareja = candidatos?.[0] ?? null;
+    }
+  }
+
+  const ids = pareja ? [cobro.id, pareja.id] : [cobro.id];
+  const { error } = await supabase.from("cobros").delete().in("id", ids);
   if (error) throw new Error(error.message);
 
   refrescar(documentoId);
+  if (pareja) refrescar(pareja.documento_id);
+});
+
+/**
+ * Compensa una rectificativa (abono) con una factura emitida del mismo cliente: por defecto la
+ * que rectifica. Crea dos cobros «Compensación» de signo opuesto; no toca los documentos.
+ */
+export const compensarRectificativa = accion(async (rectificativaId: number, facturaId?: number, fecha?: string) => {
+  await exigirAdmin();
+  if (fecha && !FECHA.test(fecha)) throw new Error("Fecha no válida.");
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("compensar_rectificativa", {
+    p_rectificativa: rectificativaId,
+    p_factura: facturaId ?? undefined,
+    p_fecha: fecha || undefined,
+  });
+  if (error) throw new Error(error.message);
+
+  refrescar(rectificativaId);
+  if (facturaId) refrescar(facturaId);
+  else {
+    const { data: rect } = await supabase.from("documentos").select("documento_origen_id").eq("id", rectificativaId).maybeSingle();
+    if (rect?.documento_origen_id) refrescar(rect.documento_origen_id);
+  }
+  return Number(data);
+});
+
+const ESTADOS_ANULABLES = ["emitido", "enviado", "aceptado", "rechazado", "caducado"];
+
+/**
+ * Anula un presupuesto o albarán emitido por error. Las facturas nunca se anulan:
+ * se corrigen con una rectificativa.
+ */
+export const anularDocumento = accion(async (documentoId: number, motivo?: string) => {
+  await exigirAdmin();
+  const supabase = await createClient();
+
+  const { data: doc } = await supabase
+    .from("documentos")
+    .select("tipo, estado, numero_completo, notas_internas")
+    .eq("id", documentoId)
+    .maybeSingle();
+  if (!doc) throw new Error("No se ha encontrado el documento.");
+  if (doc.tipo === "factura" || doc.tipo === "rectificativa") {
+    throw new Error("Una factura no se anula: se corrige con una rectificativa.");
+  }
+  if (doc.tipo !== "presupuesto" && doc.tipo !== "albaran") throw new Error("Este documento no se puede anular.");
+  if (!ESTADOS_ANULABLES.includes(doc.estado)) {
+    throw new Error(
+      doc.estado === "borrador" ? "Un borrador no se anula: elimínalo." : `No se puede anular un documento ${doc.estado}.`,
+    );
+  }
+
+  // Un borrador de factura o de versión nueva colgando de este documento lo «resucitaría» al emitirse.
+  const { data: derivados } = await supabase
+    .from("documentos")
+    .select("id, tipo")
+    .eq("documento_origen_id", documentoId)
+    .eq("estado", "borrador");
+  if ((derivados ?? []).length > 0) {
+    throw new Error("Hay un borrador (factura o versión nueva) creado desde este documento: elimínalo antes de anular.");
+  }
+
+  const nota = `Anulado el ${new Date().toLocaleDateString("es-ES")}${motivo?.trim() ? `: ${motivo.trim()}` : "."}`;
+  const { data: anulados, error } = await supabase
+    .from("documentos")
+    .update({ estado: "anulado", notas_internas: doc.notas_internas ? `${doc.notas_internas}\n${nota}` : nota })
+    .eq("id", documentoId)
+    .in("estado", ESTADOS_ANULABLES as ("emitido" | "enviado" | "aceptado" | "rechazado" | "caducado")[])
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!anulados || anulados.length === 0) throw new Error("El documento ha cambiado entre medias: recarga la página.");
+
+  refrescar(documentoId);
+});
+
+/** Cierra la revisión pendiente de un documento importado (no cambia ningún importe). */
+export const marcarRevisado = accion(async (documentoId: number) => {
+  await exigirAdmin();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("documentos")
+    .update({ revisar: false })
+    .eq("id", documentoId)
+    .eq("revisar", true)
+    .select("id");
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Este documento ya estaba revisado.");
+
+  refrescar(documentoId);
+  revalidatePath("/admin", "layout");
 });
 
 // ---------------------------------------------------------------------

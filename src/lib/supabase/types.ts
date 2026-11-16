@@ -722,6 +722,13 @@ export type Database = {
           fecha_vencimiento: string | null
           plazo_dias: number | null
           version: number
+          sin_pdf: boolean
+          revisar: boolean
+          motivo_revision: string | null
+          origen_datos: string | null
+          archivo_origen: string | null
+          drive_file_id: string | null
+          datos_excel: Json | null
           firmado: boolean
           forma_pago_id: number | null
           iban_cobro: string | null
@@ -777,6 +784,13 @@ export type Database = {
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
           version?: number
+          sin_pdf?: boolean
+          revisar?: boolean
+          motivo_revision?: string | null
+          origen_datos?: string | null
+          archivo_origen?: string | null
+          drive_file_id?: string | null
+          datos_excel?: Json | null
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -832,6 +846,13 @@ export type Database = {
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
           version?: number
+          sin_pdf?: boolean
+          revisar?: boolean
+          motivo_revision?: string | null
+          origen_datos?: string | null
+          archivo_origen?: string | null
+          drive_file_id?: string | null
+          datos_excel?: Json | null
           firmado?: boolean
           forma_pago_id?: number | null
           iban_cobro?: string | null
@@ -1478,6 +1499,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pdfs_sin_asignar: {
+        Row: {
+          archivo: string
+          base: number | null
+          creado_en: string
+          drive_file_id: string | null
+          id: number
+          motivo: string | null
+          numero: number | null
+          tipo: string | null
+          total: number | null
+        }
+        Insert: {
+          archivo: string
+          base?: number | null
+          creado_en?: string
+          drive_file_id?: string | null
+          id?: number
+          motivo?: string | null
+          numero?: number | null
+          tipo?: string | null
+          total?: number | null
+        }
+        Update: {
+          archivo?: string
+          base?: number | null
+          creado_en?: string
+          drive_file_id?: string | null
+          id?: number
+          motivo?: string | null
+          numero?: number | null
+          tipo?: string | null
+          total?: number | null
+        }
+        Relationships: []
       }
       productos: {
         Row: {
@@ -2134,6 +2191,14 @@ export type Database = {
         }
         Returns: number
       }
+      cerrar_sesiones_usuario: {
+        Args: { p_usuario: string }
+        Returns: undefined
+      }
+      compensar_rectificativa: {
+        Args: { p_factura?: number; p_fecha?: string; p_rectificativa: number }
+        Returns: number
+      }
       convertir_documento: {
         Args: {
           p_motivo?: string
@@ -2155,6 +2220,7 @@ export type Database = {
         Returns: string
       }
       es_admin: { Args: never; Returns: boolean }
+      es_usuario_activo: { Args: never; Returns: boolean }
       formatear_numero: {
         Args: { p_anio: number; p_numero: number; p_serie: number }
         Returns: string
