@@ -496,7 +496,7 @@ export function PanelPunto({
                   className={
                     conUbicacion
                       ? "absolute bottom-1 left-1 rounded-full bg-fondo-velo-fuerte px-1.5 py-0.5 text-micro text-texto-inverso"
-                      : "absolute bottom-1 left-1 rounded-full bg-fondo-aviso px-1.5 py-0.5 text-micro font-medium text-texto-primario"
+                      : "absolute bottom-1 left-1 rounded-full border border-borde-aviso bg-fondo-aviso-sutil px-1.5 py-0.5 text-micro font-medium text-texto-aviso"
                   }
                 >
                   {f.origen_foto === "galeria" ? "🖼 " : ""}
@@ -504,10 +504,11 @@ export function PanelPunto({
                 </span>
                 {(esAdmin || f.usuario_id === usuarioId) && (
                   <button
+                    type="button"
                     onClick={() => eliminarFoto(f.id)}
                     disabled={eliminando === f.id}
                     aria-label="Eliminar foto"
-                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso disabled:opacity-50"
+                    className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso shadow-sm disabled:opacity-50"
                   >
                     {eliminando === f.id ? "…" : "✕"}
                   </button>
@@ -548,12 +549,12 @@ export function PanelPunto({
               </span>
             </label>
             <div className="flex gap-esp2">
-              <Boton className="flex-1" onClick={hacerFoto} disabled={subiendo}>
-                <Icono nombre="camara" size={16} />
+              <Boton className="min-h-12 flex-1" onClick={hacerFoto} disabled={subiendo}>
+                <Icono nombre="camara" size={18} />
                 Hacer foto
               </Boton>
-              <Boton className="flex-1" variante="secundario" onClick={() => inputGaleriaRef.current?.click()} disabled={subiendo}>
-                <Icono nombre="imagen" size={16} />
+              <Boton className="min-h-12 flex-1" variante="secundario" onClick={() => inputGaleriaRef.current?.click()} disabled={subiendo}>
+                <Icono nombre="imagen" size={18} />
                 Galería
               </Boton>
             </div>
@@ -591,7 +592,8 @@ export function PanelPunto({
       {/* Acciones */}
       {asignacion && asignacion.estado !== "completada" && esRetirada && (
         <div className="flex flex-col gap-esp2">
-          <Boton onClick={retirar} cargando={pendiente}>
+          <Boton className="min-h-12 w-full text-base" onClick={retirar} cargando={pendiente}>
+            <Icono nombre="check" size={18} />
             Marcar como retirado
           </Boton>
           <p className="text-center text-xs text-texto-terciario">
@@ -602,7 +604,8 @@ export function PanelPunto({
 
       {asignacion && asignacion.estado !== "completada" && !esRetirada && (
         <div className="flex flex-col gap-esp2">
-          <Boton onClick={completar} cargando={pendiente}>
+          <Boton className="min-h-12 w-full text-base" onClick={completar} cargando={pendiente}>
+            <Icono nombre="check" size={18} />
             Marcar como instalado
           </Boton>
           {fotos.length === 0 && (
@@ -610,7 +613,8 @@ export function PanelPunto({
               Este punto no tiene fotos. Puedes marcarlo igualmente si el cliente no las requiere.
             </p>
           )}
-          <Boton variante="fantasma" onClick={() => setMostrarIncidencia((v) => !v)}>
+          <Boton className="min-h-11 w-full" variante="fantasma" onClick={() => setMostrarIncidencia((v) => !v)}>
+            <Icono nombre="alerta" size={16} />
             Reportar incidencia
           </Boton>
         </div>

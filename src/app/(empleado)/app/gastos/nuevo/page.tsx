@@ -11,7 +11,7 @@ export default async function PaginaNuevoGastoEmpleado() {
   const { categorias } = await cargarOpcionesGasto(supabase);
 
   return (
-    <div className="flex flex-col gap-esp4">
+    <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
       <div>
         <h1 className="text-xl font-semibold text-texto-primario">Añadir gasto menor</h1>
         <p className="text-sm text-texto-secundario">

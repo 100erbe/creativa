@@ -36,3 +36,14 @@ export const REGIMENES_IVA: { valor: (typeof VALORES_REGIMEN_IVA)[number]; etiqu
 export const ETIQUETA_REGIMEN: Record<string, string> = Object.fromEntries(
   REGIMENES_IVA.map((r) => [r.valor, r.etiqueta]),
 );
+
+/** Devuelve 1-2 iniciales en mayúsculas para el avatar de empresa/cliente. */
+export function inicialesCliente(nombre: string | null | undefined): string {
+  const limpio = (nombre ?? "").trim();
+  if (!limpio) return "CL";
+  const palabras = limpio.split(/\s+/).filter(Boolean);
+  if (palabras.length >= 2) {
+    return `${palabras[0]![0] ?? ""}${palabras[1]![0] ?? ""}`.toUpperCase();
+  }
+  return limpio.slice(0, 2).toUpperCase();
+}

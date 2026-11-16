@@ -34,7 +34,14 @@ self.addEventListener("push", (evento) => {
     vibrate: datos.urgente ? [250, 120, 250, 120, 250] : [120],
     data: { url: datos.url || "/" },
   };
-  evento.waitUntil(self.registration.showNotification(titulo, opciones));
+  evento.waitUntil(
+    (async () => {
+      await self.registration.showNotification(titulo, opciones);
+      // Si hay una ventana abierta, se le avisa para que enseñe el popup y actualice el contador al instante.
+      const ventanas = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      ventanas.forEach((ventana) => ventana.postMessage({ tipo: "aviso-nuevo" }));
+    })(),
+  );
 });
 
 /** Al tocar el aviso se abre (o se trae al frente) la app en la pantalla que corresponde. */

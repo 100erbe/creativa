@@ -14,7 +14,7 @@ const ratio = (a: string, b: string) => {
 
 type Par = [string, string, string, string, number];
 const pares: Par[] = [];
-const fondosTexto = ["lienzo", "superficie", "sutil", "marca-sutil", "exito-sutil", "aviso-sutil", "peligro-sutil", "info-sutil"] as const;
+const fondosTexto = ["lienzo", "superficie", "sutil", "marca-sutil", "exito-sutil", "aviso-sutil", "peligro-sutil", "critico-sutil", "info-sutil"] as const;
 const f = fondo as Record<string, string>;
 const t = texto as Record<string, string>;
 const v = (o: Record<string, string>, k: string): string => o[k] ?? (() => { throw new Error(`token inexistente: ${k}`); })();
@@ -23,10 +23,10 @@ const v = (o: Record<string, string>, k: string): string => o[k] ?? (() => { thr
 for (const k of ["primario", "secundario", "terciario"]) {
   for (const b of [...fondosTexto, "hover"]) pares.push([`texto-${k}`, v(t, k), `fondo-${b}`, v(f, b), 4.5]);
 }
-for (const k of ["marca", "exito", "aviso", "peligro", "info"]) {
+for (const k of ["marca", "exito", "aviso", "peligro", "critico", "info"]) {
   for (const b of fondosTexto) pares.push([`texto-${k}`, v(t, k), `fondo-${b}`, v(f, b), 4.5]);
 }
-for (const b of ["marca", "marca-hover", "peligro", "peligro-hover"]) pares.push(["texto-sobre-marca/inverso", v(t, "sobre-marca"), `fondo-${b}`, v(f, b), 4.5]);
+for (const b of ["marca", "marca-hover", "peligro", "peligro-hover", "critico", "critico-hover"]) pares.push(["texto-sobre-marca/inverso", v(t, "sobre-marca"), `fondo-${b}`, v(f, b), 4.5]);
 pares.push(["texto-inverso", v(t, "inverso"), "fondo-inverso", v(f, "inverso"), 4.5]);
 // Documento imprimible
 for (const [k, b] of [["texto", "papel"], ["texto-suave", "papel"], ["tenue", "papel"], ["tenue", "fondo"], ["sello", "papel"], ["acento", "papel"], ["sobre-acento", "acento"]] as const) {
@@ -38,6 +38,7 @@ pares.push(["texto-aviso", v(t, "aviso"), "fondo-aviso-sutil (aviso borrador)", 
 for (const b of ["lienzo", "superficie"]) {
   pares.push(["borde-campo", borde.campo, `fondo-${b}`, v(f, b), 3]);
   pares.push(["borde-foco", borde.foco, `fondo-${b}`, v(f, b), 3]);
+  pares.push(["borde-critico", borde.critico, `fondo-${b}`, v(f, b), 3]);
   pares.push(["icono-secundario", icono.secundario, `fondo-${b}`, v(f, b), 3]);
   pares.push(["icono-default", icono.default, `fondo-${b}`, v(f, b), 3]);
 }

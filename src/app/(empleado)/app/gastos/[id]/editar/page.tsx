@@ -17,7 +17,7 @@ export default async function PaginaEditarGastoEmpleado({ params }: { params: Pr
   if (!gasto || (gasto.estado !== "pendiente" && gasto.estado !== "rechazado")) notFound();
 
   return (
-    <div className="flex flex-col gap-esp4">
+    <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
       <h1 className="text-xl font-semibold text-texto-primario">Corregir gasto</h1>
       {gasto.estado === "rechazado" && gasto.motivo_rechazo && (
         <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3 text-sm text-texto-peligro">

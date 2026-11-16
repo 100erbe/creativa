@@ -31,6 +31,11 @@ export default async function PaginaMapa() {
             latitud: p.latitud,
             longitud: p.longitud,
             estado_punto: p.estado_punto,
+            campana: p.campana,
+            tipo_soporte: p.tipo_soporte,
+            direccion: p.direccion,
+            fecha_programada: p.fecha_programada,
+            rol_asignacion: p.rol_asignacion,
           },
         ]
       : [],

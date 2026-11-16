@@ -41,7 +41,7 @@ export type DatosGasto = {
 type Opcion = { id: number | string; etiqueta: string };
 
 const entrada =
-  "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
 function Campo({
   etiqueta,
@@ -218,7 +218,7 @@ export function FormularioGasto({
             onChange={(e) => setTotal(e.target.value)}
             placeholder="0,00"
             required
-            className={entrada}
+            className={cn(entrada, "tabular-nums")}
           />
         </Campo>
         {deducible && (
@@ -232,7 +232,7 @@ export function FormularioGasto({
                 ))}
               </select>
             </Campo>
-            <div className="flex gap-esp5 rounded-md bg-fondo-sutil px-esp4 py-esp3 text-sm md:col-span-2">
+            <div className="tabular-nums flex flex-wrap gap-esp5 rounded-md bg-fondo-sutil px-esp4 py-esp3 text-sm md:col-span-2">
               <span className="text-texto-secundario">
                 Base imponible{" "}
                 <strong className="text-texto-primario">{desglose ? euros(desglose.base) : "—"}</strong>

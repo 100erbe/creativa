@@ -3,6 +3,45 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --bg-lienzo: #FAFAF9;
+    --bg-superficie: #FFFFFF;
+    --bg-elevado: #FFFFFF;
+    --bg-sutil: #F5F5F4;
+    --bg-hover: #E7E5E4;
+    --bg-marca: #C2410C;
+    --bg-marca-sutil: #FFF4ED;
+    --bg-exito-sutil: #F0FDF4;
+    --bg-aviso-sutil: #FFFBEB;
+    --bg-peligro-sutil: #FEF2F2;
+    --bg-critico-sutil: #FFF1F2;
+    --bg-critico: #9F1239;
+    --bg-info-sutil: #EFF6FF;
+
+    --text-primario: #1C1917;
+    --text-secundario: #57534E;
+    --text-terciario: #66605B;
+    --text-marca: #C2410C;
+    --text-exito: #15803D;
+    --text-aviso: #B45309;
+    --text-peligro: #B91C1C;
+    --text-critico: #881337;
+    --text-info: #1D4ED8;
+
+    --border-default: #E7E5E4;
+    --border-sutil: #F5F5F4;
+    --border-fuerte: #D6D3D1;
+    --border-campo: #78716C;
+    --border-foco: #EA580C;
+    --border-critico: #BE123C;
+    --border-critico-sutil: #FECDD3;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+  }
+
   html {
     color-scheme: light;
   }
@@ -13,6 +52,24 @@
   }
   body {
     @apply bg-fondo-lienzo text-texto-primario antialiased;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Respeta la preferencia de movimiento reducido del sistema (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

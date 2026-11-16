@@ -18,12 +18,14 @@ export const primitivas = {
 };
 
 export const fondo = {
-  lienzo: "#FAFAF9", superficie: "#FFFFFF", sutil: "#F5F5F4",
+  lienzo: "#FAFAF9", superficie: "#FFFFFF", elevado: "#FFFFFF", sutil: "#F5F5F4",
   hover: "#E7E5E4", marca: "#C2410C", "marca-hover": "#9A3412",
   "marca-sutil": "#FFF4ED", inverso: "#1C1917",
   "exito-sutil": "#F0FDF4", "aviso-sutil": "#FFFBEB",
   "peligro-sutil": "#FEF2F2", "info-sutil": "#EFF6FF",
+  "critico-sutil": "#FFF1F2",
   peligro: "#DC2626", "peligro-hover": "#B91C1C",
+  critico: "#9F1239", "critico-hover": "#881337",
   // Capas semitransparentes (fondo de diálogos/menús y etiquetas sobre fotos)
   velo: "rgb(28 25 23 / 0.4)",
   "velo-fuerte": "rgb(28 25 23 / 0.7)",
@@ -34,17 +36,17 @@ export const texto = {
   // Antes #78716C (4,40:1 sobre fondo-sutil: no pasaba AA). Ahora ≥ 4,9:1 sobre todos los fondos.
   terciario: "#66605B",
   "sobre-marca": "#FFFFFF", marca: "#C2410C", inverso: "#FFFFFF",
-  exito: "#15803D", aviso: "#B45309", peligro: "#B91C1C", info: "#1D4ED8",
+  exito: "#15803D", aviso: "#B45309", peligro: "#B91C1C", critico: "#881337", info: "#1D4ED8",
 };
 
 export const borde = {
   // Decorativos (separadores, tarjetas): no requieren contraste.
-  default: "#E7E5E4", fuerte: "#D6D3D1",
+  default: "#E7E5E4", sutil: "#F5F5F4", fuerte: "#D6D3D1",
   // Límite de un control (input, select, botón secundario): WCAG 1.4.11 exige 3:1.
   campo: "#78716C",
   foco: "#EA580C",
-  peligro: "#DC2626", exito: "#BBF7D0", aviso: "#FDE68A",
-  "peligro-sutil": "#FECACA", info: "#BFDBFE", marca: "#FECCAA",
+  peligro: "#DC2626", critico: "#BE123C", exito: "#BBF7D0", aviso: "#FDE68A",
+  "peligro-sutil": "#FECACA", "critico-sutil": "#FECDD3", info: "#BFDBFE", marca: "#FECCAA",
 };
 
 export const icono = {

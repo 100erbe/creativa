@@ -62,10 +62,18 @@ const AVISO_PRUEBA = {
   tag: "prueba",
 };
 
+/** Guarda la prueba también en la bandeja, para que se vea en la campana y en el popup de escritorio. */
+async function guardarPruebaEnBandeja(usuarioId: string, titulo: string, cuerpo: string, url: string) {
+  const admin = crearClienteAdmin();
+  if (!admin) return;
+  await admin.from("notificaciones").insert({ usuario_id: usuarioId, tipo: "prueba", titulo, cuerpo, url });
+}
+
 /** Manda un aviso de prueba a los dispositivos de la propia persona. */
 export const enviarPrueba = accion(async (): Promise<ResultadoEnvio> => {
   const usuario = await obtenerUsuarioActual();
   if (!usuario) throw new Error("Sesión no válida.");
+  await guardarPruebaEnBandeja(usuario.id, AVISO_PRUEBA.titulo, AVISO_PRUEBA.cuerpo, pantallaInicial(usuario.rol));
   return enviarPush([usuario.id], { ...AVISO_PRUEBA, url: pantallaInicial(usuario.rol) }, { tipo: "prueba", ttlSegundos: 120 });
 });
 
@@ -75,9 +83,12 @@ export const enviarPruebaA = accion(async (usuarioId: string): Promise<Resultado
   const supabase = await createClient();
   const { data: persona } = await supabase.from("usuarios").select("id, rol").eq("id", usuarioId).maybeSingle();
   if (!persona) throw new Error("No se ha encontrado a la persona.");
+  const tituloA = "Prueba de avisos";
+  const cuerpoA = "Tu administración está comprobando que los avisos te llegan.";
+  await guardarPruebaEnBandeja(persona.id, tituloA, cuerpoA, pantallaInicial(persona.rol));
   return enviarPush(
     [persona.id],
-    { ...AVISO_PRUEBA, titulo: "Prueba de avisos", cuerpo: "Tu administración está comprobando que los avisos te llegan.", url: pantallaInicial(persona.rol) },
+    { ...AVISO_PRUEBA, titulo: tituloA, cuerpo: cuerpoA, url: pantallaInicial(persona.rol) },
     { tipo: "prueba", ttlSegundos: 120 },
   );
 });
@@ -93,6 +104,27 @@ export const marcarLeidas = accion(async () => {
     .eq("usuario_id", usuario.id)
     .is("leida_en", null);
   if (error) throw new Error(error.message);
+});
+
+/** Marca como leído un solo aviso (al abrirlo desde el popup). */
+export const marcarLeida = accion(async (id: number) => {
+  const usuario = await obtenerUsuarioActual();
+  if (!usuario) return;
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("notificaciones")
+    .update({ leida_en: new Date().toISOString() })
+    .eq("id", id)
+    .eq("usuario_id", usuario.id)
+    .is("leida_en", null);
+  if (error) throw new Error(error.message);
+});
+
+/** El último aviso recibido (leído o no) y cuántos hay sin leer, para el popup de escritorio. */
+export const consultarUltimoAviso = accion(async () => {
+  const { cargarBandeja, contarNoLeidos } = await import("./bandeja");
+  const [[ultimo], noLeidos] = await Promise.all([cargarBandeja(1), contarNoLeidos()]);
+  return { ultimo: ultimo ?? null, noLeidos };
 });
 
 /** Los últimos avisos de la persona, para el modal de la campana. */

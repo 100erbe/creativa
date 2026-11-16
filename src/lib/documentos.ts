@@ -51,7 +51,47 @@ export const ETIQUETA_COBRO: Record<string, string> = {
   pendiente: "Pendiente de cobro",
   parcial: "Cobro parcial",
   vencida: "Vencida",
+  vencida_90: "Insoluta 90+ días",
 };
+
+export type TramoAging = "al_dia" | "vencida_30" | "vencida_60" | "critica_90";
+
+export type ResultadoAging = {
+  tramo: TramoAging;
+  diasVencido: number;
+  esCritica90: boolean;
+};
+
+/** Días transcurridos desde `fechaVencimiento` (AAAA-MM-DD) hasta `hoy`. Negativo o 0 si no ha vencido. */
+export function diasDesdeVencimiento(fechaVencimiento: string | null | undefined, hoy = new Date()): number {
+  if (!fechaVencimiento) return 0;
+  const venc = new Date(`${fechaVencimiento.slice(0, 10)}T12:00:00Z`);
+  if (Number.isNaN(venc.getTime())) return 0;
+  const hoyUtc = new Date(`${hoy.toISOString().slice(0, 10)}T12:00:00Z`);
+  return Math.floor((hoyUtc.getTime() - venc.getTime()) / 86_400_000);
+}
+
+/** Clasifica una factura pendiente/parcial/vencida por su antigüedad desde el vencimiento (aging). */
+export function clasificarAgingCobro(
+  estadoCobro: string | null | undefined,
+  fechaVencimiento: string | null | undefined,
+  hoy = new Date(),
+): ResultadoAging {
+  if (!estadoCobro || estadoCobro === "cobrada") {
+    return { tramo: "al_dia", diasVencido: 0, esCritica90: false };
+  }
+  const dias = diasDesdeVencimiento(fechaVencimiento, hoy);
+  if (dias >= 90) {
+    return { tramo: "critica_90", diasVencido: dias, esCritica90: true };
+  }
+  if (dias >= 31) {
+    return { tramo: "vencida_60", diasVencido: dias, esCritica90: false };
+  }
+  if (dias >= 1 || estadoCobro === "vencida") {
+    return { tramo: "vencida_30", diasVencido: Math.max(1, dias), esCritica90: false };
+  }
+  return { tramo: "al_dia", diasVencido: 0, esCritica90: false };
+}
 
 export const METODOS_COBRO = [
   { valor: "transferencia", etiqueta: "Transferencia" },

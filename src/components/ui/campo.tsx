@@ -31,6 +31,7 @@ export function Campo({
 }: Props) {
   const id = useId();
   const mensaje = error ?? ayuda;
+  const mensajeId = mensaje ? `${id}-msg` : undefined;
 
   return (
     <div className={cn("flex flex-col gap-esp1", className)}>
@@ -46,14 +47,15 @@ export function Campo({
         autoFocus={autoFocus}
         placeholder={placeholder}
         aria-invalid={!!error}
+        aria-describedby={mensajeId}
         className={cn(
-          "h-10 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none placeholder:text-texto-terciario",
+          "min-h-11 h-11 md:min-h-9 md:h-9 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none placeholder:text-texto-terciario",
           "focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20",
           error ? "border-borde-peligro" : "border-borde-campo",
         )}
       />
       {mensaje && (
-        <p className={cn("text-xs", error ? "text-texto-peligro" : "text-texto-terciario")}>
+        <p id={mensajeId} className={cn("text-xs", error ? "text-texto-peligro" : "text-texto-terciario")}>
           {mensaje}
         </p>
       )}

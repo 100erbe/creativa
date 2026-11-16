@@ -29,6 +29,11 @@ export function Campana({
   const [abierto, setAbierto] = useState(false);
   const [avisos, setAvisos] = useState<NotificacionBandeja[] | null>(null);
   const [error, setError] = useState(false);
+  // El contador desaparece al tocar la campana, sin esperar al servidor. Guarda cuántos había al tocarla:
+  // solo reaparece si llegan más.
+  const [vistos, setVistos] = useState(0);
+  useEffect(() => setVistos((v) => Math.min(v, noLeidos)), [noLeidos]);
+  const pendientes = Math.max(0, noLeidos - vistos);
 
   // Se cierra al navegar y con Escape.
   useEffect(() => setAbierto(false), [pathname]);
@@ -55,8 +60,11 @@ export function Campana({
   return (
     <>
       <button
-        onClick={() => setAbierto(true)}
-        aria-label={noLeidos > 0 ? `Avisos: ${noLeidos} sin leer` : "Avisos"}
+        onClick={() => {
+          setVistos(noLeidos);
+          setAbierto(true);
+        }}
+        aria-label={pendientes > 0 ? `Avisos: ${pendientes} sin leer` : "Avisos"}
         aria-haspopup="dialog"
         className={cn(
           "relative flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil",
@@ -64,9 +72,9 @@ export function Campana({
         )}
       >
         <Icono nombre="avisos" size={22} />
-        {noLeidos > 0 && (
+        {pendientes > 0 && (
           <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-micro font-semibold leading-none text-texto-inverso">
-            {noLeidos > 9 ? "9+" : noLeidos}
+            {pendientes > 9 ? "9+" : pendientes}
           </span>
         )}
       </button>
