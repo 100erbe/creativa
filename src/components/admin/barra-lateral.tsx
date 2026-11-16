@@ -16,6 +16,7 @@ const ENLACES = [
   { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
   { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
+  { href: "/admin/gastos", etiqueta: "Gastos", icono: "gastos" },
   { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
   { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
 ] as const;
@@ -134,7 +135,7 @@ export function BarraLateral({
           <button
             aria-label="Cerrar menú"
             onClick={() => setAbierto(false)}
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0 bg-fondo-velo"
           />
           <aside className="absolute inset-y-0 left-0 flex w-[min(80vw,288px)] flex-col gap-esp6 bg-fondo-superficie px-esp4 py-esp5 shadow-xl">
             <div className="flex items-center">

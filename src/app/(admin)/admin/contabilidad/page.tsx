@@ -45,9 +45,16 @@ export default async function PaginaContabilidad({
       .order("trimestre")
       .order("iva_pct"),
     supabase.from("v_libro_registro").select("*").order("fecha_expedicion").order("numero").limit(5000),
+    supabase.from("v_gastos_iva_trimestral").select("*"),
+    supabase
+      .from("gastos")
+      .select("fecha, total")
+      .eq("tipo", "menor")
+      .in("estado", ["aprobado", "reembolsado"])
+      .limit(5000),
   ]);
   lanzarSiError(...resultados);
-  const [{ data: iva }, { data: libroAnio }] = resultados;
+  const [{ data: iva }, { data: libroAnio }, { data: ivaSoportado }, { data: menores }] = resultados;
 
   const ejercicios = [
     ...new Set([...(iva ?? []).map((r) => r.ejercicio), ...(libroAnio ?? []).map((r) => r.ejercicio)]),
@@ -106,7 +113,7 @@ export default async function PaginaContabilidad({
             id="ejercicio"
             name="ejercicio"
             defaultValue={ejercicio}
-            className="h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-sm text-texto-primario"
+            className="h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-sm text-texto-primario"
           >
             {(ejercicios.length ? ejercicios : [ejercicio]).map((e) => (
               <option key={e} value={e}>
@@ -198,8 +205,58 @@ export default async function PaginaContabilidad({
           })}
         </div>
         <p className="text-xs text-texto-terciario">
-          Solo incluye el IVA de tus ventas. El IVA soportado de tus compras no se registra en la app, así que el
-          resultado del modelo 303 se obtiene restándolo aparte.
+          IVA repercutido de tus ventas. El soportado sale de los gastos deducibles aprobados (sección Gastos).
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-esp3">
+        <div className="flex items-center gap-esp3">
+          <h2 className="flex-1 text-base font-semibold text-texto-primario">IVA soportado y saldo por trimestre</h2>
+          <Link href="/admin/gastos" className="text-sm font-medium text-texto-marca">
+            Ver gastos →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
+          {TRIMESTRES.map((t) => {
+            const soportado = (ivaSoportado ?? [])
+              .filter((r) => r.ejercicio === ejercicio && r.trimestre === t.n)
+              .reduce((s, r) => s + Number(r.cuota_iva ?? 0), 0);
+            const repercutido = ivaAnio
+              .filter((r) => r.trimestre === t.n)
+              .reduce((s, r) => s + Number(r.cuota_iva ?? 0), 0);
+            const menor = (menores ?? [])
+              .filter((g) => g.fecha.startsWith(String(ejercicio)) && Math.ceil(Number(g.fecha.slice(5, 7)) / 3) === t.n)
+              .reduce((s, g) => s + Number(g.total), 0);
+            return (
+              <div
+                key={t.n}
+                className="flex flex-col gap-esp1 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm"
+              >
+                <h3 className="font-semibold text-texto-primario">T{t.n}</h3>
+                <span className="flex text-texto-secundario">
+                  <span className="flex-1">Repercutido</span>
+                  <span className="text-texto-primario">{euros(repercutido)}</span>
+                </span>
+                <span className="flex text-texto-secundario">
+                  <span className="flex-1">Soportado</span>
+                  <span className="text-texto-primario">− {euros(soportado)}</span>
+                </span>
+                <div className="my-1 h-px bg-fondo-hover" />
+                <span className="flex font-semibold text-texto-primario">
+                  <span className="flex-1">Saldo (303)</span>
+                  <span>{euros(repercutido - soportado)}</span>
+                </span>
+                <span className="mt-1 flex text-xs text-texto-terciario">
+                  <span className="flex-1">Gastos menores (no deducibles)</span>
+                  <span>{euros(menor)}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-texto-terciario">
+          Solo cuentan los gastos deducibles aprobados o reembolsados. Los gastos menores no entran en el IVA: se
+          muestran aparte, solo como referencia.
         </p>
       </div>
 
@@ -237,7 +294,7 @@ export default async function PaginaContabilidad({
               name="q"
               defaultValue={filtros.q ?? ""}
               placeholder="Número, cliente o NIF…"
-              className="h-9 w-[220px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+              className="h-9 w-[220px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
             />
             <Boton type="submit" variante="secundario">
               Buscar

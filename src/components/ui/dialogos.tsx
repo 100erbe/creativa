@@ -86,7 +86,7 @@ export function Dialogos() {
         aria-label="Cancelar"
         tabIndex={-1}
         onClick={() => cerrar(false)}
-        className="absolute inset-0 cursor-default bg-black/40"
+        className="absolute inset-0 cursor-default bg-fondo-velo"
       />
       <div
         role="alertdialog"

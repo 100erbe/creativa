@@ -125,7 +125,7 @@ export function ControlesPunto({
         <select
           value={elegido}
           onChange={(e) => setElegido(e.target.value)}
-          className="h-8 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-xs text-texto-primario"
+          className="h-8 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-xs text-texto-primario"
         >
           <option value="">Asignar a…</option>
           {libres.map((c) => (
@@ -193,7 +193,7 @@ export function ControlesPunto({
                 value={elegidoRetirada}
                 onChange={(e) => setElegidoRetirada(e.target.value)}
                 aria-label="Quién retira el punto"
-                className="h-8 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-xs text-texto-primario"
+                className="h-8 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-xs text-texto-primario"
               >
                 <option value="">Encargar a…</option>
                 {candidatos.map((c) => (
@@ -297,7 +297,7 @@ export function EnlaceCliente({
         readOnly
         value={url}
         onFocus={(e) => e.currentTarget.select()}
-        className="h-9 w-full rounded-md border border-borde-fuerte bg-fondo-sutil px-esp3 text-xs text-texto-secundario"
+        className="h-9 w-full rounded-md border border-borde-campo bg-fondo-sutil px-esp3 text-xs text-texto-secundario"
       />
       <div className="flex items-center gap-esp3">
         <Boton tamano="s" variante="secundario" onClick={copiar}>
@@ -473,7 +473,7 @@ export function EditarCampana({
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           rows={2}
-          className="rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
+          className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
         />
       </label>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}

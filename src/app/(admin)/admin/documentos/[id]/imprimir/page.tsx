@@ -222,7 +222,7 @@ export default async function PaginaImprimirDocumento({
               href={`/admin/documentos/${documentoId}/imprimir${pagada ? "" : "?pagada=1"}`}
               replace
               aria-pressed={!!pagada}
-              className="inline-flex h-10 items-center gap-esp2 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
+              className="inline-flex h-10 items-center gap-esp2 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
             >
               <Icono nombre={pagada ? "cerrar" : "check"} size={16} />
               {pagada ? "Quitar sello «PAGADA»" : "Añadir sello «PAGADA»"}

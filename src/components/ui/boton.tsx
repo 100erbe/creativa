@@ -7,7 +7,7 @@ type Tamano = "m" | "s";
 const variantes: Record<Variante, string> = {
   primario: "bg-fondo-marca text-texto-sobre-marca hover:bg-fondo-marca-hover",
   secundario:
-    "bg-fondo-superficie text-texto-primario border border-borde-fuerte hover:bg-fondo-sutil",
+    "bg-fondo-superficie text-texto-primario border border-borde-campo hover:bg-fondo-sutil",
   fantasma: "bg-transparent text-texto-marca hover:bg-fondo-marca-sutil",
   peligro: "bg-fondo-peligro text-texto-inverso hover:bg-fondo-peligro-hover",
 };

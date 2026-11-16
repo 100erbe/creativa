@@ -80,7 +80,7 @@ export function FormularioAviso({ personas }: { personas: Persona[] }) {
           maxLength={600}
           required
           rows={4}
-          className="rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
+          className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
         />
         <span className="self-end font-normal text-texto-terciario">{cuerpo.length}/600</span>
       </label>

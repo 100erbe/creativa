@@ -6,6 +6,11 @@
   html {
     color-scheme: light;
   }
+  /* Foco visible en cualquier elemento interactivo (WCAG 2.4.7 / 2.4.11) */
+  :focus-visible {
+    outline: 2px solid theme("colors.borde.foco");
+    outline-offset: 2px;
+  }
   body {
     @apply bg-fondo-lienzo text-texto-primario antialiased;
   }

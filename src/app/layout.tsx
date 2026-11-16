@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { colorMarca } from "@/design/tokens";
 import { Dialogos } from "@/components/ui/dialogos";
 
 const inter = Inter({
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#C2410C",
+  themeColor: colorMarca,
   width: "device-width",
   initialScale: 1,
 };

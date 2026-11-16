@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
@@ -64,15 +65,27 @@ export function Campana({
       >
         <Icono nombre="avisos" size={22} />
         {noLeidos > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-[10px] font-semibold leading-none text-texto-inverso">
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-micro font-semibold leading-none text-texto-inverso">
             {noLeidos > 9 ? "9+" : noLeidos}
           </span>
         )}
       </button>
 
-      {abierto && (
-        <div className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-start sm:justify-end sm:p-esp4" role="dialog" aria-modal="true" aria-label="Avisos">
-          <button aria-label="Cerrar avisos" onClick={() => setAbierto(false)} className="absolute inset-0 bg-black/40" />
+      {/*
+        Se pinta en <body> con un portal: la cabecera es `sticky` con z-index propio y encerraba el modal en su
+        capa, así que el mapa (Leaflet, z-index hasta 1000) o el cajón se montaban por encima y lo recortaban.
+      */}
+      {abierto &&
+        createPortal(
+        <div
+          className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-start sm:justify-end sm:p-esp4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Avisos"
+          // Un aviso que lleva a la pantalla donde ya estás no cambia de ruta: se cierra al tocar cualquier enlace.
+          onClick={(e) => (e.target as HTMLElement).closest("a") && setAbierto(false)}
+        >
+          <button aria-label="Cerrar avisos" onClick={() => setAbierto(false)} className="absolute inset-0 bg-fondo-velo" />
           <div className="relative flex max-h-[85dvh] w-full flex-col gap-esp3 rounded-t-xl bg-fondo-superficie p-esp4 shadow-xl sm:mt-12 sm:w-[420px] sm:rounded-xl">
             <div className="flex items-center">
               <h2 className="flex-1 text-base font-semibold text-texto-primario">Avisos</h2>
@@ -97,8 +110,9 @@ export function Campana({
               {etiquetaEnlace}
             </Link>
           </div>
-        </div>
-      )}
+        </div>,
+        document.body,
+        )}
     </>
   );
 }

@@ -495,8 +495,8 @@ export function PanelPunto({
                   title={ubic.ayuda}
                   className={
                     conUbicacion
-                      ? "absolute bottom-1 left-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
-                      : "absolute bottom-1 left-1 rounded-full bg-fondo-aviso px-1.5 py-0.5 text-[10px] font-medium text-texto-primario"
+                      ? "absolute bottom-1 left-1 rounded-full bg-fondo-velo-fuerte px-1.5 py-0.5 text-micro text-texto-inverso"
+                      : "absolute bottom-1 left-1 rounded-full bg-fondo-aviso px-1.5 py-0.5 text-micro font-medium text-texto-primario"
                   }
                 >
                   {f.origen_foto === "galeria" ? "🖼 " : ""}
@@ -507,7 +507,7 @@ export function PanelPunto({
                     onClick={() => eliminarFoto(f.id)}
                     disabled={eliminando === f.id}
                     aria-label="Eliminar foto"
-                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-sm text-white disabled:opacity-50"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso disabled:opacity-50"
                   >
                     {eliminando === f.id ? "…" : "✕"}
                   </button>
@@ -519,7 +519,7 @@ export function PanelPunto({
             onClick={() => setPanelAbierto((v) => !v)}
             disabled={subiendo}
             aria-expanded={panelAbierto}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-borde-fuerte text-texto-terciario disabled:opacity-50"
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-md border border-dashed border-borde-campo text-texto-terciario disabled:opacity-50"
           >
             <Icono nombre="camara" size={22} />
             <span className="text-xs">
@@ -648,7 +648,7 @@ export function PanelPunto({
             onChange={(e) => setNotaIncidencia(e.target.value)}
             placeholder="¿Qué ha pasado?"
             rows={3}
-            className="rounded-md border border-borde-fuerte px-esp3 py-esp2 text-sm outline-none focus:border-borde-foco"
+            className="rounded-md border border-borde-campo px-esp3 py-esp2 text-sm outline-none focus:border-borde-foco"
           />
           <Boton variante="peligro" onClick={enviarIncidencia} cargando={pendiente} disabled={!notaIncidencia}>
             Enviar incidencia

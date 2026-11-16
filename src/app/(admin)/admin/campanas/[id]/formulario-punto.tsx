@@ -29,7 +29,7 @@ export type PuntoEditable = {
 
 
 const area =
-  "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+  "rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
 
 /**
  * Alta o edición de un punto de la campaña, desde la propia ficha de la campaña

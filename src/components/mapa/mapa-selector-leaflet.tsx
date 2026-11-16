@@ -5,6 +5,7 @@ import { MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CapaBase } from "./capa-base";
+import { colorMapa } from "@/design/tokens";
 
 // Mapa para elegir la ubicación de un punto: clic en el mapa = nueva posición.
 // Muestra también los puntos ya creados de la campaña.
@@ -15,14 +16,14 @@ export type Posicion = { latitud: number; longitud: number };
 function icono(color: string, tamano = 16) {
   return L.divIcon({
     className: "",
-    html: `<span style="display:block;width:${tamano}px;height:${tamano}px;border-radius:50%;background:${color};border:2px solid #FFFFFF;box-shadow:0 1px 4px rgba(28,25,23,0.45)"></span>`,
+    html: `<span style="display:block;width:${tamano}px;height:${tamano}px;border-radius:50%;background:${color};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
     iconSize: [tamano, tamano],
     iconAnchor: [tamano / 2, tamano / 2],
     popupAnchor: [0, -tamano / 2],
   });
 }
-const ICONO_EXISTENTE = icono("#78716C");
-const ICONO_NUEVO = icono("#C2410C", 22);
+const ICONO_EXISTENTE = icono(colorMapa.estado.retirado);
+const ICONO_NUEVO = icono(colorMapa.defecto, 22);
 
 // Centro por defecto: Málaga (zona habitual de trabajo de Creativa).
 const CENTRO_DEFECTO: [number, number] = [36.7213, -4.4214];

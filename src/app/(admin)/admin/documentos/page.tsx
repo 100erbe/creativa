@@ -166,7 +166,7 @@ export default async function PaginaDocumentos({
             name="q"
             defaultValue={q}
             placeholder="Buscar por número o cliente…"
-            className="h-10 w-full min-w-0 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco md:h-9 md:max-w-sm md:text-sm"
+            className="h-10 w-full min-w-0 flex-1 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco md:h-9 md:max-w-sm md:text-sm"
           />
           <Boton type="submit" variante="secundario">
             Buscar
@@ -175,7 +175,7 @@ export default async function PaginaDocumentos({
 
         {/* Nivel 1: tipo de documento (relleno oscuro) */}
         <div className="flex flex-col gap-esp1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-texto-terciario">Tipo de documento</p>
+          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Tipo de documento</p>
           <div className="flex flex-wrap gap-esp2" role="group" aria-label="Tipo de documento">
             {[{ valor: "", etiqueta: "Todos" }, ...TIPOS].map((t) => {
               const activo = tipo === t.valor;
@@ -203,7 +203,7 @@ export default async function PaginaDocumentos({
 
         {/* Nivel 2: estado (pastillas con contorno y punto) */}
         <div className="flex flex-col gap-esp1">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-texto-terciario">Estado</p>
+          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Estado</p>
           <div className="flex flex-wrap gap-esp2" role="group" aria-label="Estado">
             {COBROS.map((c) => {
               const activo = cobro === c.valor;
@@ -259,7 +259,7 @@ export default async function PaginaDocumentos({
                 key={c.clave}
                 href={enlace(actual, { [c.clave]: "", pagina: "" })}
                 aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-fuerte bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario md:min-h-8"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario md:min-h-8"
               >
                 <span className="max-w-[60vw] truncate">{c.texto}</span>
                 <span aria-hidden className="text-base leading-none text-texto-terciario">×</span>
@@ -289,7 +289,7 @@ export default async function PaginaDocumentos({
                 <Icono nombre="documentos" size={18} className="text-icono-default" />
               </div>
               <div className="min-w-0 lg:flex-1">
-                <p className="truncate text-[10px] font-normal uppercase tracking-wide text-texto-terciario/70 lg:hidden">
+                <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario lg:hidden">
                   {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
                 </p>
                 <p className="truncate text-sm font-medium text-texto-primario">
@@ -311,7 +311,7 @@ export default async function PaginaDocumentos({
                 className="hidden w-[130px] text-xs text-texto-terciario lg:block"
                 title="Fecha de creación del documento"
               >
-                <span className="block text-[10px] uppercase tracking-wide">Creado</span>
+                <span className="block text-micro uppercase tracking-wide">Creado</span>
                 {fechaMedia(d.creado_en)}{" "}
                 {new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(new Date(d.creado_en))}
               </span>

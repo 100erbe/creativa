@@ -11,7 +11,8 @@
     "copiar-worker": "node scripts/copiar-worker-maplibre.mjs",
     "predev": "npm run copiar-worker",
     "prebuild": "npm run copiar-worker",
-    "postinstall": "node scripts/copiar-worker-maplibre.mjs"
+    "postinstall": "node scripts/copiar-worker-maplibre.mjs",
+    "contraste": "jiti scripts/comprobar-contraste.ts"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",

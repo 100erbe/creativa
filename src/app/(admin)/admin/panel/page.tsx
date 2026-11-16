@@ -172,7 +172,7 @@ export default async function PaginaPanel() {
                   <Icono nombre="documentos" size={18} className="text-icono-default" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[10px] font-normal uppercase tracking-wide text-texto-terciario/70">
+                  <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario">
                     {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
                   </p>
                   <p className="truncate text-sm font-medium text-texto-primario">

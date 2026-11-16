@@ -38,7 +38,7 @@ export type DatosCliente = {
 type Opcion = { id: number; etiqueta: string };
 
 const entrada =
-  "h-9 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+  "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
 
 function Campo({
   etiqueta,
@@ -225,7 +225,7 @@ export function FormularioCliente({
             name="notas"
             rows={3}
             defaultValue={inicial?.notas ?? ""}
-            className="rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
         </Campo>
       </Seccion>

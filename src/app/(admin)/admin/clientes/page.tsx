@@ -127,7 +127,7 @@ export default async function PaginaClientes({
             name="q"
             defaultValue={q}
             placeholder="Nombre, NIF, código…"
-            className="h-9 w-[220px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-9 w-[220px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario">
             Buscar

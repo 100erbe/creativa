@@ -52,7 +52,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
   }
 
   const entrada =
-    "h-9 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+    "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
 
   return (
     <div className="flex flex-col gap-esp3">

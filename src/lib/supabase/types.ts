@@ -277,6 +277,108 @@ export type Database = {
           },
         ]
       }
+      categorias_gasto: {
+        Row: { activo: boolean; id: number; nombre: string }
+        Insert: { activo?: boolean; id?: number; nombre: string }
+        Update: { activo?: boolean; id?: number; nombre?: string }
+        Relationships: []
+      }
+      gastos: {
+        Row: {
+          actualizado_en: string
+          aprobado_en: string | null
+          aprobado_por: string | null
+          base_imponible: number | null
+          categoria_id: number | null
+          codigo: string
+          concepto: string
+          creado_en: string
+          creado_por: string | null
+          cuota_iva: number | null
+          estado: Database["public"]["Enums"]["estado_gasto"]
+          fecha: string
+          forma_pago: Database["public"]["Enums"]["forma_pago_gasto"]
+          id: number
+          iva_pct: number | null
+          motivo_rechazo: string | null
+          nif_proveedor: string | null
+          notas: string | null
+          numero_factura: string | null
+          proveedor: string | null
+          ticket_path: string | null
+          tipo: Database["public"]["Enums"]["tipo_gasto"]
+          total: number
+          usuario_id: string
+        }
+        Insert: {
+          actualizado_en?: string
+          aprobado_en?: string | null
+          aprobado_por?: string | null
+          base_imponible?: number | null
+          categoria_id?: number | null
+          codigo?: string
+          concepto: string
+          creado_en?: string
+          creado_por?: string | null
+          cuota_iva?: number | null
+          estado?: Database["public"]["Enums"]["estado_gasto"]
+          fecha?: string
+          forma_pago: Database["public"]["Enums"]["forma_pago_gasto"]
+          id?: number
+          iva_pct?: number | null
+          motivo_rechazo?: string | null
+          nif_proveedor?: string | null
+          notas?: string | null
+          numero_factura?: string | null
+          proveedor?: string | null
+          ticket_path?: string | null
+          tipo: Database["public"]["Enums"]["tipo_gasto"]
+          total: number
+          usuario_id: string
+        }
+        Update: {
+          actualizado_en?: string
+          aprobado_en?: string | null
+          aprobado_por?: string | null
+          base_imponible?: number | null
+          categoria_id?: number | null
+          codigo?: string
+          concepto?: string
+          creado_en?: string
+          creado_por?: string | null
+          cuota_iva?: number | null
+          estado?: Database["public"]["Enums"]["estado_gasto"]
+          fecha?: string
+          forma_pago?: Database["public"]["Enums"]["forma_pago_gasto"]
+          id?: number
+          iva_pct?: number | null
+          motivo_rechazo?: string | null
+          nif_proveedor?: string | null
+          notas?: string | null
+          numero_factura?: string | null
+          proveedor?: string | null
+          ticket_path?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_gasto"]
+          total?: number
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_gasto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           codigo: string
@@ -1783,6 +1885,17 @@ export type Database = {
       }
     }
     Views: {
+      v_gastos_iva_trimestral: {
+        Row: {
+          base_imponible: number | null
+          cuota_iva: number | null
+          ejercicio: number | null
+          iva_pct: number | null
+          n_gastos: number | null
+          trimestre: number | null
+        }
+        Relationships: []
+      }
       v_agenda_empleado: {
         Row: {
           asignacion_id: number | null
@@ -2091,6 +2204,9 @@ export type Database = {
       registrar_vista_enlace: { Args: { p_token: string }; Returns: undefined }
     }
     Enums: {
+      tipo_gasto: "deducible" | "menor"
+      estado_gasto: "pendiente" | "aprobado" | "reembolsado" | "rechazado"
+      forma_pago_gasto: "efectivo" | "tarjeta_empresa" | "caja_chica" | "transferencia"
       alcance_servicio:
         | "fabricacion"
         | "instalacion"

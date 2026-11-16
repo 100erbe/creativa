@@ -20,7 +20,7 @@ export function TarjetaKpi({
 }) {
   const clases = cn(
     "flex min-w-0 flex-1 flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5",
-    href && "transition-colors hover:border-borde-fuerte hover:bg-fondo-sutil",
+    href && "transition-colors hover:border-borde-campo hover:bg-fondo-sutil",
   );
   const contenido = (
     <>

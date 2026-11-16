@@ -49,7 +49,7 @@ const ETIQUETA_SOPORTE = Object.fromEntries(SOPORTES.map((s) => [s.valor, s.etiq
 
 const entrada = CAMPO;
 const areaTexto =
-  "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+  "rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
 
 export function PasoCampana({
   documento,
@@ -188,7 +188,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
                       "flex min-h-12 shrink-0 flex-col justify-center rounded-md border px-esp3 py-esp2 text-left",
                       activa
                         ? "border-borde-foco bg-fondo-marca-sutil"
-                        : "border-borde-fuerte bg-fondo-superficie hover:bg-fondo-sutil",
+                        : "border-borde-campo bg-fondo-superficie hover:bg-fondo-sutil",
                     )}
                   >
                     <span className="text-sm font-medium text-texto-primario">{c.nombre}</span>

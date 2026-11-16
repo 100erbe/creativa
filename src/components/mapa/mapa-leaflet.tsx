@@ -5,6 +5,7 @@ import { MapContainer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CapaBase } from "./capa-base";
+import { colorMapa } from "@/design/tokens";
 
 // Mapa con OpenStreetMap (gratuito, sin clave de API) a través de Leaflet.
 // No usamos los iconos PNG por defecto de Leaflet (dan problemas de rutas
@@ -20,21 +21,14 @@ export type PuntoMapa = {
   detalle?: string;
 };
 
-// Mismos colores que supabase/LEEME.txt ↔ TONO_POR_ESTADO (ver insignia.tsx),
-// pero en hexadecimal: el HTML de un icono de Leaflet no pasa por Tailwind.
-const COLOR_POR_ESTADO: Record<string, string> = {
-  pendiente: "#B45309", // aviso
-  instalado: "#15803D", // éxito
-  verificado: "#15803D", // éxito
-  incidencia: "#B91C1C", // peligro
-  retirado: "#78716C", // neutro
-};
-const COLOR_DEFECTO = "#C2410C"; // marca
+// Los colores salen de src/design/tokens.ts (el HTML de un icono de Leaflet no pasa por Tailwind).
+const COLOR_POR_ESTADO: Record<string, string> = colorMapa.estado;
+const COLOR_DEFECTO = colorMapa.defecto;
 
 function iconoPunto(color: string) {
   return L.divIcon({
     className: "",
-    html: `<span style="display:block;width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #FFFFFF;box-shadow:0 1px 4px rgba(28,25,23,0.45)"></span>`,
+    html: `<span style="display:block;width:16px;height:16px;border-radius:50%;background:${color};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
     iconSize: [16, 16],
     iconAnchor: [8, 8],
     popupAnchor: [0, -8],
@@ -67,7 +61,7 @@ export function MapaLeaflet({
     return (
       <div
         style={{ height: altura }}
-        className="flex items-center justify-center rounded-lg border border-dashed border-borde-fuerte bg-fondo-sutil text-sm text-texto-terciario"
+        className="flex items-center justify-center rounded-lg border border-dashed border-borde-campo bg-fondo-sutil text-sm text-texto-terciario"
       >
         No hay puntos con ubicación para mostrar.
       </div>

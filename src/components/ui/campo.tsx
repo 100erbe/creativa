@@ -49,7 +49,7 @@ export function Campo({
         className={cn(
           "h-10 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none placeholder:text-texto-terciario",
           "focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20",
-          error ? "border-borde-peligro" : "border-borde-fuerte",
+          error ? "border-borde-peligro" : "border-borde-campo",
         )}
       />
       {mensaje && (

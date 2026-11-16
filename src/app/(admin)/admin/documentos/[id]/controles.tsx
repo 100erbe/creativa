@@ -161,7 +161,7 @@ export function AccionesDocumento({
           <a
             href={mailto}
             onClick={alEnviar}
-            className="inline-flex h-10 items-center justify-center gap-esp2 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp4 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
+            className="inline-flex h-10 items-center justify-center gap-esp2 rounded-md border border-borde-campo bg-fondo-superficie px-esp4 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
           >
             <Icono nombre="enviar" size={16} />
             Enviar por email
@@ -206,7 +206,7 @@ export function AccionesDocumento({
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
-              className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
+              className="h-11 md:h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
             />
           </label>
 
@@ -362,7 +362,7 @@ export function AccionesDocumento({
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder="Motivo de la rectificación (opcional)"
-            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-11 md:h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton
             variante="secundario"
@@ -494,21 +494,21 @@ export function Cobros({
               onChange={(e) => setImporte(e.target.value)}
               inputMode="decimal"
               aria-label="Importe cobrado"
-              className="h-11 md:h-9 w-[110px] rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
+              className="h-11 md:h-9 w-[110px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario"
             />
             <input
               type="date"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
               aria-label="Fecha del cobro"
-              className="h-11 md:h-9 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
+              className="h-11 md:h-9 flex-1 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
             />
           </div>
           <select
             value={metodo}
             onChange={(e) => setMetodo(e.target.value as MetodoCobro)}
             aria-label="Método de cobro"
-            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
+            className="h-11 md:h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
           >
             {METODOS_COBRO.map((m) => (
               <option key={m.valor} value={m.valor}>
@@ -520,7 +520,7 @@ export function Cobros({
             value={referencia}
             onChange={(e) => setReferencia(e.target.value)}
             placeholder="Referencia (opcional)"
-            className="h-11 md:h-9 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-11 md:h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario" cargando={pendiente}>
             Registrar cobro
@@ -593,7 +593,7 @@ export function CondicionesDocumento({
 
   const num = (v: string) => (v.trim() === "" ? 0 : Number(v.replace(",", ".")));
   const area =
-    "rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+    "rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   const esPresupuesto = tipo === "presupuesto";
   // Plazos a elegir: solo si la forma de pago es aplazada (y no en presupuestos).

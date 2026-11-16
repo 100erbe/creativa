@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
-import { BarraInferior } from "@/components/empleado/barra-inferior";
-import { Logo } from "@/components/ui/logo";
+import { CabeceraEmpleado } from "@/components/empleado/cabecera-empleado";
 import { contarNoLeidos } from "@/lib/push/bandeja";
 import { avisosUrgentesPendientes } from "@/lib/avisos/pendientes";
 import Link from "next/link";
-import { Campana } from "@/components/avisos/campana";
-import { BotonSalir } from "@/components/empleado/boton-salir";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
 
@@ -17,19 +14,13 @@ export default async function LayoutEmpleado({
 }) {
   const usuario = await obtenerUsuarioActual();
   if (!usuario || usuario.rol !== "empleado") redirect("/entrar");
+  const iniciales = `${usuario.nombre[0] ?? ""}${usuario.apellidos?.[0] ?? ""}`.toUpperCase();
   const [noLeidos, urgentes] = await Promise.all([contarNoLeidos(), avisosUrgentesPendientes()]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-fondo-lienzo">
-      <header className="sticky top-0 z-20 flex items-center justify-center border-b border-borde-default bg-fondo-superficie px-esp4 py-esp2">
-        <Logo alto={28} />
-        {/* Contenedor propio: la campana ya es `relative`, y sin tailwind-merge no se puede pisar con `absolute`. */}
-        <div className="absolute right-14 top-1/2 -translate-y-1/2">
-          <Campana href="/app/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
-        </div>
-        <BotonSalir />
-      </header>
-      <main className="flex-1 overflow-y-auto pb-20">
+      <CabeceraEmpleado nombre={usuario.nombre} iniciales={iniciales} noLeidos={noLeidos} />
+      <main className="flex-1 overflow-y-auto pb-8">
         <IniciarAvisos />
         {urgentes.length > 0 && (
           <Link
@@ -48,7 +39,6 @@ export default async function LayoutEmpleado({
         <BannerAvisos />
         {children}
       </main>
-      <BarraInferior />
     </div>
   );
 }

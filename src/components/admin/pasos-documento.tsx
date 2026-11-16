@@ -55,7 +55,7 @@ export function PasosDocumento({ actual, documentoId }: { actual: number; docume
                 "flex h-7 w-7 items-center justify-center rounded-completo text-xs font-medium",
                 estado === "hecho" && "border border-borde-exito bg-fondo-exito-sutil text-texto-exito",
                 estado === "actual" && "bg-fondo-marca text-texto-sobre-marca",
-                estado === "pendiente" && "border border-borde-fuerte bg-fondo-superficie text-texto-terciario",
+                estado === "pendiente" && "border border-borde-campo bg-fondo-superficie text-texto-terciario",
               )}
             >
               {estado === "hecho" ? <Icono nombre="check" size={14} /> : paso.numero}

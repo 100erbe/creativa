@@ -126,7 +126,7 @@ export function PasoCliente({
                     "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-md border px-esp2 py-esp2 text-center transition-colors md:items-start md:text-left",
                     activo
                       ? "border-borde-foco bg-fondo-marca-sutil ring-2 ring-borde-foco/20"
-                      : "border-borde-fuerte bg-fondo-superficie hover:bg-fondo-sutil",
+                      : "border-borde-campo bg-fondo-superficie hover:bg-fondo-sutil",
                   )}
                 >
                   <span className={cn("text-sm font-semibold", activo ? "text-texto-marca" : "text-texto-primario")}>
@@ -156,7 +156,7 @@ export function PasoCliente({
                   "flex min-h-12 w-full items-center gap-esp3 rounded-md border px-esp3 py-esp2 text-left md:min-h-10",
                   seleccionado
                     ? "border-borde-foco bg-fondo-marca-sutil"
-                    : "border-borde-fuerte bg-fondo-superficie hover:bg-fondo-sutil",
+                    : "border-borde-campo bg-fondo-superficie hover:bg-fondo-sutil",
                 )}
               >
                 {seleccionado ? (
@@ -357,7 +357,7 @@ function SelectorCliente({
             aria-expanded="true"
             aria-controls="lista-clientes"
             aria-label="Buscar cliente"
-            className="h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none placeholder:text-texto-terciario focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-9 md:text-sm"
+            className="h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none placeholder:text-texto-terciario focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-9 md:text-sm"
           />
         </div>
       </div>
@@ -408,7 +408,7 @@ function SelectorCliente({
 }
 
 const entrada =
-  "h-9 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+  "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
 
 function FormularioClienteRapido({
   razonInicial,

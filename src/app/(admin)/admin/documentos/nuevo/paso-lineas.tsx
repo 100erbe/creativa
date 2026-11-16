@@ -463,7 +463,7 @@ function FormularioArticulo({
                           descuento: r.ultimo_descuento,
                         });
                     }}
-                    className="flex min-h-10 items-center gap-1 rounded-completo border border-borde-fuerte bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
+                    className="flex min-h-10 items-center gap-1 rounded-completo border border-borde-campo bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
                   >
                     <Icono nombre="mas" size={12} className="text-icono-marca" />
                     {r.etiqueta}
@@ -480,7 +480,7 @@ function FormularioArticulo({
               onClick={() => setAbierto(true)}
               aria-haspopup="listbox"
               aria-expanded={abierto}
-              className="flex h-11 w-full items-center gap-esp3 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-left hover:bg-fondo-sutil md:h-10"
+              className="flex h-11 w-full items-center gap-esp3 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-left hover:bg-fondo-sutil md:h-10"
             >
               <Icono nombre="buscar" size={16} className="shrink-0 text-icono-secundario" />
               <span className="truncate text-sm text-texto-terciario">
@@ -504,7 +504,7 @@ function FormularioArticulo({
               >
                 {resultados.map(([categoria, productos]) => (
                   <div key={categoria} className="flex flex-col gap-1">
-                    <span className="px-esp2 pt-esp2 text-[11px] font-medium uppercase tracking-wide text-texto-terciario">
+                    <span className="px-esp2 pt-esp2 text-micro font-medium uppercase tracking-wide text-texto-terciario">
                       {categoria}
                     </span>
                     {productos.map((p) => (
@@ -574,7 +574,7 @@ function FormularioArticulo({
                             "min-h-11 rounded-md border px-esp3 text-sm font-medium md:min-h-9",
                             formatoId === f.id
                               ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
-                              : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                              : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
                           )}
                         >
                           {f.nombre}
@@ -610,7 +610,7 @@ function FormularioArticulo({
                       "min-h-11 flex-1 rounded-md border px-esp3 text-xs font-medium md:min-h-9",
                       alcance === a
                         ? "border-borde-foco bg-fondo-marca text-texto-sobre-marca"
-                        : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                        : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
                     )}
                   >
                     {ETIQUETA_ALCANCE[a]}
@@ -691,7 +691,7 @@ function FormularioArticulo({
                       "min-h-10 rounded-completo border px-esp3 text-xs font-medium",
                       artista === a
                         ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
-                        : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                        : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
                     )}
                   >
                     {a}
@@ -806,8 +806,8 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
   }
 
   const celda =
-    "h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-right text-base text-texto-primario outline-none focus:border-borde-foco md:h-8 md:border-transparent md:bg-transparent md:text-sm md:hover:border-borde-default md:focus:bg-fondo-superficie";
-  const etiquetaMovil = "text-[11px] text-texto-terciario md:hidden";
+    "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-right text-base text-texto-primario outline-none focus:border-borde-foco md:h-8 md:border-transparent md:bg-transparent md:text-sm md:hover:border-borde-default md:focus:bg-fondo-superficie";
+  const etiquetaMovil = "text-micro text-texto-terciario md:hidden";
   const alPulsarEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
   };
@@ -837,7 +837,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
             onKeyDown={alPulsarEnter}
             placeholder="+ Artista / referencia"
             aria-label="Artista"
-            className="mt-1 h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 text-left text-base text-texto-secundario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:mt-0 md:h-7 md:border-transparent md:bg-transparent md:text-xs md:hover:border-borde-default md:focus:bg-fondo-superficie"
+            className="mt-1 h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-left text-base text-texto-secundario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:mt-0 md:h-7 md:border-transparent md:bg-transparent md:text-xs md:hover:border-borde-default md:focus:bg-fondo-superficie"
           />
           {linea.cantidad !== linea.piezas && (
             <p className="px-esp2 text-xs text-texto-terciario">
@@ -1072,7 +1072,7 @@ function FormularioLineaLibre({
                   "min-h-10 rounded-completo border px-esp3 text-xs font-medium",
                   artista === a
                     ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
-                    : "border-borde-fuerte bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                    : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
                 )}
               >
                 {a}

@@ -46,7 +46,7 @@ export default function PaginaAjustes() {
           <Link
             key={s.href}
             href={s.href}
-            className="flex items-start gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 transition-colors hover:border-borde-fuerte hover:bg-fondo-sutil"
+            className="flex items-start gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 transition-colors hover:border-borde-campo hover:bg-fondo-sutil"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-fondo-marca-sutil">
               <Icono nombre={s.icono} size={20} className="text-icono-marca" />

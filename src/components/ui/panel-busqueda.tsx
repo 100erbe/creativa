@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 /** Estilo de campo: 44px y 16px en móvil (evita el zoom de iOS), compacto en escritorio. */
 export const CAMPO =
-  "h-11 w-full rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
+  "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
 
 /**
  * Buscador genérico.
