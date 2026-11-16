@@ -81,7 +81,7 @@ export function Dialogos() {
   if (!actual) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
       <button
         aria-label="Cancelar"
         tabIndex={-1}

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
-import { confirmar } from "@/components/ui/dialogos";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
@@ -54,7 +53,6 @@ export function CabeceraEmpleado({
   }, [abierto]);
 
   async function salir() {
-    if (!(await confirmar("¿Cerrar la sesión en este móvil?", { aceptar: "Cerrar sesión" }))) return;
     await liberarDispositivo(); // antes de cerrar sesión: necesita la sesión para borrar el dispositivo
     await createClient().auth.signOut();
     router.push("/entrar");
