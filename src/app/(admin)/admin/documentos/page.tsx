@@ -289,7 +289,7 @@ export default async function PaginaDocumentos({
                 <Icono nombre="documentos" size={18} className="text-icono-default" />
               </div>
               <div className="min-w-0 lg:flex-1">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-texto-terciario lg:hidden">
+                <p className="truncate text-[10px] font-normal uppercase tracking-wide text-texto-terciario/70 lg:hidden">
                   {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
                 </p>
                 <p className="truncate text-sm font-medium text-texto-primario">
