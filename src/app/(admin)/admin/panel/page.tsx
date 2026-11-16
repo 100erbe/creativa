@@ -8,7 +8,7 @@ import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaLarga } from "@/lib/formato";
 import { saludo } from "@/lib/saludo";
-import { ETIQUETA_ESTADO_DOC } from "@/lib/documentos";
+import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 
 export const dynamic = "force-dynamic";
 
@@ -172,6 +172,9 @@ export default async function PaginaPanel() {
                   <Icono nombre="documentos" size={18} className="text-icono-default" />
                 </div>
                 <div className="min-w-0 flex-1">
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-texto-terciario">
+                    {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
+                  </p>
                   <p className="truncate text-sm font-medium text-texto-primario">
                     {d.numero_completo ?? "Borrador"}
                   </p>
