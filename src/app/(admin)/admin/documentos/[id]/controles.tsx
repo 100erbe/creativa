@@ -99,6 +99,8 @@ export function AccionesDocumento({
   facturaEnBorradorId = null,
   versionEnBorradorId = null,
   vencido = false,
+  avisoEmision = null,
+  facturaImportada = false,
 }: {
   documentoId: number;
   tipo: string;
@@ -115,6 +117,10 @@ export function AccionesDocumento({
   versionEnBorradorId?: number | null;
   /** Presupuesto con el «válido hasta» ya pasado. */
   vencido?: boolean;
+  /** Aviso que hay que leer antes de emitir (p. ej. rectificativa que no abona lo que queda de la factura). */
+  avisoEmision?: string | null;
+  /** Factura que viene de la importación (Excel/PDF): sus líneas pueden no sumar su total. */
+  facturaImportada?: boolean;
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const condiciones = useContext(ContextoCondiciones);
@@ -220,6 +226,11 @@ export function AccionesDocumento({
             </Boton>
           ) : (
             <div className="flex flex-col gap-esp2 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp3">
+              {avisoEmision && (
+                <p className="text-xs font-semibold text-texto-aviso" role="alert">
+                  {avisoEmision} Si querías anular la factura entera, cancela y corrige las líneas.
+                </p>
+              )}
               <p className="text-xs text-texto-primario">
                 Se le asignará su número definitivo y <strong>ya no podrá editarse</strong>.
                 {guardarCondiciones && " Antes se guardarán los cambios de «Condiciones»."} ¿Continuar?
@@ -238,7 +249,7 @@ export function AccionesDocumento({
                     })
                   }
                 >
-                  Sí, emitir
+                  {avisoEmision ? "Emitir igualmente" : "Sí, emitir"}
                 </Boton>
                 <Boton tamano="s" variante="secundario" onClick={() => setConfirmarEmision(false)}>
                   Cancelar
@@ -379,6 +390,12 @@ export function AccionesDocumento({
           >
             Crear rectificativa (abono total)
           </Boton>
+          {facturaImportada && (
+            <p className="text-xs text-texto-aviso">
+              Factura importada: sus líneas pueden no sumar el total del PDF. Comprueba el importe del borrador antes
+              de emitirlo.
+            </p>
+          )}
         </div>
       )}
 

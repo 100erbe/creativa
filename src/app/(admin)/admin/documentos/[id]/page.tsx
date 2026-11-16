@@ -56,7 +56,7 @@ export default async function PaginaDocumento({
     ? (
         await supabase
           .from("documentos")
-          .select("id, tipo, numero_completo, total")
+          .select("id, tipo, numero_completo, total, origen_datos")
           .eq("id", doc.documento_origen_id)
           .maybeSingle()
       ).data
@@ -76,13 +76,18 @@ export default async function PaginaDocumento({
             .neq("id", doc.id);
           const rectificado = -(emitidas ?? []).reduce((s, r) => s + Number(r.total), 0);
           const restante = Math.max(0, Number(origen.total) - rectificado);
+          const excede = -Number(doc.total) > restante + 0.005;
           return {
             factura: origen.numero_completo ?? "",
             totalFactura: Number(origen.total),
             rectificado,
             restante,
             numeros: (emitidas ?? []).map((r) => r.numero_completo).filter(Boolean).join(", "),
-            excede: -Number(doc.total) > restante + 0.005,
+            excede,
+            // El borrador no abona exactamente lo que queda. En las facturas importadas las líneas pueden no
+            // sumar el total del PDF: al copiarlas en negativo se recalculan y el abono sale por otro importe.
+            noCuadra: !excede && Math.abs(-Number(doc.total) - restante) > 0.01,
+            facturaImportada: !!origen.origen_datos,
           };
         })()
       : null;
@@ -275,16 +280,28 @@ export default async function PaginaDocumento({
         {doc.motivo_rectificacion && (
           <p className="text-xs text-texto-secundario">Motivo: {doc.motivo_rectificacion}</p>
         )}
-        {limiteRectificacion && (limiteRectificacion.rectificado > 0.005 || limiteRectificacion.excede) && (
+        {limiteRectificacion &&
+          (limiteRectificacion.rectificado > 0.005 || limiteRectificacion.excede || limiteRectificacion.noCuadra) && (
           <div
+            role={limiteRectificacion.excede || limiteRectificacion.noCuadra ? "alert" : undefined}
             className={`flex flex-col gap-1 rounded-md border px-esp3 py-esp2 text-xs text-texto-primario ${
-              limiteRectificacion.excede ? "border-borde-aviso bg-fondo-aviso-sutil" : "border-borde-default bg-fondo-superficie"
+              limiteRectificacion.excede || limiteRectificacion.noCuadra
+                ? "border-borde-aviso bg-fondo-aviso-sutil"
+                : "border-borde-default bg-fondo-superficie"
             }`}
           >
             <p>
-              La factura {limiteRectificacion.factura} ({euros(limiteRectificacion.totalFactura)}) ya está rectificada en{" "}
-              {euros(limiteRectificacion.rectificado)}
-              {limiteRectificacion.numeros ? ` (${limiteRectificacion.numeros})` : ""}. Queda por rectificar{" "}
+              {limiteRectificacion.rectificado > 0.005 ? (
+                <>
+                  La factura {limiteRectificacion.factura} ({euros(limiteRectificacion.totalFactura)}) ya está rectificada en{" "}
+                  {euros(limiteRectificacion.rectificado)}
+                  {limiteRectificacion.numeros ? ` (${limiteRectificacion.numeros})` : ""}. Queda por rectificar{" "}
+                </>
+              ) : (
+                <>
+                  La factura {limiteRectificacion.factura} no tiene otras rectificativas emitidas. Queda por rectificar{" "}
+                </>
+              )}
               <strong>{euros(limiteRectificacion.restante)}</strong>.
             </p>
             {limiteRectificacion.excede && (
@@ -292,6 +309,22 @@ export default async function PaginaDocumento({
                 Esta rectificativa ({euros(Number(doc.total))}) supera lo que queda: ajusta las líneas hasta un máximo de{" "}
                 {euros(-limiteRectificacion.restante)} o no se podrá emitir.
               </p>
+            )}
+            {limiteRectificacion.noCuadra && (
+              <>
+                <p className="text-sm font-semibold text-texto-aviso">
+                  Este borrador no es un abono total: rectifica {euros(Number(doc.total))} y lo que queda de la factura es{" "}
+                  {euros(-limiteRectificacion.restante)}.
+                </p>
+                <p>
+                  {limiteRectificacion.facturaImportada
+                    ? `La factura ${limiteRectificacion.factura} es importada y sus líneas no corresponden a su total: al copiarlas en negativo se recalculan con su cantidad y precio y dan otro importe.`
+                    : "Las líneas copiadas de la factura no dan el importe que queda por rectificar."}{" "}
+                  Si quieres anular la factura entera, corrige las líneas a mano («Editar líneas») hasta{" "}
+                  {euros(-limiteRectificacion.restante)} antes de emitir. Si es un abono parcial a propósito, puedes
+                  emitirlo así.
+                </p>
+              </>
             )}
           </div>
         )}
@@ -521,6 +554,12 @@ export default async function PaginaDocumento({
               facturaEnBorradorId={facturaEnBorradorId}
               versionEnBorradorId={versionEnBorradorId}
               vencido={vencido}
+              avisoEmision={
+                limiteRectificacion?.noCuadra
+                  ? `Esta rectificativa abona ${euros(Number(doc.total))}, no lo que queda de la factura ${limiteRectificacion.factura} (${euros(-limiteRectificacion.restante)}): no es un abono total.`
+                  : null
+              }
+              facturaImportada={doc.tipo === "factura" && !!doc.origen_datos}
             />
           </div>
 
