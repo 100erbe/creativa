@@ -13,7 +13,6 @@ export const dynamic = "force-dynamic";
 const POR_PAGINA = 25;
 
 const TIPOS = [
-  { valor: "", etiqueta: "Todos" },
   { valor: "presupuesto", etiqueta: "Presupuestos" },
   { valor: "albaran", etiqueta: "Albaranes" },
   { valor: "factura", etiqueta: "Facturas" },
@@ -21,16 +20,22 @@ const TIPOS = [
 ];
 
 const ESTADOS = [
-  { valor: "", etiqueta: "Cualquier estado" },
-  { valor: "borrador", etiqueta: "Borradores" },
-  { valor: "emitido", etiqueta: "Emitidos" },
-  { valor: "enviado", etiqueta: "Enviados" },
-  { valor: "aceptado", etiqueta: "Aceptados" },
-  { valor: "rechazado", etiqueta: "Rechazados" },
-  { valor: "caducado", etiqueta: "Caducados" },
-  { valor: "facturado", etiqueta: "Facturados" },
-  { valor: "sustituido", etiqueta: "Sustituidos" },
+  { valor: "borrador", etiqueta: "Borrador" },
+  { valor: "emitido", etiqueta: "Emitido" },
+  { valor: "enviado", etiqueta: "Enviado" },
+  { valor: "aceptado", etiqueta: "Aceptado" },
+  { valor: "rechazado", etiqueta: "Rechazado" },
+  { valor: "caducado", etiqueta: "Caducado" },
+  { valor: "facturado", etiqueta: "Facturado" },
+  { valor: "sustituido", etiqueta: "Sustituido" },
 ];
+
+const COBROS = [
+  { valor: "pendiente", etiqueta: "Por cobrar" },
+  { valor: "vencida", etiqueta: "Vencida" },
+];
+
+const PILDORA = "inline-flex min-h-10 items-center gap-1.5 rounded-completo px-esp3 text-sm md:min-h-8";
 
 type Filtros = { tipo?: string; estado?: string; q?: string; cliente?: string; cobro?: string; pagina?: string };
 
@@ -123,6 +128,14 @@ export default async function PaginaDocumentos({
     ? (await supabase.from("clientes").select("razon_social").eq("id", clienteId).maybeSingle()).data
     : null;
 
+  const chips: { clave: keyof Filtros; texto: string }[] = [];
+  if (tipo) chips.push({ clave: "tipo", texto: TIPOS.find((t) => t.valor === tipo)?.etiqueta ?? tipo });
+  if (estado) chips.push({ clave: "estado", texto: ESTADOS.find((e) => e.valor === estado)?.etiqueta ?? estado });
+  if (cobro) chips.push({ clave: "cobro", texto: COBROS.find((c) => c.valor === cobro)?.etiqueta ?? cobro });
+  if (q) chips.push({ clave: "q", texto: `"${q}"` });
+  if (clienteId) chips.push({ clave: "cliente", texto: clienteFiltrado?.razon_social ?? `Cliente #${clienteId}` });
+  const hayFiltros = chips.length > 0;
+
   return (
     <div className="flex flex-col gap-esp6">
       <div className="flex items-center gap-esp3">
@@ -142,92 +155,124 @@ export default async function PaginaDocumentos({
 
       {borradoresVacios > 0 && <LimpiarBorradores cantidad={borradoresVacios} />}
 
-      {clienteId && (
-        <div className="flex flex-wrap items-center gap-esp2 text-sm text-texto-secundario">
-          Documentos de
-          <span className="font-medium text-texto-primario">{clienteFiltrado?.razon_social ?? `cliente #${clienteId}`}</span>
-          <Link href={enlace({ ...actual, cliente: "" }, { pagina: "" })} className="font-medium text-texto-marca">
-            Quitar filtro
-          </Link>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-esp3 md:flex-row md:flex-wrap md:items-center">
-        <div className="-mx-esp4 flex gap-esp2 overflow-x-auto px-esp4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
-          {TIPOS.map((t) => (
-            <Link
-              key={t.valor}
-              href={enlace(actual, { tipo: t.valor, pagina: "" })}
-              className={
-                tipo === t.valor
-                  ? "inline-flex min-h-10 shrink-0 items-center rounded-completo bg-fondo-marca px-esp3 text-sm font-medium text-texto-sobre-marca md:min-h-0 md:py-esp1"
-                  : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
-              }
-            >
-              {t.etiqueta}
-            </Link>
-          ))}
-          {[
-            { valor: "pendiente", etiqueta: "Por cobrar" },
-            { valor: "vencida", etiqueta: "Vencidas" },
-          ].map((c) => (
-            <Link
-              key={c.valor}
-              href={enlace(actual, { cobro: cobro === c.valor ? "" : c.valor, tipo: "factura", pagina: "" })}
-              aria-pressed={cobro === c.valor}
-              className={
-                cobro === c.valor
-                  ? "inline-flex min-h-10 shrink-0 items-center rounded-completo bg-fondo-peligro px-esp3 text-sm font-medium text-texto-inverso md:min-h-0 md:py-esp1"
-                  : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
-              }
-            >
-              {c.etiqueta}
-            </Link>
-          ))}
-          {(() => {
-            // Lo que toca facturar: presupuestos que el cliente ya ha aceptado.
-            const activo = tipo === "presupuesto" && estado === "aceptado";
-            return (
-              <Link
-                href={enlace(actual, activo ? { tipo: "", estado: "", pagina: "" } : { tipo: "presupuesto", estado: "aceptado", cobro: "", pagina: "" })}
-                aria-pressed={activo}
-                className={
-                  activo
-                    ? "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-exito bg-fondo-exito-sutil px-esp3 text-sm font-medium text-texto-exito md:min-h-0 md:py-esp1"
-                    : "inline-flex min-h-10 shrink-0 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-sm text-texto-secundario hover:bg-fondo-sutil md:min-h-0 md:py-esp1"
-                }
-              >
-                Aceptados sin facturar
-              </Link>
-            );
-          })()}
-        </div>
-        <form action="/admin/documentos" className="flex flex-wrap items-center gap-esp2 md:ml-auto md:flex-nowrap">
+      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
+        <form action="/admin/documentos" className="flex items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
-          {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
+          {estado && <input type="hidden" name="estado" value={estado} />}
           {cobro && <input type="hidden" name="cobro" value={cobro} />}
-          <select
-            name="estado"
-            defaultValue={estado}
-            className="h-10 min-w-0 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp2 md:flex-none text-base text-texto-primario md:h-9 md:text-sm"
-          >
-            {ESTADOS.map((e) => (
-              <option key={e.valor} value={e.valor}>
-                {e.etiqueta}
-              </option>
-            ))}
-          </select>
+          {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
           <input
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Número o cliente…"
-            className="order-first h-10 w-full min-w-0 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco md:order-none md:h-9 md:w-[200px] md:text-sm"
+            placeholder="Buscar por número o cliente…"
+            className="h-10 w-full min-w-0 flex-1 rounded-md border border-borde-fuerte bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco md:h-9 md:max-w-sm md:text-sm"
           />
           <Boton type="submit" variante="secundario">
             Buscar
           </Boton>
         </form>
+
+        {/* Nivel 1: tipo de documento (relleno oscuro) */}
+        <div className="flex flex-col gap-esp1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-texto-terciario">Tipo de documento</p>
+          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Tipo de documento">
+            {[{ valor: "", etiqueta: "Todos" }, ...TIPOS].map((t) => {
+              const activo = tipo === t.valor;
+              return (
+                <Link
+                  key={t.valor}
+                  href={enlace(actual, {
+                    tipo: t.valor,
+                    cobro: t.valor === "" || t.valor === "factura" ? cobro : "",
+                    pagina: "",
+                  })}
+                  aria-current={activo ? "true" : undefined}
+                  className={`${PILDORA} ${
+                    activo
+                      ? "bg-fondo-marca font-medium text-texto-sobre-marca"
+                      : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
+                  }`}
+                >
+                  {t.etiqueta}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Nivel 2: estado (pastillas con contorno y punto) */}
+        <div className="flex flex-col gap-esp1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-texto-terciario">Estado</p>
+          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Estado">
+            {COBROS.map((c) => {
+              const activo = cobro === c.valor;
+              return (
+                <Link
+                  key={c.valor}
+                  href={enlace(actual, {
+                    cobro: activo ? "" : c.valor,
+                    estado: "",
+                    tipo: activo ? tipo : "factura",
+                    pagina: "",
+                  })}
+                  aria-pressed={activo}
+                  className={`${PILDORA} border ${
+                    activo
+                      ? "border-borde-peligro-sutil bg-fondo-peligro font-medium text-texto-inverso"
+                      : "border-borde-peligro-sutil bg-fondo-peligro-sutil text-texto-peligro hover:opacity-80"
+                  }`}
+                >
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-completo bg-current" />
+                  {c.etiqueta}
+                </Link>
+              );
+            })}
+            <span aria-hidden className="mx-esp1 hidden w-px self-stretch bg-borde-default sm:block" />
+            {ESTADOS.map((e) => {
+              const activo = estado === e.valor;
+              return (
+                <Link
+                  key={e.valor}
+                  href={enlace(actual, { estado: activo ? "" : e.valor, cobro: "", pagina: "" })}
+                  aria-pressed={activo}
+                  className={`${PILDORA} border ${
+                    activo
+                      ? "border-borde-marca bg-fondo-marca-sutil font-medium text-texto-marca"
+                      : "border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
+                  }`}
+                >
+                  <span aria-hidden className={`h-1.5 w-1.5 rounded-completo ${activo ? "bg-current" : "bg-borde-fuerte"}`} />
+                  {e.etiqueta}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Filtros activos: siempre visibles, cada uno se quita con un toque */}
+        {hayFiltros && (
+          <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3 text-sm">
+            <span className="text-texto-terciario">Filtrando por:</span>
+            {chips.map((c) => (
+              <Link
+                key={c.clave}
+                href={enlace(actual, { [c.clave]: "", pagina: "" })}
+                aria-label={`Quitar filtro ${c.texto}`}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-fuerte bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario md:min-h-8"
+              >
+                <span className="max-w-[60vw] truncate">{c.texto}</span>
+                <span aria-hidden className="text-base leading-none text-texto-terciario">×</span>
+              </Link>
+            ))}
+            <Link
+              href="/admin/documentos"
+              className="inline-flex min-h-10 items-center px-esp2 font-medium text-texto-marca md:min-h-8"
+            >
+              Quitar todos
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">

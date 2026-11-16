@@ -23,7 +23,10 @@ export default async function LayoutEmpleado({
     <div className="flex min-h-dvh flex-col bg-fondo-lienzo">
       <header className="sticky top-0 z-20 flex items-center justify-center border-b border-borde-default bg-fondo-superficie px-esp4 py-esp2">
         <Logo alto={28} />
-        <Campana href="/app/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} className="absolute right-14 top-1/2 -translate-y-1/2" />
+        {/* Contenedor propio: la campana ya es `relative`, y sin tailwind-merge no se puede pisar con `absolute`. */}
+        <div className="absolute right-14 top-1/2 -translate-y-1/2">
+          <Campana href="/app/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
+        </div>
         <BotonSalir />
       </header>
       <main className="flex-1 overflow-y-auto pb-20">
