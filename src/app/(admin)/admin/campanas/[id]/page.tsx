@@ -3,13 +3,11 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
-import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
 import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
-import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
@@ -29,6 +27,11 @@ function fechaHora(fecha: string) {
   }).format(new Date(fecha));
 }
 
+function nombreVisiblePunto(nombre: string) {
+  const limpio = nombre.trim();
+  return /^\d+$/.test(limpio) ? `Punto ${limpio}` : limpio;
+}
+
 export default async function PaginaCampana({
   params,
 }: {
@@ -40,33 +43,30 @@ export default async function PaginaCampana({
 
   const supabase = await createClient();
 
-  const resultadosBase =
-    await Promise.all([
-      supabase
-        .from("campanas")
-        .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin, descripcion, documento_id, clientes(razon_social)")
-        .eq("id", campanaId)
-        .maybeSingle(),
-      supabase
-        .from("puntos_campana")
-        .select("id, nombre, tipo_soporte, linea_id, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia")
-        .eq("campana_id", campanaId)
-        .order("id"),
-      supabase
-        .from("usuarios")
-        .select("id, nombre, apellidos, rol")
-        .eq("activo", true)
-        .order("nombre"),
-      supabase
-        .from("enlaces_cliente")
-        .select("token, vistas, expira_en")
-        .eq("campana_id", campanaId)
-        .eq("activo", true)
-        .order("creado_en", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
-    ]);
+  const resultadosBase = await Promise.all([
+    supabase
+      .from("campanas")
+      .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin, descripcion, documento_id, clientes(razon_social)")
+      .eq("id", campanaId)
+      .maybeSingle(),
+    supabase
+      .from("puntos_campana")
+      .select(
+        "id, nombre, tipo_soporte, linea_id, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia",
+      )
+      .eq("campana_id", campanaId)
+      .order("id"),
+    supabase.from("usuarios").select("id, nombre, apellidos, rol").eq("activo", true).order("nombre"),
+    supabase
+      .from("enlaces_cliente")
+      .select("token, vistas, expira_en")
+      .eq("campana_id", campanaId)
+      .eq("activo", true)
+      .order("creado_en", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
+  ]);
   lanzarSiError(...resultadosBase);
   const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }, { count: documentosVinculados }] =
     resultadosBase;
@@ -133,6 +133,12 @@ export default async function PaginaCampana({
   const lista = puntos ?? [];
   const contar = (estado: string) => lista.filter((p) => p.estado === estado).length;
   const hechos = contar("instalado") + contar("verificado") + contar("retirado");
+  const pendientes = contar("pendiente");
+  const incidencias = contar("incidencia");
+  const retirados = contar("retirado");
+  const verificados = contar("verificado");
+  const totalFotos = (fotos ?? []).length;
+  const porcentaje = lista.length > 0 ? Math.round((hechos / lista.length) * 100) : 0;
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -140,8 +146,8 @@ export default async function PaginaCampana({
   const urlEnlace = enlace ? `${protocolo}://${host}/c/${enlace.token}` : null;
 
   return (
-    <div className="flex flex-col gap-esp6">
-      <div className="flex flex-col gap-esp2">
+    <div className="flex flex-col gap-esp5">
+      <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/campanas"
           className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
@@ -149,236 +155,339 @@ export default async function PaginaCampana({
           <Icono nombre="atras" size={16} />
           Campañas
         </Link>
-        <div className="flex items-center gap-esp3">
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold text-texto-primario">{campana.nombre}</h1>
-            <p className="text-sm text-texto-secundario">
-              {cliente?.razon_social ?? "—"}
-              {campana.codigo ? ` · ${campana.codigo}` : ""}
-              {campana.fecha_inicio && campana.fecha_fin
-                ? ` · ${fechaCorta(campana.fecha_inicio)} – ${fechaCorta(campana.fecha_fin)}`
-                : ""}
-            </p>
+
+        {/* Blocco 1: Header unificata con barra metriche compatta e condivisione cliente */}
+        <section className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+          <div className="flex flex-wrap items-start justify-between gap-esp3 p-esp4 md:p-esp5">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-esp2">
+                <h1 className="text-xl font-semibold tracking-tight text-texto-primario md:text-2xl">
+                  {campana.nombre}
+                </h1>
+                <Insignia tono={TONO_POR_ESTADO[campana.estado] ?? "neutro"}>
+                  {ETIQUETA_ESTADO[campana.estado] ?? campana.estado}
+                </Insignia>
+                {campana.codigo && (
+                  <span className="rounded bg-fondo-sutil px-2 py-0.5 font-mono text-xs text-texto-secundario">
+                    {campana.codigo}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-center gap-x-esp3 gap-y-1 text-xs text-texto-secundario">
+                <span className="font-medium text-texto-primario">{cliente?.razon_social ?? "Sin cliente"}</span>
+                {campana.fecha_inicio && campana.fecha_fin && (
+                  <span className="tabular-nums text-texto-terciario">
+                    {fechaCorta(campana.fecha_inicio)} – {fechaCorta(campana.fecha_fin)}
+                  </span>
+                )}
+              </div>
+
+              {campana.descripcion && (
+                <p className="mt-esp2 max-w-3xl text-xs text-texto-secundario">{campana.descripcion}</p>
+              )}
+            </div>
+
+            <EditarCampana
+              campanaId={campanaId}
+              eliminable={!campana.documento_id && (documentosVinculados ?? 0) === 0}
+              contenido={{ puntos: lista.length, fotos: totalFotos }}
+              inicial={{
+                nombre: campana.nombre,
+                estado: campana.estado,
+                fechaInicio: campana.fecha_inicio,
+                fechaFin: campana.fecha_fin,
+                descripcion: campana.descripcion,
+              }}
+            />
           </div>
-          <Insignia tono={TONO_POR_ESTADO[campana.estado] ?? "neutro"}>
-            {ETIQUETA_ESTADO[campana.estado] ?? campana.estado}
-          </Insignia>
-        </div>
-        {campana.descripcion && (
-          <p className="max-w-3xl text-sm text-texto-secundario">{campana.descripcion}</p>
-        )}
-        <EditarCampana
-          campanaId={campanaId}
-          eliminable={!campana.documento_id && (documentosVinculados ?? 0) === 0}
-          contenido={{ puntos: lista.length, fotos: (fotos ?? []).length }}
-          inicial={{
-            nombre: campana.nombre,
-            estado: campana.estado,
-            fechaInicio: campana.fecha_inicio,
-            fechaFin: campana.fecha_fin,
-            descripcion: campana.descripcion,
-          }}
-        />
+
+          <div className="grid grid-cols-2 divide-y divide-borde-default border-t border-borde-default bg-fondo-sutil/50 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            <div className="px-esp4 py-esp3">
+              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Instalación</p>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-esp2">
+                <span className="tabular-nums text-base font-semibold text-texto-primario">
+                  {hechos}/{lista.length}
+                </span>
+                <span className="tabular-nums text-xs font-medium text-texto-secundario">{porcentaje}%</span>
+                {verificados > 0 && <span className="tabular-nums text-xs text-texto-exito">· {verificados} verif.</span>}
+              </div>
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-completo bg-fondo-hover">
+                <div
+                  className="h-full rounded-completo bg-fondo-marca transition-all"
+                  style={{ width: `${porcentaje}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="px-esp4 py-esp3">
+              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Pendientes</p>
+              <div className="mt-0.5 flex items-baseline gap-esp2">
+                <span className="tabular-nums text-base font-semibold text-texto-primario">{pendientes}</span>
+                <span className="text-xs text-texto-terciario">{pendientes === 0 ? "Al día" : "por instalar"}</span>
+              </div>
+            </div>
+
+            <div className="px-esp4 py-esp3">
+              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Incidencias</p>
+              <div className="mt-0.5 flex items-baseline gap-esp2">
+                <span
+                  className={`tabular-nums text-base font-semibold ${
+                    incidencias > 0 ? "text-texto-peligro" : "text-texto-primario"
+                  }`}
+                >
+                  {incidencias}
+                </span>
+                <span className={`text-xs ${incidencias > 0 ? "font-medium text-texto-peligro" : "text-texto-terciario"}`}>
+                  {incidencias > 0 ? "activas" : "ninguna"}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-esp4 py-esp3">
+              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Fotos y soportes</p>
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-esp2">
+                <span className="tabular-nums text-base font-semibold text-texto-primario">{totalFotos}</span>
+                <span className="text-xs text-texto-secundario">{totalFotos === 1 ? "foto" : "fotos"}</span>
+                {retirados > 0 && (
+                  <span className="tabular-nums text-xs text-texto-terciario">
+                    · {retirados}/{lista.length} ret.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-esp2 border-t border-borde-default bg-fondo-superficie px-esp4 py-esp3 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp5">
+            <span className="shrink-0 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
+              Enlace cliente
+            </span>
+            <div className="min-w-0 flex-1">
+              <EnlaceCliente
+                campanaId={campanaId}
+                url={urlEnlace}
+                vistas={Number(enlace?.vistas ?? 0)}
+                expiraEn={enlace?.expira_en ?? null}
+              />
+            </div>
+          </div>
+        </section>
       </div>
 
-      <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[140px]">
-        <TarjetaKpi etiqueta="Puntos" valor={String(lista.length)} />
-        <TarjetaKpi
-          etiqueta="Instalados"
-          valor={`${hechos}/${lista.length}`}
-          detalle={`${contar("verificado")} verificados`}
-          colorDetalle="text-texto-exito"
-        />
-        <TarjetaKpi etiqueta="Pendientes" valor={String(contar("pendiente"))} />
-        {contar("retirado") > 0 && <TarjetaKpi etiqueta="Retirados" valor={`${contar("retirado")}/${lista.length}`} />}
-        <TarjetaKpi
-          etiqueta="Incidencias"
-          valor={String(contar("incidencia"))}
-          colorDetalle="text-texto-peligro"
-        />
-        <TarjetaKpi etiqueta="Fotos" valor={String((fotos ?? []).length)} />
-      </div>
-
-      {lista.length > 0 && contar("retirado") === lista.length && campana.estado !== "finalizada" && (
+      {lista.length > 0 && retirados === lista.length && campana.estado !== "finalizada" && (
         <AvisoFinalizar campanaId={campanaId} />
       )}
 
-      <div className="flex flex-col-reverse gap-esp6 xl:flex-row">
-        <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <SafeMapContainer
-            title={`Mappa · ${campana.nombre}`}
-            coordinates={
-              lista[0]
-                ? { lat: Number(lista[0].latitud), lng: Number(lista[0].longitud) }
-                : null
-            }
-            address={lista[0]?.direccion ?? null}
-          >
-            <MapaPuntos
-              altura={ALTURA_MAPA_GRANDE}
-              puntos={lista.map((p) => ({
-                id: p.id,
-                nombre: p.nombre,
-                latitud: Number(p.latitud),
-                longitud: Number(p.longitud),
-                estado: p.estado,
-              }))}
-            />
-          </SafeMapContainer>
+      {/* Blocco 2: Mappa panoramica & Riepilogo articoli */}
+      <div className={articulosPunto.length > 0 ? "grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_320px]" : ""}>
+        <SafeMapContainer
+          title={`Mappa · ${campana.nombre}`}
+          coordinates={
+            lista[0] ? { lat: Number(lista[0].latitud), lng: Number(lista[0].longitud) } : null
+          }
+          address={lista[0]?.direccion ?? null}
+        >
+          <MapaPuntos
+            altura="clamp(240px, 34vh, 360px)"
+            puntos={lista.map((p) => ({
+              id: p.id,
+              nombre: p.nombre,
+              latitud: Number(p.latitud),
+              longitud: Number(p.longitud),
+              estado: p.estado,
+            }))}
+          />
+        </SafeMapContainer>
 
-          <ResumenArticulos articulos={articulosPunto} />
-          <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>
-          <BotonAnadirPunto campanaId={campanaId} articulos={articulosPunto} fechasCampana={fechasCampana} otrosPuntos={puntosParaMapa} />
-          {lista.map((p) => {
-            const asignados = (asignaciones ?? [])
-              .filter((a) => a.punto_id === p.id)
-              .map((a) => {
-                const u = usuarioPorId.get(a.usuario_id);
-                return {
-                  id: a.id,
-                  usuarioId: a.usuario_id,
-                  nombre: u ? nombreCompleto(u) : "Usuario",
-                  estado: a.estado,
-                  rol: a.rol_asignacion,
-                };
-              });
-            const fotosPunto = (fotos ?? []).filter((f) => f.punto_id === p.id);
-
-            return (
-              <div
-                key={p.id}
-                className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
-              >
-                <div className="flex items-start gap-esp3">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-texto-primario">{p.nombre}</p>
-                    <p className="text-xs text-texto-terciario">
-                      {ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte}
-                      {p.direccion ? ` · ${p.direccion}` : ""}
-                    </p>
-                  </div>
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-medium text-texto-marca"
-                  >
-                    Ver en el mapa
-                  </a>
-                  <Insignia tono={TONO_POR_ESTADO[p.estado] ?? "neutro"}>
-                    {ETIQUETA_ESTADO[p.estado] ?? p.estado}
-                  </Insignia>
-                </div>
-
-                {p.estado === "incidencia" && p.incidencia && (
-                  <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario">
-                    <strong className="text-texto-peligro">Incidencia:</strong> {p.incidencia}
-                  </p>
-                )}
-                {p.notas && <p className="text-xs text-texto-secundario">Instrucciones: {p.notas}</p>}
-
-                <ControlesPunto
-                  campanaId={campanaId}
-                  puntoId={p.id}
-                  estado={p.estado}
-                  asignados={asignados}
-                  candidatos={candidatos}
-                  articulos={articulosPunto}
-                  punto={{
-                    id: p.id,
-                    linea_id: p.linea_id,
-                    nombre: p.nombre,
-                    tipo_soporte: p.tipo_soporte,
-                    direccion: p.direccion,
-                    latitud: Number(p.latitud),
-                    longitud: Number(p.longitud),
-                    piezas: p.piezas == null ? null : Number(p.piezas),
-                    fecha_colocacion_prevista: p.fecha_colocacion_prevista,
-                    fecha_retirada_prevista: p.fecha_retirada_prevista,
-                    notas: p.notas,
-                  }}
-                  tieneFotos={fotosPunto.length > 0}
-                  fechasCampana={fechasCampana}
-                  otrosPuntos={puntosParaMapa}
-                />
-
-                {fotosPunto.length > 0 && (
-                  <div className="flex flex-wrap gap-esp3 border-t border-fondo-hover pt-esp3">
-                    {fotosPunto.map((f) => {
-                      const url = urlPorRuta.get(f.url_foto);
-                      const autor = f.usuario_id ? usuarioPorId.get(f.usuario_id) : undefined;
-                      return (
-                        <div key={f.id} className="flex w-[132px] flex-col gap-1">
-                          {url ? (
-                            <a href={url} target="_blank" rel="noreferrer">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={url}
-                                alt={`Foto de ${p.nombre}`}
-                                className="aspect-square w-full rounded-md object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <div className="flex aspect-square w-full items-center justify-center rounded-md bg-fondo-sutil text-xs text-texto-terciario">
-                              No disponible
-                            </div>
-                          )}
-                          <p className="truncate text-xs text-texto-secundario">
-                            {autor ? nombreCompleto(autor) : "—"}
-                          </p>
-                          <p className="text-xs text-texto-terciario">
-                            {fechaHora(f.tomada_en)}
-                            {f.origen_foto === "galeria" ? " · 🖼 galería" : ""}
-                          </p>
-                          {f.latitud != null && f.longitud != null ? (
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${f.latitud},${f.longitud}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-1 text-xs text-texto-exito"
-                            >
-                              <Icono nombre="ubicacion" size={12} />
-                              {f.origen_ubicacion === "gps_al_subir"
-                                ? "Ubicación al subir"
-                                : f.origen_ubicacion === "exif"
-                                  ? "Ubicación de la foto"
-                                  : "Geolocalizada"}
-                            </a>
-                          ) : (
-                            <p className="text-xs text-texto-aviso">Sin ubicación</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {lista.length === 0 && (
-            <p className="text-sm text-texto-terciario">Esta campaña aún no tiene puntos.</p>
-          )}
-        </div>
-
-        <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[340px]">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4">
-            <h2 className="text-base font-semibold text-texto-primario">Enlace para el cliente</h2>
-            <EnlaceCliente
-              campanaId={campanaId}
-              url={urlEnlace}
-              vistas={Number(enlace?.vistas ?? 0)}
-              expiraEn={enlace?.expira_en ?? null}
-            />
-          </div>
-        </div>
+        {articulosPunto.length > 0 && <ResumenArticulos articulos={articulosPunto} />}
       </div>
+
+      {/* Blocco 3: Sezione Puntos strutturata ad alta densità */}
+      <section className="flex flex-col gap-esp3">
+        <div className="flex flex-wrap items-center justify-between gap-esp3">
+          <div className="flex items-center gap-esp2">
+            <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>
+            <span className="tabular-nums rounded-completo border border-borde-default bg-fondo-superficie px-2 py-0.5 text-xs font-medium text-texto-secundario">
+              {lista.length}
+            </span>
+          </div>
+          <BotonAnadirPunto
+            campanaId={campanaId}
+            articulos={articulosPunto}
+            fechasCampana={fechasCampana}
+            otrosPuntos={puntosParaMapa}
+          />
+        </div>
+
+        {lista.length > 0 ? (
+          <div className="divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+            {lista.map((p, idx) => {
+              const asignados = (asignaciones ?? [])
+                .filter((a) => a.punto_id === p.id)
+                .map((a) => {
+                  const u = usuarioPorId.get(a.usuario_id);
+                  return {
+                    id: a.id,
+                    usuarioId: a.usuario_id,
+                    nombre: u ? nombreCompleto(u) : "Usuario",
+                    estado: a.estado,
+                    rol: a.rol_asignacion,
+                  };
+                });
+              const fotosPunto = (fotos ?? []).filter((f) => f.punto_id === p.id);
+              const esIncidencia = p.estado === "incidencia";
+
+              return (
+                <div
+                  key={p.id}
+                  className={`flex flex-col gap-esp3 px-esp4 py-esp4 transition-colors hover:bg-fondo-sutil/40 md:px-esp5 ${
+                    esIncidencia ? "border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/20" : ""
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-esp3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-esp2">
+                        <span className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded bg-fondo-sutil font-mono text-xs font-semibold text-texto-secundario">
+                          #{idx + 1}
+                        </span>
+                        <h3 className="text-sm font-semibold text-texto-primario">{nombreVisiblePunto(p.nombre)}</h3>
+                        <span className="rounded border border-borde-default bg-fondo-sutil px-1.5 py-0.5 text-xs font-medium text-texto-secundario">
+                          {ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte}
+                        </span>
+                        {p.piezas != null && (
+                          <span className="tabular-nums text-xs text-texto-terciario">{num(Number(p.piezas))} pzs</span>
+                        )}
+                        <Insignia tono={TONO_POR_ESTADO[p.estado] ?? "neutro"}>
+                          {ETIQUETA_ESTADO[p.estado] ?? p.estado}
+                        </Insignia>
+                      </div>
+
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-esp3 gap-y-1 text-xs text-texto-secundario">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-medium text-texto-secundario transition-colors hover:text-texto-marca"
+                        >
+                          <Icono nombre="ubicacion" size={13} className="text-icono-marca" />
+                          <span>{p.direccion || "Ver en Google Maps"}</span>
+                        </a>
+                        {(p.fecha_colocacion_prevista || p.fecha_retirada_prevista) && (
+                          <span className="tabular-nums text-texto-terciario">
+                            {p.fecha_colocacion_prevista ? `Colocar ${fechaCorta(p.fecha_colocacion_prevista)}` : ""}
+                            {p.fecha_colocacion_prevista && p.fecha_retirada_prevista ? " · " : ""}
+                            {p.fecha_retirada_prevista ? `Retirar ${fechaCorta(p.fecha_retirada_prevista)}` : ""}
+                          </span>
+                        )}
+                      </div>
+
+                      {p.notas && <p className="mt-1 text-xs text-texto-terciario">{p.notas}</p>}
+                    </div>
+
+                    <ControlesPunto
+                      campanaId={campanaId}
+                      puntoId={p.id}
+                      estado={p.estado}
+                      asignados={asignados}
+                      candidatos={candidatos}
+                      articulos={articulosPunto}
+                      punto={{
+                        id: p.id,
+                        linea_id: p.linea_id,
+                        nombre: p.nombre,
+                        tipo_soporte: p.tipo_soporte,
+                        direccion: p.direccion,
+                        latitud: Number(p.latitud),
+                        longitud: Number(p.longitud),
+                        piezas: p.piezas == null ? null : Number(p.piezas),
+                        fecha_colocacion_prevista: p.fecha_colocacion_prevista,
+                        fecha_retirada_prevista: p.fecha_retirada_prevista,
+                        notas: p.notas,
+                      }}
+                      tieneFotos={fotosPunto.length > 0}
+                      fechasCampana={fechasCampana}
+                      otrosPuntos={puntosParaMapa}
+                    />
+                  </div>
+
+                  {esIncidencia && p.incidencia && (
+                    <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario">
+                      <strong className="text-texto-peligro">Incidencia:</strong> {p.incidencia}
+                    </p>
+                  )}
+
+                  {fotosPunto.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp3">
+                      {fotosPunto.map((f) => {
+                        const url = urlPorRuta.get(f.url_foto);
+                        const autor = f.usuario_id ? usuarioPorId.get(f.usuario_id) : undefined;
+                        return (
+                          <div
+                            key={f.id}
+                            className="flex items-center gap-esp2 rounded-md border border-borde-default bg-fondo-sutil/60 p-1 pr-esp3"
+                          >
+                            {url ? (
+                              <a href={url} target="_blank" rel="noreferrer" className="shrink-0">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={url}
+                                  alt={`Foto de ${nombreVisiblePunto(p.nombre)}`}
+                                  className="h-10 w-10 rounded object-cover"
+                                />
+                              </a>
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-fondo-hover text-micro text-texto-terciario">
+                                —
+                              </div>
+                            )}
+                            <div className="flex min-w-0 flex-col">
+                              <p className="truncate text-xs font-medium text-texto-primario">
+                                {autor ? nombreCompleto(autor) : "—"}
+                              </p>
+                              <p className="tabular-nums text-micro text-texto-terciario">
+                                {fechaHora(f.tomada_en)}
+                                {f.origen_foto === "galeria" ? " · galería" : ""}
+                              </p>
+                              {f.latitud != null && f.longitud != null ? (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${f.latitud},${f.longitud}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-micro font-medium text-texto-exito hover:underline"
+                                >
+                                  <Icono nombre="ubicacion" size={10} />
+                                  {f.origen_ubicacion === "gps_al_subir"
+                                    ? "Al subir"
+                                    : f.origen_ubicacion === "exif"
+                                      ? "EXIF"
+                                      : "GPS"}
+                                </a>
+                              ) : (
+                                <span className="text-micro text-texto-aviso">Sin GPS</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
+            Esta campaña aún no tiene puntos. Añade el primero desde el botón superior.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
 
 const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
 
-/** Cuántas piezas de cada artículo del documento están ya repartidas entre los puntos. Discreto: una línea por artículo. */
+/** Cuántas piezas de cada artículo del documento están ya repartidas entre los puntos. */
 function ResumenArticulos({
   articulos,
 }: {
@@ -386,32 +495,34 @@ function ResumenArticulos({
 }) {
   if (articulos.length === 0) return null;
   return (
-    <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
-      <p className="text-xs font-medium uppercase tracking-wide text-texto-terciario">Artículos repartidos</p>
-      {articulos.map((a) => {
-        const restan = a.piezas - a.repartidas;
-        const exceso = restan < 0;
-        const porcentaje = a.piezas > 0 ? Math.min(100, Math.round((a.repartidas / a.piezas) * 100)) : 0;
-        return (
-          <div key={a.id} className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-esp3 text-sm">
-              <span className="min-w-0 flex-1 truncate text-texto-primario" title={`${a.etiqueta} · ${a.documento}`}>
-                {a.etiqueta}
-              </span>
-              <span className={exceso ? "whitespace-nowrap text-xs text-texto-aviso" : "whitespace-nowrap text-xs text-texto-secundario"}>
-                {num(a.repartidas)} / {num(a.piezas)}
-                {exceso ? ` · te pasas en ${num(-restan)}` : restan > 0 ? ` · quedan ${num(restan)}` : " · completo"}
-              </span>
+    <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
+      <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Artículos repartidos</p>
+      <div className="flex flex-col gap-esp3">
+        {articulos.map((a) => {
+          const restan = a.piezas - a.repartidas;
+          const exceso = restan < 0;
+          const porcentaje = a.piezas > 0 ? Math.min(100, Math.round((a.repartidas / a.piezas) * 100)) : 0;
+          return (
+            <div key={a.id} className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-esp2 text-xs">
+                <span className="min-w-0 flex-1 truncate font-medium text-texto-primario" title={`${a.etiqueta} · ${a.documento}`}>
+                  {a.etiqueta}
+                </span>
+                <span className={exceso ? "tabular-nums whitespace-nowrap text-texto-aviso" : "tabular-nums whitespace-nowrap text-texto-secundario"}>
+                  {num(a.repartidas)} / {num(a.piezas)}
+                  {exceso ? ` (+${num(-restan)})` : restan > 0 ? ` · ${num(restan)} rest.` : " · completo"}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-completo bg-fondo-sutil">
+                <div
+                  className={exceso ? "h-full bg-fondo-aviso" : "h-full bg-fondo-marca"}
+                  style={{ width: `${porcentaje}%` }}
+                />
+              </div>
             </div>
-            <div className="h-1 overflow-hidden rounded-completo bg-fondo-sutil">
-              <div
-                className={exceso ? "h-full bg-fondo-aviso" : "h-full bg-fondo-marca"}
-                style={{ width: `${porcentaje}%` }}
-              />
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -3,7 +3,6 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
-import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
 import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";

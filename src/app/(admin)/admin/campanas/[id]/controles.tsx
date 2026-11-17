@@ -30,6 +30,12 @@ import { confirmar } from "@/components/ui/dialogos";
 type Asignado = { id: number; usuarioId: string; nombre: string; estado: string; rol: string };
 type Candidato = { id: string; nombre: string };
 
+const CLASE_SELECT_COMPACTO =
+  "min-h-11 h-11 md:min-h-8 md:h-8 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-[9px] text-base leading-6 text-texto-primario outline-none focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50 md:py-[5px] md:text-xs md:leading-5";
+
+const CLASE_ACCION_COMPACTA =
+  "inline-flex min-h-11 h-11 md:min-h-8 md:h-8 items-center justify-center gap-1.5 rounded-md px-esp3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 md:text-xs";
+
 /** Asignar / quitar personas de un punto y marcarlo como verificado. */
 export function ControlesPunto({
   campanaId,
@@ -57,8 +63,6 @@ export function ControlesPunto({
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [editando, setEditando] = useState(false);
-  const [elegido, setElegido] = useState("");
-  const [elegidoRetirada, setElegidoRetirada] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function ejecutar(accion: () => Promise<void>) {
@@ -80,77 +84,75 @@ export function ControlesPunto({
 
   if (editando) {
     return (
-      <FormularioPunto
-        campanaId={campanaId}
-        articulos={articulos}
-        punto={punto}
-        fechasCampana={fechasCampana}
-        otrosPuntos={otrosPuntos}
-        onCerrar={() => setEditando(false)}
-      />
+      <div className="mt-esp2 w-full basis-full">
+        <FormularioPunto
+          campanaId={campanaId}
+          articulos={articulos}
+          punto={punto}
+          fechasCampana={fechasCampana}
+          otrosPuntos={otrosPuntos}
+          onCerrar={() => setEditando(false)}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-esp2">
-      <div className="flex flex-wrap items-center gap-esp2">
-        {asignados.map((a) => (
-          <span
-            key={a.id}
-            className="inline-flex items-center gap-esp1 rounded-completo border border-borde-default bg-fondo-sutil px-esp2 py-[2px] text-xs text-texto-secundario"
-          >
-            {a.nombre}
-            <span className="text-texto-terciario">
-              · {a.rol === "retirador" ? "retirada, " : ""}
-              {etiquetaEstado(a.estado, ETIQUETA_ESTADO_ASIGNACION).toLowerCase()}
-            </span>
-            <button
-              onClick={async () => {
-                if (!(await confirmar(`¿Quitar a ${a.nombre} de este punto?`, { aceptar: "Quitar", peligro: true }))) return;
-                ejecutar(() => desenvolver(quitarAsignacion(campanaId, a.id)));
-              }}
-              disabled={pendiente}
-              aria-label={`Quitar a ${a.nombre}`}
-              className="ml-1 text-texto-terciario hover:text-texto-peligro disabled:opacity-50"
+    <div className="flex w-full flex-col gap-esp2 lg:w-auto lg:items-end">
+      {asignados.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
+          {asignados.map((a) => (
+            <span
+              key={a.id}
+              className="inline-flex min-h-7 items-center gap-1.5 rounded-md border border-borde-default bg-fondo-sutil px-esp2 py-0.5 text-xs font-medium text-texto-primario"
             >
-              ✕
-            </button>
-          </span>
-        ))}
-        {asignados.length === 0 && (
-          <span className="text-xs text-texto-terciario">Sin asignar</span>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-esp2">
-        <select
-          value={elegido}
-          onChange={(e) => setElegido(e.target.value)}
-          className="h-8 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-xs text-texto-primario"
-        >
-          <option value="">Asignar a…</option>
-          {libres.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nombre}
-            </option>
+              <span>{a.nombre}</span>
+              <span className="font-normal text-texto-terciario">
+                · {a.rol === "retirador" ? "retirada, " : ""}
+                {etiquetaEstado(a.estado, ETIQUETA_ESTADO_ASIGNACION).toLowerCase()}
+              </span>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!(await confirmar(`¿Quitar a ${a.nombre} de este punto?`, { aceptar: "Quitar", peligro: true }))) return;
+                  ejecutar(() => desenvolver(quitarAsignacion(campanaId, a.id)));
+                }}
+                disabled={pendiente}
+                aria-label={`Quitar a ${a.nombre}`}
+                className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded text-texto-terciario transition-colors hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
+              >
+                ✕
+              </button>
+            </span>
           ))}
-        </select>
-        <Boton
-          tamano="s"
-          variante="secundario"
-          disabled={!elegido || pendiente}
-          onClick={() =>
-            ejecutar(async () => {
-              await desenvolver(asignarPunto(campanaId, puntoId, elegido));
-              setElegido("");
-            })
-          }
-        >
-          Asignar
-        </Boton>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-esp2 lg:justify-end">
+        <div className="min-w-[148px] flex-1 sm:flex-initial">
+          <select
+            value=""
+            disabled={pendiente || libres.length === 0}
+            onChange={(e) => {
+              const usuarioId = e.target.value;
+              if (!usuarioId) return;
+              ejecutar(() => desenvolver(asignarPunto(campanaId, puntoId, usuarioId)));
+            }}
+            aria-label={`Asignar responsable para ${punto.nombre}`}
+            className={CLASE_SELECT_COMPACTO}
+          >
+            <option value="">{libres.length === 0 ? "Todos asignados" : "Asignar a…"}</option>
+            {libres.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
         {estado === "instalado" && (
           <Boton
             tamano="s"
+            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
             disabled={pendiente}
             onClick={() => ejecutar(() => desenvolver(verificarPunto(campanaId, puntoId)))}
           >
@@ -161,6 +163,7 @@ export function ControlesPunto({
         {estado === "incidencia" && (
           <Boton
             tamano="s"
+            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
             disabled={pendiente}
             onClick={() => ejecutar(() => desenvolver(resolverIncidencia(campanaId, puntoId)))}
           >
@@ -168,33 +171,46 @@ export function ControlesPunto({
             Resolver incidencia
           </Boton>
         )}
-        <Boton tamano="s" variante="fantasma" disabled={pendiente} onClick={() => setEditando(true)}>
+        <button
+          type="button"
+          disabled={pendiente}
+          onClick={() => setEditando(true)}
+          className={`${CLASE_ACCION_COMPACTA} border border-borde-campo bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil`}
+        >
           Editar
-        </Boton>
+        </button>
         {sePuedeEliminar && (
           <button
+            type="button"
             disabled={pendiente}
+            title="Eliminar punto"
+            aria-label={`Eliminar punto ${punto.nombre}`}
             onClick={async () => {
               if (!(await confirmar("¿Eliminar este punto? No se puede deshacer."))) return;
               ejecutar(() => desenvolver(eliminarPuntoCampana(campanaId, puntoId)));
             }}
-            className="text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
+            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
           >
-            Eliminar
+            <Icono nombre="eliminar" size={15} />
           </button>
         )}
       </div>
 
       {instalado && (
-        <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp2">
+        <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp2 lg:justify-end">
           <span className="text-xs font-medium text-texto-secundario">Retirada</span>
           {!retiradaPendiente && (
-            <>
+            <div className="min-w-[148px] flex-1 sm:flex-initial">
               <select
-                value={elegidoRetirada}
-                onChange={(e) => setElegidoRetirada(e.target.value)}
+                value=""
+                disabled={pendiente}
+                onChange={(e) => {
+                  const usuarioId = e.target.value;
+                  if (!usuarioId) return;
+                  ejecutar(() => desenvolver(programarRetirada(campanaId, puntoId, usuarioId)));
+                }}
                 aria-label="Quién retira el punto"
-                className="h-8 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-xs text-texto-primario"
+                className={CLASE_SELECT_COMPACTO}
               >
                 <option value="">Encargar a…</option>
                 {candidatos.map((c) => (
@@ -203,24 +219,12 @@ export function ControlesPunto({
                   </option>
                 ))}
               </select>
-              <Boton
-                tamano="s"
-                variante="secundario"
-                disabled={!elegidoRetirada || pendiente}
-                onClick={() =>
-                  ejecutar(async () => {
-                    await desenvolver(programarRetirada(campanaId, puntoId, elegidoRetirada));
-                    setElegidoRetirada("");
-                  })
-                }
-              >
-                Programar retirada
-              </Boton>
-            </>
+            </div>
           )}
           <Boton
             tamano="s"
             variante="fantasma"
+            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
             disabled={pendiente}
             onClick={async () => {
               if (!(await confirmar("¿Marcar este punto como retirado?"))) return;
@@ -237,7 +241,7 @@ export function ControlesPunto({
   );
 }
 
-/** Enlace público para el cliente: copiar o crear si todavía no existe. */
+/** Enlace público para el cliente: barra compacta para crear, copiar o gestionar. */
 export function EnlaceCliente({
   campanaId,
   url,
@@ -279,29 +283,44 @@ export function EnlaceCliente({
 
   if (!url) {
     return (
-      <div className="flex flex-col gap-esp2">
-        <p className="text-sm text-texto-secundario">
-          El cliente verá el estado y las fotos sin necesidad de iniciar sesión.
-        </p>
-        <Boton variante="secundario" onClick={crear} cargando={pendiente}>
-          <Icono nombre="enlace" size={16} />
-          Crear enlace para el cliente
-        </Boton>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-esp2">
+          <p className="flex items-center gap-esp2 text-xs text-texto-secundario">
+            <Icono nombre="enlace" size={14} className="text-icono-secundario" />
+            <span>Comparte el avance y las fotos con el cliente sin iniciar sesión.</span>
+          </p>
+          <Boton
+            tamano="s"
+            variante="secundario"
+            className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 text-xs"
+            onClick={crear}
+            cargando={pendiente}
+          >
+            <Icono nombre="enlace" size={14} />
+            Crear enlace público
+          </Boton>
+        </div>
         {error && <p className="text-xs text-texto-peligro">{error}</p>}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-esp2">
-      <input
-        readOnly
-        value={url}
-        onFocus={(e) => e.currentTarget.select()}
-        className="h-9 w-full rounded-md border border-borde-campo bg-fondo-sutil px-esp3 text-xs text-texto-secundario"
-      />
-      <div className="flex items-center gap-esp3">
-        <Boton tamano="s" variante="secundario" onClick={copiar}>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-esp2">
+        <input
+          readOnly
+          value={url}
+          aria-label="Enlace público para el cliente"
+          onFocus={(e) => e.currentTarget.select()}
+          className="h-9 min-w-[200px] flex-1 rounded-md border border-borde-campo bg-fondo-sutil px-esp3 font-mono text-xs text-texto-secundario md:h-8"
+        />
+        <Boton
+          tamano="s"
+          variante="secundario"
+          className="min-h-9 h-9 md:min-h-8 md:h-8 text-xs"
+          onClick={copiar}
+        >
           <Icono nombre="copiar" size={14} />
           {copiado ? "Copiado" : "Copiar"}
         </Boton>
@@ -309,64 +328,63 @@ export function EnlaceCliente({
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="text-xs font-medium text-texto-marca"
+          className="inline-flex min-h-9 items-center rounded-md px-esp2 text-xs font-medium text-texto-marca transition-colors hover:bg-fondo-marca-sutil md:min-h-8"
         >
-          Abrir
+          Abrir ↗
         </a>
-        <span className="ml-auto text-xs text-texto-terciario">
+        <span className="tabular-nums text-xs text-texto-terciario">
           {vistas} {vistas === 1 ? "visita" : "visitas"}
+          {expiraEn
+            ? ` · ${new Date(expiraEn) < new Date() ? "caducó " : "caduca "}${fechaMedia(expiraEn)}`
+            : ""}
         </span>
-      </div>
-      {expiraEn && (
-        <p className="text-xs text-texto-terciario">
-          {new Date(expiraEn) < new Date() ? "Caducó el " : "Caduca el "}
-          {fechaMedia(expiraEn)}
-        </p>
-      )}
-      <div className="flex items-center gap-esp3 border-t border-fondo-hover pt-esp2">
-        <button
-          disabled={pendiente}
-          onClick={async () => {
-            if (!(await confirmar("Se desactivará el enlace actual y se creará uno nuevo. El cliente tendrá que usar el nuevo. ¿Continuar?"))) return;
-            setError(null);
-            iniciar(async () => {
-              try {
-                await desenvolver(renovarEnlaceCliente(campanaId));
-                router.refresh();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "No se pudo renovar el enlace.");
-              }
-            });
-          }}
-          className="text-xs font-medium text-texto-marca disabled:opacity-50"
-        >
-          Generar uno nuevo
-        </button>
-        <button
-          disabled={pendiente}
-          onClick={async () => {
-            if (!(await confirmar("El cliente dejará de poder ver la campaña con este enlace. ¿Desactivarlo?"))) return;
-            setError(null);
-            iniciar(async () => {
-              try {
-                await desenvolver(revocarEnlaceCliente(campanaId));
-                router.refresh();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "No se pudo desactivar el enlace.");
-              }
-            });
-          }}
-          className="text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
-        >
-          Desactivar
-        </button>
+        <div className="flex items-center gap-esp2 border-l border-borde-default pl-esp2">
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={async () => {
+              if (!(await confirmar("Se desactivará el enlace actual y se creará uno nuevo. El cliente tendrá que usar el nuevo. ¿Continuar?"))) return;
+              setError(null);
+              iniciar(async () => {
+                try {
+                  await desenvolver(renovarEnlaceCliente(campanaId));
+                  router.refresh();
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "No se pudo renovar el enlace.");
+                }
+              });
+            }}
+            className="min-h-8 text-xs font-medium text-texto-marca hover:underline disabled:opacity-50"
+          >
+            Renovar
+          </button>
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={async () => {
+              if (!(await confirmar("El cliente dejará de poder ver la campaña con este enlace. ¿Desactivarlo?"))) return;
+              setError(null);
+              iniciar(async () => {
+                try {
+                  await desenvolver(revocarEnlaceCliente(campanaId));
+                  router.refresh();
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "No se pudo desactivar el enlace.");
+                }
+              });
+            }}
+            className="min-h-8 text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
+          >
+            Desactivar
+          </button>
+        </div>
       </div>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
     </div>
   );
 }
 
-/** Botón "Añadir punto" que despliega el formulario con mapa en la propia ficha de la campaña. */
+/** Botón "Añadir punto" que despliega el formulario con mapa a ancho completo. */
 export function BotonAnadirPunto({
   campanaId,
   articulos,
@@ -381,18 +399,24 @@ export function BotonAnadirPunto({
   const [abierto, setAbierto] = useState(false);
   if (abierto) {
     return (
-      <FormularioPunto
-        campanaId={campanaId}
-        articulos={articulos}
-        fechasCampana={fechasCampana}
-        otrosPuntos={otrosPuntos}
-        onCerrar={() => setAbierto(false)}
-      />
+      <div className="w-full basis-full">
+        <FormularioPunto
+          campanaId={campanaId}
+          articulos={articulos}
+          fechasCampana={fechasCampana}
+          otrosPuntos={otrosPuntos}
+          onCerrar={() => setAbierto(false)}
+        />
+      </div>
     );
   }
   return (
-    <Boton variante="secundario" className="w-fit" onClick={() => setAbierto(true)}>
-      <Icono nombre="mas" size={16} />
+    <Boton
+      tamano="s"
+      className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 w-fit"
+      onClick={() => setAbierto(true)}
+    >
+      <Icono nombre="mas" size={15} />
       Añadir punto
     </Boton>
   );
@@ -424,7 +448,12 @@ export function EditarCampana({
 
   if (!abierto) {
     return (
-      <Boton variante="secundario" tamano="s" onClick={() => setAbierto(true)}>
+      <Boton
+        variante="secundario"
+        tamano="s"
+        className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 shrink-0"
+        onClick={() => setAbierto(true)}
+      >
         Editar campaña
       </Boton>
     );
@@ -433,7 +462,7 @@ export function EditarCampana({
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   return (
     <form
-      className="flex max-w-xl flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4"
+      className="mt-esp3 flex w-full basis-full max-w-2xl flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 shadow-xs"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
@@ -484,7 +513,7 @@ export function EditarCampana({
         />
       </label>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
-      <div className="flex gap-esp2">
+      <div className="flex flex-wrap items-center gap-esp2">
         <Boton type="submit" cargando={pendiente}>
           Guardar
         </Boton>
