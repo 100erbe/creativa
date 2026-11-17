@@ -82,3 +82,26 @@
     font-size: 16px !important;
   }
 }
+
+/* Atribución de los mapas (Leaflet / OpenStreetMap): obligatoria por licencia, pero discreta.
+   Selector con tres clases para ganar a leaflet.css, que se carga después. */
+.leaflet-container .leaflet-control-container .leaflet-control-attribution {
+  background: rgb(255 255 255 / 0.35);
+  color: rgb(68 64 60 / 0.55);
+  font-size: 9px;
+  line-height: 1.4;
+  padding: 0 4px;
+  border-top-left-radius: 4px;
+  box-shadow: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.leaflet-container .leaflet-control-container .leaflet-control-attribution a {
+  color: inherit;
+}
+.leaflet-container .leaflet-control-container .leaflet-control-attribution:hover {
+  background: rgb(255 255 255 / 0.85);
+  color: rgb(68 64 60 / 0.9);
+}
+.leaflet-container .leaflet-control-container .leaflet-control-attribution svg {
+  opacity: 0.5;
+}
