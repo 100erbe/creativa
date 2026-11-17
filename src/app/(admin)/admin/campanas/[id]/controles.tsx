@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
@@ -20,7 +20,7 @@ import {
   finalizarCampana,
   eliminarCampana,
 } from "./acciones";
-import { FormularioPunto, type ArticuloPunto, type PuntoEditable } from "./formulario-punto";
+import type { PuntoEditable } from "./formulario-punto";
 import { useAnadirPunto } from "./anadir-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -45,10 +45,7 @@ export function ControlesPunto({
   asignados,
   candidatos,
   punto,
-  articulos,
   tieneFotos,
-  fechasCampana,
-  otrosPuntos,
 }: {
   campanaId: number;
   puntoId: number;
@@ -56,14 +53,12 @@ export function ControlesPunto({
   asignados: Asignado[];
   candidatos: Candidato[];
   punto: PuntoEditable;
-  articulos: ArticuloPunto[];
   tieneFotos: boolean;
-  fechasCampana: { inicio: string | null; fin: string | null };
-  otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
-  const [editando, setEditando] = useState(false);
+  const { modo, editar } = useAnadirPunto();
+  const editandoEste = modo?.tipo === "editar" && modo.punto.id === puntoId;
   const [error, setError] = useState<string | null>(null);
 
   function ejecutar(accion: () => Promise<void>) {
@@ -82,21 +77,6 @@ export function ControlesPunto({
   const instalado = estado === "instalado" || estado === "verificado";
   const retiradaPendiente = asignados.some((a) => a.rol === "retirador" && a.estado !== "completada");
   const sePuedeEliminar = (estado === "pendiente" || estado === "incidencia") && !tieneFotos;
-
-  if (editando) {
-    return (
-      <div className="mt-esp2 w-full basis-full">
-        <FormularioPunto
-          campanaId={campanaId}
-          articulos={articulos}
-          punto={punto}
-          fechasCampana={fechasCampana}
-          otrosPuntos={otrosPuntos}
-          onCerrar={() => setEditando(false)}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="flex w-full flex-col gap-esp2 lg:w-auto lg:items-end">
@@ -174,11 +154,11 @@ export function ControlesPunto({
         )}
         <button
           type="button"
-          disabled={pendiente}
-          onClick={() => setEditando(true)}
+          disabled={pendiente || editandoEste}
+          onClick={() => editar(punto)}
           className={`${CLASE_ACCION_COMPACTA} border border-borde-campo bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil`}
         >
-          Editar
+          {editandoEste ? "Editando…" : "Editar"}
         </button>
         {sePuedeEliminar && (
           <button
@@ -386,47 +366,15 @@ export function EnlaceCliente({
 }
 
 /** Botón "Añadir punto" que despliega el formulario con mapa a ancho completo. */
-export function BotonAnadirPunto({
-  campanaId,
-  articulos,
-  fechasCampana,
-  otrosPuntos,
-}: {
-  campanaId: number;
-  articulos: ArticuloPunto[];
-  fechasCampana: { inicio: string | null; fin: string | null };
-  otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
-}) {
-  const { abierto, desdeMapa, abrir, cerrar } = useAnadirPunto();
-  const contenedor = useRef<HTMLDivElement>(null);
-
-  // Al llegar desde el mapa (pulsación larga), se lleva el formulario a la vista.
-  useEffect(() => {
-    if (!desdeMapa) return;
-    const t = setTimeout(() => contenedor.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [desdeMapa?.version]);
-
-  if (abierto) {
-    return (
-      <div ref={contenedor} className="w-full basis-full scroll-mt-esp3">
-        <FormularioPunto
-          campanaId={campanaId}
-          articulos={articulos}
-          fechasCampana={fechasCampana}
-          otrosPuntos={otrosPuntos}
-          desdeMapa={desdeMapa}
-          onCerrar={cerrar}
-        />
-      </div>
-    );
-  }
+/** Abre el formulario de punto nuevo junto al mapa de la campaña. */
+export function BotonAnadirPunto() {
+  const { modo, nuevo } = useAnadirPunto();
+  if (modo?.tipo === "nuevo") return null;
   return (
     <Boton
       tamano="s"
       className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 w-fit"
-      onClick={() => abrir()}
+      onClick={() => nuevo()}
     >
       <Icono nombre="mas" size={15} />
       Añadir punto

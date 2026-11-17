@@ -8,7 +8,7 @@ import { Icono } from "@/components/ui/iconos";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
-import { MapaCampana, ProveedorAnadirPunto } from "./anadir-punto";
+import { ProveedorAnadirPunto, ZonaMapaCampana } from "./anadir-punto";
 import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -277,23 +277,25 @@ export default async function PaginaCampana({
         <AvisoFinalizar campanaId={campanaId} />
       )}
 
-      <ProveedorAnadirPunto>
-      {/* Blocco 2: Mappa panoramica & Riepilogo articoli */}
-      <div className={articulosPunto.length > 0 ? "grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_320px]" : ""}>
-        <MapaCampana
-          titulo={`Mapa · ${campana.nombre}`}
-          altura="clamp(240px, 34vh, 360px)"
-          puntos={lista.map((p) => ({
-            id: p.id,
-            nombre: p.nombre,
-            latitud: Number(p.latitud),
-            longitud: Number(p.longitud),
-            estado: p.estado,
-          }))}
-        />
-
-        {articulosPunto.length > 0 && <ResumenArticulos articulos={articulosPunto} />}
-      </div>
+      <ProveedorAnadirPunto
+        campanaId={campanaId}
+        articulos={articulosPunto}
+        fechasCampana={fechasCampana}
+        otrosPuntos={puntosParaMapa}
+      >
+      {/* Blocco 2: Mappa panoramica & Riepilogo articoli (con el formulario de punto abierto: mapa para colocar + formulario) */}
+      <ZonaMapaCampana
+        titulo={`Mapa · ${campana.nombre}`}
+        altura="clamp(240px, 34vh, 360px)"
+        puntos={lista.map((p) => ({
+          id: p.id,
+          nombre: p.nombre,
+          latitud: Number(p.latitud),
+          longitud: Number(p.longitud),
+          estado: p.estado,
+        }))}
+        resumen={articulosPunto.length > 0 ? <ResumenArticulos articulos={articulosPunto} /> : null}
+      />
 
       {/* Blocco 3: Sezione Puntos strutturata ad alta densità */}
       <section className="flex flex-col gap-esp3">
@@ -304,12 +306,7 @@ export default async function PaginaCampana({
               {lista.length}
             </span>
           </div>
-          <BotonAnadirPunto
-            campanaId={campanaId}
-            articulos={articulosPunto}
-            fechasCampana={fechasCampana}
-            otrosPuntos={puntosParaMapa}
-          />
+          <BotonAnadirPunto />
         </div>
 
         {lista.length > 0 ? (
@@ -383,7 +380,6 @@ export default async function PaginaCampana({
                       estado={p.estado}
                       asignados={asignados}
                       candidatos={candidatos}
-                      articulos={articulosPunto}
                       punto={{
                         id: p.id,
                         linea_id: p.linea_id,
@@ -398,8 +394,6 @@ export default async function PaginaCampana({
                         notas: p.notas,
                       }}
                       tieneFotos={fotosPunto.length > 0}
-                      fechasCampana={fechasCampana}
-                      otrosPuntos={puntosParaMapa}
                     />
                   </div>
 

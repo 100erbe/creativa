@@ -1,17 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
-import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
-import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
-import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
-import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { desenvolver } from "@/lib/accion";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { guardarPunto } from "./acciones";
+import { useAnadirPunto } from "./anadir-punto";
 
 export type PuntoEditable = {
   id: number;
@@ -46,34 +43,15 @@ export type ArticuloPunto = {
   repartidas: number;
 };
 
-export function FormularioPunto({
-  campanaId,
-  articulos,
-  punto,
-  fechasCampana,
-  otrosPuntos,
-  desdeMapa,
-  onCerrar,
-}: {
-  campanaId: number;
-  /** Artículos de los presupuestos/facturas de la campaña. Si hay, el punto debe pertenecer a uno. */
-  articulos: ArticuloPunto[];
-  /** Si viene, se edita ese punto; si no, se crea uno nuevo. */
-  punto?: PuntoEditable;
-  fechasCampana: { inicio: string | null; fin: string | null };
-  otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
-  /** Posición elegida con pulsación larga en el mapa de la campaña (`version` cambia en cada elección). */
-  desdeMapa?: { posicion: Posicion; version: number } | null;
-  onCerrar: () => void;
-}) {
+export function FormularioPunto() {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const formulario = useRef<HTMLFormElement>(null);
+  // La posición vive en el mapa de la campaña (compartida con el formulario).
+  const { modo, posicion, direccionSugerida, cerrar: onCerrar, datos } = useAnadirPunto();
+  const { campanaId, articulos, fechasCampana } = datos;
+  const punto = modo?.tipo === "editar" ? modo.punto : undefined;
 
-  const [posicion, setPosicion] = useState<Posicion | null>(
-    punto ? { latitud: punto.latitud, longitud: punto.longitud } : (desdeMapa?.posicion ?? null),
-  );
   const [tipo, setTipo] = useState(punto?.tipo_soporte ?? "cartel");
   const [lineaId, setLineaId] = useState<number | null>(
     punto?.linea_id ?? (articulos.length === 1 ? articulos[0]!.id : null),
@@ -83,53 +61,14 @@ export function FormularioPunto({
   const [colocacion, setColocacion] = useState(punto ? (punto.fecha_colocacion_prevista ?? "") : (fechasCampana.inicio ?? ""));
   const [retirada, setRetirada] = useState(punto ? (punto.fecha_retirada_prevista ?? "") : (fechasCampana.fin ?? ""));
   const [instrucciones, setInstrucciones] = useState(punto?.notas ?? "");
-  // Al elegir una sugerencia: se coloca el punto y se rellena la dirección.
-  function elegirBusqueda(sugerencia: Sugerencia) {
-    setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
-    setDireccion(sugerencia.direccion);
-    setError(null);
-  }
 
-  async function direccionDe(p: Posicion) {
-    try {
-      const r = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&accept-language=es&lat=${p.latitud}&lon=${p.longitud}`,
-      );
-      const d = (await r.json()) as { display_name?: string; address?: Record<string, string> };
-      const a = d.address ?? {};
-      const calle = [a.road ?? a.pedestrian ?? a.square, a.house_number].filter(Boolean).join(" ");
-      const ciudad = a.city ?? a.town ?? a.village ?? a.municipality;
-      return [calle, ciudad].filter(Boolean).join(", ") || d.display_name || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function elegirEnMapa(p: Posicion) {
-    setPosicion(p);
-    // Con el mapa a ancho completo el formulario queda debajo: se acerca (solo en tablet/desktop estrecho, no dentro del modal móvil).
-    if (window.matchMedia("(min-width: 768px) and (max-width: 1279px)").matches) {
-      setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    }
-    void direccionDe(p).then((d) => {
-      if (d && !direccion.trim()) setDireccion(d);
-    });
-  }
-
-  // Posición elegida en el mapa general de la campaña: se coloca el punto y se propone la dirección.
+  // Al mover el punto en el mapa (o elegir una búsqueda) se propone la nueva dirección.
   useEffect(() => {
-    if (!desdeMapa) return;
-    let vigente = true;
-    setPosicion(desdeMapa.posicion);
-    setError(null);
-    void direccionDe(desdeMapa.posicion).then((d) => {
-      if (vigente && d) setDireccion(d);
-    });
-    return () => {
-      vigente = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [desdeMapa?.version]);
+    if (direccionSugerida) setDireccion(direccionSugerida.texto);
+  }, [direccionSugerida]);
+  useEffect(() => {
+    if (posicion) setError(null);
+  }, [posicion]);
 
   // Contador de piezas del artículo elegido: lo ya repartido en otros puntos + lo que se escribe aquí.
   const articuloElegido = articulos.find((a) => a.id === lineaId) ?? null;
@@ -167,25 +106,8 @@ export function FormularioPunto({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-esp4 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 xl:grid-cols-[1fr_340px]">
-      <div className="flex flex-col gap-esp2">
-        <BuscadorDireccion onElegir={elegirBusqueda} />
-        <SafeMapContainer
-          title={punto ? `Ubicación · ${punto.nombre}` : "Elige la ubicación del punto"}
-        >
-          <MapaSelector
-            puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
-            posicion={posicion}
-            onElegir={elegirEnMapa}
-            altura={ALTURA_MAPA_GRANDE}
-          />
-        </SafeMapContainer>
-        <p className="text-xs text-texto-terciario">
-          Haz clic en el mapa para {punto ? "mover" : "colocar"} el punto; puedes arrastrarlo para ajustarlo.
-        </p>
-      </div>
-
-      <form ref={formulario} onSubmit={guardar} className="flex scroll-mt-esp3 flex-col gap-esp3">
+    <div className="rounded-lg border border-borde-foco bg-fondo-superficie p-esp4">
+      <form onSubmit={guardar} className="flex flex-col gap-esp3">
         <h3 className="text-base font-semibold text-texto-primario">{punto ? `Editar ${/^\d+$/.test(punto.nombre.trim()) ? `Punto ${punto.nombre.trim()}` : punto.nombre}` : "Nuevo punto"}</h3>
         <p className={cn("text-xs", posicion ? "text-texto-exito" : "text-texto-terciario")}>
           {posicion
