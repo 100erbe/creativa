@@ -9,6 +9,7 @@ import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { enSegundoPlano, fechaAviso, notificar } from "@/lib/push/notificar";
 import { soporteDe } from "@/lib/soporte";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
+import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
 
 /** Personas con el punto pendiente o en curso en su agenda (las que hay que avisar de un cambio). */
 async function asignadosActivos(supabase: Awaited<ReturnType<typeof createClient>>, puntoId: number) {
@@ -171,8 +172,8 @@ export const actualizarCampana = accion(
   },
 );
 
+/** El nombre no se pide: los puntos nuevos se llaman "Punto N" y al editar se conserva el suyo. */
 export type DatosPunto = {
-  nombre: string;
   tipoSoporte: string;
   /** Artículo del presupuesto/factura al que pertenece el punto (obligatorio si la campaña tiene documentos). */
   lineaId: number | null;
@@ -188,7 +189,6 @@ export type DatosPunto = {
 /** Crea (puntoId null) o modifica un punto de la campaña, también cuando el documento ya está emitido. */
 export const guardarPunto = accion(async (campanaId: number, puntoId: number | null, d: DatosPunto) => {
   const admin = await exigirAdmin();
-  if (!d.nombre.trim()) throw new Error("Pon un nombre al punto (ej. «Farola Av. Andalucía 12»).");
   if (!Number.isFinite(d.latitud) || !Number.isFinite(d.longitud)) {
     throw new Error("Marca la ubicación en el mapa o busca la dirección.");
   }
@@ -217,7 +217,6 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
   }
 
   const fila = {
-    nombre: d.nombre.trim(),
     tipo_soporte: tipoSoporte,
     linea_id: lineaId,
     direccion: d.direccion.trim() || null,
@@ -230,7 +229,13 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
   };
 
   if (puntoId == null) {
-    const { error } = await supabase.from("puntos_campana").insert({ ...fila, campana_id: campanaId });
+    const { data: existentes, error: errorNombres } = await supabase
+      .from("puntos_campana")
+      .select("nombre")
+      .eq("campana_id", campanaId);
+    if (errorNombres) throw new Error(errorNombres.message);
+    const nombre = siguienteNombrePunto((existentes ?? []).map((p) => p.nombre));
+    const { error } = await supabase.from("puntos_campana").insert({ ...fila, nombre, campana_id: campanaId });
     if (error) throw new Error(error.message);
   } else {
     const { data: antes } = await supabase
@@ -266,7 +271,6 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
         Math.abs(Number(antes.latitud) - fila.latitud) > 1e-5 || Math.abs(Number(antes.longitud) - fila.longitud) > 1e-5;
       if (seMovio || (antes.direccion ?? null) !== fila.direccion) cambios.push("ubicación");
       if ((antes.notas ?? null) !== fila.notas) cambios.push("instrucciones");
-      if (antes.nombre !== fila.nombre) cambios.push("nombre");
       if (antes.tipo_soporte !== fila.tipo_soporte) cambios.push("soporte");
       if ((antes.piezas == null ? null : Number(antes.piezas)) !== fila.piezas) cambios.push("piezas");
 
@@ -277,7 +281,7 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
             destinatarios,
             {
               tipo: "punto_modificado",
-              titulo: `Cambios en ${fila.nombre}`,
+              titulo: `Cambios en ${antes.nombre}`,
               cuerpo: `Cambia: ${cambios.join(", ")}.`,
               url: `/app/punto/${puntoId}`,
               tag: `punto-${puntoId}`,

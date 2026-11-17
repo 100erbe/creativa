@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import type { Database } from "@/lib/supabase/types";
 import { soporteDe } from "@/lib/soporte";
+import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
 import { accion, desenvolver } from "@/lib/accion";
 import { guardarProducto } from "../../catalogo/acciones";
 
@@ -386,7 +387,6 @@ export const anadirPunto = accion(async (
   documentoId: number,
   campanaId: number,
   datos: {
-    nombre: string;
     lineaId: number | null;
     piezas?: number | null;
     direccion?: string;
@@ -398,7 +398,6 @@ export const anadirPunto = accion(async (
   },
 ) => {
   await exigirAdmin();
-  if (!datos.nombre.trim()) throw new Error("Pon un nombre al punto (ej. «Farola Av. Andalucía 12»).");
   if (!Number.isFinite(datos.latitud) || !Number.isFinite(datos.longitud)) {
     throw new Error("Marca la ubicación en el mapa o busca la dirección.");
   }
@@ -421,9 +420,16 @@ export const anadirPunto = accion(async (
     tipoSoporte = soporteDe(producto?.nombre ?? "");
   }
 
+  // Sin nombre a mano: "Punto N", el siguiente número libre de la campaña.
+  const { data: existentes, error: errorNombres } = await supabase
+    .from("puntos_campana")
+    .select("nombre")
+    .eq("campana_id", campanaId);
+  if (errorNombres) throw new Error(errorNombres.message);
+
   const { error } = await supabase.from("puntos_campana").insert({
     campana_id: campanaId,
-    nombre: datos.nombre.trim(),
+    nombre: siguienteNombrePunto((existentes ?? []).map((p) => p.nombre)),
     tipo_soporte: tipoSoporte,
     linea_id: datos.lineaId,
     piezas: datos.piezas ?? null,

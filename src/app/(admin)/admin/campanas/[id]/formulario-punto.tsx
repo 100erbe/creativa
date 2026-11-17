@@ -74,7 +74,6 @@ export function FormularioPunto({
   const [posicion, setPosicion] = useState<Posicion | null>(
     punto ? { latitud: punto.latitud, longitud: punto.longitud } : (desdeMapa?.posicion ?? null),
   );
-  const [nombre, setNombre] = useState(punto?.nombre ?? "");
   const [tipo, setTipo] = useState(punto?.tipo_soporte ?? "cartel");
   const [lineaId, setLineaId] = useState<number | null>(
     punto?.linea_id ?? (articulos.length === 1 ? articulos[0]!.id : null),
@@ -84,11 +83,10 @@ export function FormularioPunto({
   const [colocacion, setColocacion] = useState(punto ? (punto.fecha_colocacion_prevista ?? "") : (fechasCampana.inicio ?? ""));
   const [retirada, setRetirada] = useState(punto ? (punto.fecha_retirada_prevista ?? "") : (fechasCampana.fin ?? ""));
   const [instrucciones, setInstrucciones] = useState(punto?.notas ?? "");
-  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y, si aún no tiene nombre, se propone uno.
+  // Al elegir una sugerencia: se coloca el punto y se rellena la dirección.
   function elegirBusqueda(sugerencia: Sugerencia) {
     setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
     setDireccion(sugerencia.direccion);
-    setNombre((actual) => (actual.trim() ? actual : sugerencia.titulo));
     setError(null);
   }
 
@@ -149,7 +147,6 @@ export function FormularioPunto({
       try {
         await desenvolver(
           guardarPunto(campanaId, punto?.id ?? null, {
-            nombre,
             tipoSoporte: tipo,
             lineaId,
             direccion,
@@ -189,21 +186,12 @@ export function FormularioPunto({
       </div>
 
       <form ref={formulario} onSubmit={guardar} className="flex scroll-mt-esp3 flex-col gap-esp3">
-        <h3 className="text-base font-semibold text-texto-primario">{punto ? "Editar punto" : "Nuevo punto"}</h3>
+        <h3 className="text-base font-semibold text-texto-primario">{punto ? `Editar ${/^\d+$/.test(punto.nombre.trim()) ? `Punto ${punto.nombre.trim()}` : punto.nombre}` : "Nuevo punto"}</h3>
         <p className={cn("text-xs", posicion ? "text-texto-exito" : "text-texto-terciario")}>
           {posicion
             ? `Ubicación: ${posicion.latitud.toFixed(5)}, ${posicion.longitud.toFixed(5)}`
             : "Sin ubicación: márcala en el mapa o busca la dirección."}
         </p>
-        <Campo texto="Nombre del punto *">
-          <input
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            required
-            placeholder="Farola Av. Andalucía 12"
-            className={CAMPO}
-          />
-        </Campo>
         {articulos.length > 0 ? (
           <>
             <Campo texto="Artículo *">

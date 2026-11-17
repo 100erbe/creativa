@@ -348,7 +348,6 @@ function NuevoPunto({
 }) {
   const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
   const [posicion, setPosicion] = useState<Posicion | null>(null);
-  const [nombre, setNombre] = useState("");
   const [lineaId, setLineaId] = useState<string>(articulos.length === 1 ? String(articulos[0]!.id) : "");
   const [piezas, setPiezas] = useState("");
   // Piezas del artículo elegido: ya repartidas en otros puntos + las de este.
@@ -361,11 +360,10 @@ function NuevoPunto({
   const [colocacion, setColocacion] = useState(campana.fecha_inicio ?? "");
   const [retirada, setRetirada] = useState(campana.fecha_fin ?? "");
   const [notas, setNotas] = useState("");
-  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y, si aún no tiene nombre, se propone uno.
+  // Al elegir una sugerencia: se coloca el punto y se rellena la dirección.
   function elegirBusqueda(sugerencia: Sugerencia) {
     setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
     setDireccion(sugerencia.direccion);
-    setNombre((actual) => (actual.trim() ? actual : sugerencia.titulo));
     setError(null);
   }
 
@@ -398,7 +396,6 @@ function NuevoPunto({
 
   function limpiar() {
     setPosicion(null);
-    setNombre("");
     setDireccion("");
     setNotas("");
     setPiezas("");
@@ -449,7 +446,6 @@ function NuevoPunto({
           const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
           ejecutar(async () => {
             await desenvolver(anadirPunto(documentoId, campana.id, {
-              nombre,
               lineaId: lineaId ? Number(lineaId) : null,
               piezas: nPiezas,
               direccion,
@@ -469,15 +465,6 @@ function NuevoPunto({
             ? `Ubicación: ${posicion.latitud.toFixed(5)}, ${posicion.longitud.toFixed(5)}`
             : "Sin ubicación: márcala en el mapa o busca la dirección."}
         </p>
-        <Etiqueta texto="Nombre del punto *">
-          <input
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            required
-            placeholder="Farola Av. Andalucía 12"
-            className={entrada}
-          />
-        </Etiqueta>
         {articulos.length > 0 ? (
           <div className="flex flex-col gap-esp2">
             <Etiqueta texto="Artículo *">
