@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { PuntoMapa } from "./mapa-leaflet";
+import type { PosicionMapa, PuntoMapa } from "./mapa-leaflet";
 
 // Leaflet necesita `window` al cargarse, así que el mapa real solo se
 // carga en el navegador (ssr: false). Mientras carga se muestra un
@@ -21,14 +21,16 @@ const MapaLeaflet = dynamic(
   },
 );
 
-export type { PuntoMapa };
+export type { PosicionMapa, PuntoMapa };
 
 export function MapaPuntos({
   puntos,
   altura,
+  onAnadirPunto,
 }: {
   puntos: PuntoMapa[];
   altura?: number | string;
+  onAnadirPunto?: (p: PosicionMapa) => void;
 }) {
-  return <MapaLeaflet puntos={puntos} altura={altura} />;
+  return <MapaLeaflet puntos={puntos} altura={altura} onAnadirPunto={onAnadirPunto} />;
 }

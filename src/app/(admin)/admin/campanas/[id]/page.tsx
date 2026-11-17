@@ -5,11 +5,10 @@ import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
-import { MapaPuntos } from "@/components/mapa/mapa-puntos";
-import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
+import { MapaCampana, ProveedorAnadirPunto } from "./anadir-punto";
 import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -278,26 +277,20 @@ export default async function PaginaCampana({
         <AvisoFinalizar campanaId={campanaId} />
       )}
 
+      <ProveedorAnadirPunto>
       {/* Blocco 2: Mappa panoramica & Riepilogo articoli */}
       <div className={articulosPunto.length > 0 ? "grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_320px]" : ""}>
-        <SafeMapContainer
-          title={`Mappa · ${campana.nombre}`}
-          coordinates={
-            lista[0] ? { lat: Number(lista[0].latitud), lng: Number(lista[0].longitud) } : null
-          }
-          address={lista[0]?.direccion ?? null}
-        >
-          <MapaPuntos
-            altura="clamp(240px, 34vh, 360px)"
-            puntos={lista.map((p) => ({
-              id: p.id,
-              nombre: p.nombre,
-              latitud: Number(p.latitud),
-              longitud: Number(p.longitud),
-              estado: p.estado,
-            }))}
-          />
-        </SafeMapContainer>
+        <MapaCampana
+          titulo={`Mapa · ${campana.nombre}`}
+          altura="clamp(240px, 34vh, 360px)"
+          puntos={lista.map((p) => ({
+            id: p.id,
+            nombre: p.nombre,
+            latitud: Number(p.latitud),
+            longitud: Number(p.longitud),
+            estado: p.estado,
+          }))}
+        />
 
         {articulosPunto.length > 0 && <ResumenArticulos articulos={articulosPunto} />}
       </div>
@@ -481,6 +474,7 @@ export default async function PaginaCampana({
           </p>
         )}
       </section>
+      </ProveedorAnadirPunto>
     </div>
   );
 }

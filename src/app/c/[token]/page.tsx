@@ -98,7 +98,7 @@ export default async function PaginaPublicaCliente({
       </section>
 
       <SafeMapContainer
-        title={cabecera.campana_nombre ?? "Mappa campagna"}
+        title={cabecera.campana_nombre ?? "Mapa de la campaña"}
         coordinates={
           primerPunto && primerPunto.latitud != null && primerPunto.longitud != null
             ? { lat: primerPunto.latitud, lng: primerPunto.longitud }

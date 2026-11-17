@@ -409,7 +409,7 @@ function NuevoPunto({
       <div className="flex flex-col gap-esp2">
         <BuscadorDireccion onElegir={elegirBusqueda} />
         <SafeMapContainer
-          title={`Seleziona punto · ${campana.nombre}`}
+          title={`Elige el punto · ${campana.nombre}`}
           coordinates={posicion ? { lat: posicion.latitud, lng: posicion.longitud } : null}
           address={direccion || null}
         >

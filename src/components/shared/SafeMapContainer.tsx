@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
@@ -10,6 +10,16 @@ export type SafeMapCoordinates = {
   lng: number;
 };
 
+/**
+ * Permite a la mappa (children) saber si está dentro del modal y cerrarlo,
+ * p. ej. tras elegir "Añadir punto aquí". Fuera de SafeMapContainer `cerrar` no hace nada.
+ */
+const SafeMapContext = createContext<{ enModal: boolean; cerrar: () => void }>({
+  enModal: false,
+  cerrar: () => {},
+});
+export const useSafeMap = () => useContext(SafeMapContext);
+
 export interface SafeMapContainerProps {
   children: React.ReactNode;
   /** Titolo mostrato nell'header del Dialog/Drawer mobile */
@@ -18,9 +28,9 @@ export interface SafeMapContainerProps {
   coordinates?: SafeMapCoordinates | null;
   /** Indirizzo testuale alternativo o aggiuntivo per "Indicazioni" */
   address?: string | null;
-  /** Testo del pulsante di apertura modale (default: "Esplora mappa") */
+  /** Testo dell'etichetta di apertura modale (default: "Explorar mapa") */
   exploreLabel?: string;
-  /** Testo del pulsante indicazioni (default: "Indicazioni") */
+  /** Testo del pulsante indicazioni (default: "Cómo llegar") */
   directionsLabel?: string;
   /** Classi opzionali sul contenitore esterno */
   className?: string;
@@ -49,17 +59,17 @@ function buildDirectionsUrl(
  * - Desktop (>= 768px): renderizza la mappa normalmente senza blocchi.
  * - Mobile (< 768px): racchiude la mappa in una card compatta (h-48) con
  *   pointer-events-none di default e margini laterali di sicurezza per lo
- *   scroll con il pollice, offrendo i pulsanti accessibili (>= 44x44px)
- *   "Esplora mappa" (apre il Dialog interattivo quasi a schermo intero) e
- *   "Indicazioni" (se sono disponibili coordinate o indirizzo).
+ *   scroll con il pollice. L'intera card è un pulsante che apre il Dialog
+ *   interattivo quasi a schermo intero (etichetta visiva "Explorar mapa"),
+ *   più "Cómo llegar" se sono disponibili coordinate o indirizzo.
  */
 export function SafeMapContainer({
   children,
-  title = "Mappa",
+  title = "Mapa",
   coordinates,
   address,
-  exploreLabel = "Esplora mappa",
-  directionsLabel = "Indicazioni",
+  exploreLabel = "Explorar mapa",
+  directionsLabel = "Cómo llegar",
   className,
 }: SafeMapContainerProps) {
   const [open, setOpen] = useState(false);
@@ -116,6 +126,8 @@ export function SafeMapContainer({
   }, [open]);
 
   const directionsUrl = buildDirectionsUrl(coordinates, address);
+  const inlineCtx = { enModal: false, cerrar: () => setOpen(false) };
+  const modalCtx = { enModal: true, cerrar: () => setOpen(false) };
 
   return (
     <>
@@ -130,34 +142,35 @@ export function SafeMapContainer({
           data-safe-map-inline-layer=""
           className="h-full w-full select-none touch-pan-y pointer-events-none max-md:isolate max-md:[&>*]:!h-full max-md:[&>*]:!rounded-none max-md:[&>*]:!border-0 max-md:[&_.leaflet-control-zoom]:!hidden max-md:[&_*]:!pointer-events-none max-md:[&_*]:![touch-action:pan-y] md:pointer-events-auto md:h-auto md:select-auto md:touch-auto"
         >
-          {children}
+          <SafeMapContext.Provider value={inlineCtx}>{children}</SafeMapContext.Provider>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1100] flex items-center justify-between gap-esp2 bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/25 to-transparent p-esp3 md:hidden">
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            className="pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg border border-borde-campo bg-fondo-superficie px-esp4 py-esp2 text-xs font-semibold text-texto-primario shadow-md transition-colors hover:bg-fondo-sutil"
-          >
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label={`${exploreLabel}: ${title}`}
+          className="absolute inset-0 z-[1100] flex items-end bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/10 to-transparent p-esp3 text-left md:hidden"
+        >
+          <span className="inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg border border-borde-campo bg-fondo-superficie px-esp4 py-esp2 text-xs font-semibold text-texto-primario shadow-md">
             <Icono nombre="expandir" size={16} className="text-icono-marca" />
             <span>{exploreLabel}</span>
-          </button>
+          </span>
+        </button>
 
-          {directionsUrl && (
-            <a
-              href={directionsUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="pointer-events-auto inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors hover:bg-fondo-marca-hover"
-            >
-              <Icono nombre="ubicacion" size={16} />
-              <span>{directionsLabel}</span>
-            </a>
-          )}
-        </div>
+        {directionsUrl && (
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="absolute bottom-esp3 right-esp3 z-[1101] inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors hover:bg-fondo-marca-hover md:hidden"
+          >
+            <Icono nombre="ubicacion" size={16} />
+            <span>{directionsLabel}</span>
+          </a>
+        )}
       </div>
 
       {mounted &&
@@ -170,7 +183,7 @@ export function SafeMapContainer({
           >
             <button
               type="button"
-              aria-label="Chiudi mappa"
+              aria-label="Cerrar mapa"
               tabIndex={-1}
               onClick={() => setOpen(false)}
               className="absolute inset-0 cursor-default bg-fondo-velo"
@@ -203,7 +216,7 @@ export function SafeMapContainer({
                   <button
                     ref={closeRef}
                     type="button"
-                    aria-label="Chiudi mappa"
+                    aria-label="Cerrar mapa"
                     onClick={() => setOpen(false)}
                     className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors hover:bg-fondo-sutil"
                   >
@@ -216,7 +229,7 @@ export function SafeMapContainer({
                 data-safe-map-modal-layer=""
                 className="relative isolate flex-1 w-full overflow-hidden pointer-events-auto [&>*]:!h-full [&>*]:!rounded-none [&>*]:!border-0"
               >
-                {children}
+                <SafeMapContext.Provider value={modalCtx}>{children}</SafeMapContext.Provider>
               </div>
             </div>
           </div>,

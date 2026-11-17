@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
@@ -21,6 +21,7 @@ import {
   eliminarCampana,
 } from "./acciones";
 import { FormularioPunto, type ArticuloPunto, type PuntoEditable } from "./formulario-punto";
+import { useAnadirPunto } from "./anadir-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
@@ -396,16 +397,27 @@ export function BotonAnadirPunto({
   fechasCampana: { inicio: string | null; fin: string | null };
   otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
 }) {
-  const [abierto, setAbierto] = useState(false);
+  const { abierto, desdeMapa, abrir, cerrar } = useAnadirPunto();
+  const contenedor = useRef<HTMLDivElement>(null);
+
+  // Al llegar desde el mapa (pulsación larga), se lleva el formulario a la vista.
+  useEffect(() => {
+    if (!desdeMapa) return;
+    const t = setTimeout(() => contenedor.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desdeMapa?.version]);
+
   if (abierto) {
     return (
-      <div className="w-full basis-full">
+      <div ref={contenedor} className="w-full basis-full scroll-mt-esp3">
         <FormularioPunto
           campanaId={campanaId}
           articulos={articulos}
           fechasCampana={fechasCampana}
           otrosPuntos={otrosPuntos}
-          onCerrar={() => setAbierto(false)}
+          desdeMapa={desdeMapa}
+          onCerrar={cerrar}
         />
       </div>
     );
@@ -414,7 +426,7 @@ export function BotonAnadirPunto({
     <Boton
       tamano="s"
       className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 w-fit"
-      onClick={() => setAbierto(true)}
+      onClick={() => abrir()}
     >
       <Icono nombre="mas" size={15} />
       Añadir punto

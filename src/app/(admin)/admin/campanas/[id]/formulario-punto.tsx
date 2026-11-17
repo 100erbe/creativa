@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
@@ -52,6 +52,7 @@ export function FormularioPunto({
   punto,
   fechasCampana,
   otrosPuntos,
+  desdeMapa,
   onCerrar,
 }: {
   campanaId: number;
@@ -61,6 +62,8 @@ export function FormularioPunto({
   punto?: PuntoEditable;
   fechasCampana: { inicio: string | null; fin: string | null };
   otrosPuntos: { id: number; nombre: string; latitud: number; longitud: number }[];
+  /** Posición elegida con pulsación larga en el mapa de la campaña (`version` cambia en cada elección). */
+  desdeMapa?: { posicion: Posicion; version: number } | null;
   onCerrar: () => void;
 }) {
   const router = useRouter();
@@ -69,7 +72,7 @@ export function FormularioPunto({
   const formulario = useRef<HTMLFormElement>(null);
 
   const [posicion, setPosicion] = useState<Posicion | null>(
-    punto ? { latitud: punto.latitud, longitud: punto.longitud } : null,
+    punto ? { latitud: punto.latitud, longitud: punto.longitud } : (desdeMapa?.posicion ?? null),
   );
   const [nombre, setNombre] = useState(punto?.nombre ?? "");
   const [tipo, setTipo] = useState(punto?.tipo_soporte ?? "cartel");
@@ -115,6 +118,21 @@ export function FormularioPunto({
     });
   }
 
+  // Posición elegida en el mapa general de la campaña: se coloca el punto y se propone la dirección.
+  useEffect(() => {
+    if (!desdeMapa) return;
+    let vigente = true;
+    setPosicion(desdeMapa.posicion);
+    setError(null);
+    void direccionDe(desdeMapa.posicion).then((d) => {
+      if (vigente && d) setDireccion(d);
+    });
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desdeMapa?.version]);
+
   // Contador de piezas del artículo elegido: lo ya repartido en otros puntos + lo que se escribe aquí.
   const articuloElegido = articulos.find((a) => a.id === lineaId) ?? null;
   const propias = punto && punto.linea_id === lineaId ? (punto.piezas ?? 0) : 0;
@@ -156,9 +174,7 @@ export function FormularioPunto({
       <div className="flex flex-col gap-esp2">
         <BuscadorDireccion onElegir={elegirBusqueda} />
         <SafeMapContainer
-          title={punto ? `Posizione · ${punto.nombre}` : "Seleziona posizione punto"}
-          coordinates={posicion ? { lat: posicion.latitud, lng: posicion.longitud } : null}
-          address={direccion || null}
+          title={punto ? `Ubicación · ${punto.nombre}` : "Elige la ubicación del punto"}
         >
           <MapaSelector
             puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
