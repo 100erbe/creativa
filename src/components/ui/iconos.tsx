@@ -48,6 +48,7 @@ const PATHS: Record<string, string> = {
   enviar: "M22 2 11 13 M22 2 15 22 11 13 2 9z",
   menu: "M3 6h18 M3 12h18 M3 18h18",
   cerrar: "M18 6 6 18 M6 6l12 12",
+  expandir: "M15 3h6v6 M9 21H3v-6 M21 3l-7 7 M3 21l7-7",
   ajustes: "M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6",
   kanban: "M4 4h4v16H4z M10 4h4v11h-4z M16 4h4v14h-4z",
   lista: "M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01",

@@ -7,6 +7,7 @@ import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { fechaCorta } from "@/lib/formato";
@@ -168,12 +169,8 @@ export default async function PaginaCampana({
         )}
         <EditarCampana
           campanaId={campanaId}
-          eliminable={
-            !campana.documento_id &&
-            (documentosVinculados ?? 0) === 0 &&
-            lista.every((p) => p.estado === "pendiente" || p.estado === "incidencia") &&
-            (fotos ?? []).length === 0
-          }
+          eliminable={!campana.documento_id && (documentosVinculados ?? 0) === 0}
+          contenido={{ puntos: lista.length, fotos: (fotos ?? []).length }}
           inicial={{
             nombre: campana.nombre,
             estado: campana.estado,
@@ -208,16 +205,26 @@ export default async function PaginaCampana({
 
       <div className="flex flex-col-reverse gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <MapaPuntos
-            altura={ALTURA_MAPA_GRANDE}
-            puntos={lista.map((p) => ({
-              id: p.id,
-              nombre: p.nombre,
-              latitud: Number(p.latitud),
-              longitud: Number(p.longitud),
-              estado: p.estado,
-            }))}
-          />
+          <SafeMapContainer
+            title={`Mappa · ${campana.nombre}`}
+            coordinates={
+              lista[0]
+                ? { lat: Number(lista[0].latitud), lng: Number(lista[0].longitud) }
+                : null
+            }
+            address={lista[0]?.direccion ?? null}
+          >
+            <MapaPuntos
+              altura={ALTURA_MAPA_GRANDE}
+              puntos={lista.map((p) => ({
+                id: p.id,
+                nombre: p.nombre,
+                latitud: Number(p.latitud),
+                longitud: Number(p.longitud),
+                estado: p.estado,
+              }))}
+            />
+          </SafeMapContainer>
 
           <ResumenArticulos articulos={articulosPunto} />
           <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>

@@ -7,6 +7,7 @@ import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_FICHA } from "@/components/mapa/config-mapa";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
@@ -420,18 +421,24 @@ export function PanelPunto({
         <Insignia tono={TONO_POR_ESTADO[punto.estado] ?? "neutro"}>{etiquetaEstado(punto.estado)}</Insignia>
       </div>
 
-      <MapaPuntos
-        puntos={[
-          {
-            id: punto.id,
-            nombre: punto.nombre,
-            latitud: punto.latitud,
-            longitud: punto.longitud,
-            estado: punto.estado,
-          },
-        ]}
-        altura={ALTURA_MAPA_FICHA}
-      />
+      <SafeMapContainer
+        title={punto.nombre}
+        coordinates={{ lat: punto.latitud, lng: punto.longitud }}
+        address={punto.direccion}
+      >
+        <MapaPuntos
+          puntos={[
+            {
+              id: punto.id,
+              nombre: punto.nombre,
+              latitud: punto.latitud,
+              longitud: punto.longitud,
+              estado: punto.estado,
+            },
+          ]}
+          altura={ALTURA_MAPA_FICHA}
+        />
+      </SafeMapContainer>
 
       {punto.direccion && (
         <a

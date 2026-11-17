@@ -8,7 +8,7 @@ const config: Config = {
     extend: {
       colors: {
         ...primitivas, // poco uso directo; preferir los semánticos
-        fondo, texto, borde, icono, documento,
+        fondo, texto, borde, border: borde.default, icono, documento,
       },
       fontSize: tamanoTexto,
       spacing: {

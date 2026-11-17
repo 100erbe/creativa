@@ -7,6 +7,7 @@ import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
 import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
@@ -386,8 +387,8 @@ function NuevoPunto({
   const formulario = useRef<HTMLFormElement>(null);
   function elegirEnMapa(p: Posicion) {
     setPosicion(p);
-    // En móvil el formulario queda bajo el mapa: lo acercamos.
-    if (window.matchMedia("(max-width: 1279px)").matches) {
+    // En tablet/desktop estrecho el formulario queda bajo el mapa: lo acercamos (no dentro del modal móvil).
+    if (window.matchMedia("(min-width: 768px) and (max-width: 1279px)").matches) {
       setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     }
     void direccionDe(p).then((d) => {
@@ -407,17 +408,23 @@ function NuevoPunto({
     <div className="grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-esp2">
         <BuscadorDireccion onElegir={elegirBusqueda} />
-        <MapaSelector
-          puntos={puntos.map((p) => ({
-            id: p.id,
-            nombre: p.nombre,
-            latitud: p.latitud,
-            longitud: p.longitud,
-            detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
-          }))}
-          posicion={posicion}
-          onElegir={elegirEnMapa}
-        />
+        <SafeMapContainer
+          title={`Seleziona punto · ${campana.nombre}`}
+          coordinates={posicion ? { lat: posicion.latitud, lng: posicion.longitud } : null}
+          address={direccion || null}
+        >
+          <MapaSelector
+            puntos={puntos.map((p) => ({
+              id: p.id,
+              nombre: p.nombre,
+              latitud: p.latitud,
+              longitud: p.longitud,
+              detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
+            }))}
+            posicion={posicion}
+            onElegir={elegirEnMapa}
+          />
+        </SafeMapContainer>
         <p className="text-xs text-texto-terciario">
           Haz clic en el mapa para colocar el punto; puedes arrastrarlo para ajustarlo.
         </p>

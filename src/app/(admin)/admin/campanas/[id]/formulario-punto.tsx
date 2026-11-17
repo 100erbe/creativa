@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
 import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { CAMPO } from "@/components/ui/panel-busqueda";
@@ -106,8 +107,8 @@ export function FormularioPunto({
 
   function elegirEnMapa(p: Posicion) {
     setPosicion(p);
-    // Con el mapa a ancho completo el formulario queda debajo: se acerca.
-    if (window.matchMedia("(max-width: 1279px)").matches) {
+    // Con el mapa a ancho completo el formulario queda debajo: se acerca (solo en tablet/desktop estrecho, no dentro del modal móvil).
+    if (window.matchMedia("(min-width: 768px) and (max-width: 1279px)").matches) {
       setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     }
     void direccionDe(p).then((d) => {
@@ -155,12 +156,18 @@ export function FormularioPunto({
     <div className="grid grid-cols-1 gap-esp4 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 xl:grid-cols-[1fr_340px]">
       <div className="flex flex-col gap-esp2">
         <BuscadorDireccion onElegir={elegirBusqueda} />
-        <MapaSelector
-          puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
-          posicion={posicion}
-          onElegir={elegirEnMapa}
-          altura={ALTURA_MAPA_GRANDE}
-        />
+        <SafeMapContainer
+          title={punto ? `Posizione · ${punto.nombre}` : "Seleziona posizione punto"}
+          coordinates={posicion ? { lat: posicion.latitud, lng: posicion.longitud } : null}
+          address={direccion || null}
+        >
+          <MapaSelector
+            puntos={otrosPuntos.filter((p) => p.id !== punto?.id).map((p) => ({ ...p }))}
+            posicion={posicion}
+            onElegir={elegirEnMapa}
+            altura={ALTURA_MAPA_GRANDE}
+          />
+        </SafeMapContainer>
         <p className="text-xs text-texto-terciario">
           Haz clic en el mapa para {punto ? "mover" : "colocar"} el punto; puedes arrastrarlo para ajustarlo.
         </p>

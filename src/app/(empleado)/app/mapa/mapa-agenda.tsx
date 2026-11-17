@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { Icono } from "@/components/ui/iconos";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
@@ -78,16 +79,26 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
         })}
       </div>
 
-      <MapaPuntos
-        puntos={visibles.map((p) => ({
-          id: p.punto_id,
-          nombre: p.punto,
-          latitud: p.latitud,
-          longitud: p.longitud,
-          estado: p.estado_punto,
-        }))}
-        altura={ALTURA_MAPA_GRANDE}
-      />
+      <SafeMapContainer
+        title="Mapa de puntos"
+        coordinates={
+          visibles[0]
+            ? { lat: visibles[0].latitud, lng: visibles[0].longitud }
+            : null
+        }
+        address={visibles[0]?.direccion ?? null}
+      >
+        <MapaPuntos
+          puntos={visibles.map((p) => ({
+            id: p.punto_id,
+            nombre: p.punto,
+            latitud: p.latitud,
+            longitud: p.longitud,
+            estado: p.estado_punto,
+          }))}
+          altura={ALTURA_MAPA_GRANDE}
+        />
+      </SafeMapContainer>
 
       <div className="flex flex-col gap-esp2">
         {visibles.map((p) => {

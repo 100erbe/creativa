@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { MapaPuntos } from "@/components/mapa/mapa-puntos";
+import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_MEDIA } from "@/components/mapa/config-mapa";
 import { Logo } from "@/components/ui/logo";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
@@ -46,6 +47,9 @@ export default async function PaginaPublicaCliente({
     ["instalado", "verificado", "retirado"].includes(p.punto_estado ?? ""),
   ).length;
   const totalFotos = (fotos ?? []).length;
+  const primerPunto = filas.find(
+    (p) => p.punto_id !== null && p.latitud !== null && p.longitud !== null,
+  );
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-esp5 bg-fondo-lienzo px-esp4 py-esp6 sm:py-esp8">
@@ -93,18 +97,28 @@ export default async function PaginaPublicaCliente({
         </div>
       </section>
 
-      <MapaPuntos
-        puntos={filas
-          .filter((p) => p.punto_id !== null)
-          .map((p) => ({
-            id: p.punto_id!,
-            nombre: p.punto_nombre ?? "Punto",
-            latitud: p.latitud!,
-            longitud: p.longitud!,
-            estado: p.punto_estado ?? undefined,
-          }))}
-        altura={ALTURA_MAPA_MEDIA}
-      />
+      <SafeMapContainer
+        title={cabecera.campana_nombre ?? "Mappa campagna"}
+        coordinates={
+          primerPunto && primerPunto.latitud != null && primerPunto.longitud != null
+            ? { lat: primerPunto.latitud, lng: primerPunto.longitud }
+            : null
+        }
+        address={primerPunto?.direccion ?? null}
+      >
+        <MapaPuntos
+          puntos={filas
+            .filter((p) => p.punto_id !== null)
+            .map((p) => ({
+              id: p.punto_id!,
+              nombre: p.punto_nombre ?? "Punto",
+              latitud: p.latitud!,
+              longitud: p.longitud!,
+              estado: p.punto_estado ?? undefined,
+            }))}
+          altura={ALTURA_MAPA_MEDIA}
+        />
+      </SafeMapContainer>
 
       <div className="flex flex-col gap-esp4">
         {filas.map((p) => (

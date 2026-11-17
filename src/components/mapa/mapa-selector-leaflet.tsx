@@ -47,6 +47,27 @@ function Seguir({ posicion }: { posicion: Posicion | null }) {
   return null;
 }
 
+/** Recalcula el tamaño del mapa cuando cambia su contenedor (tarjeta mobile o modal fullscreen). */
+function AutoResize() {
+  const mapa = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => mapa.invalidateSize(), 100);
+    const contenedor = mapa.getContainer();
+    if (typeof ResizeObserver === "undefined") {
+      return () => clearTimeout(t);
+    }
+    const observer = new ResizeObserver(() => {
+      mapa.invalidateSize();
+    });
+    observer.observe(contenedor);
+    return () => {
+      clearTimeout(t);
+      observer.disconnect();
+    };
+  }, [mapa]);
+  return null;
+}
+
 export function MapaSelectorLeaflet({
   puntos,
   posicion,
@@ -74,6 +95,7 @@ export function MapaSelectorLeaflet({
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%", cursor: "crosshair" }}
       >
+        <AutoResize />
         <CapaBase />
         <Clics onElegir={onElegir} />
         <Seguir posicion={posicion} />

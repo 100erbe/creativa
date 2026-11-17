@@ -49,6 +49,27 @@ function Encuadrar({ puntos }: { puntos: PuntoMapa[] }) {
   return null;
 }
 
+/** Recalcula el tamaño del mapa cuando cambia su contenedor (tarjeta mobile o modal fullscreen). */
+function AutoResize() {
+  const mapa = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => mapa.invalidateSize(), 100);
+    const contenedor = mapa.getContainer();
+    if (typeof ResizeObserver === "undefined") {
+      return () => clearTimeout(t);
+    }
+    const observer = new ResizeObserver(() => {
+      mapa.invalidateSize();
+    });
+    observer.observe(contenedor);
+    return () => {
+      clearTimeout(t);
+      observer.disconnect();
+    };
+  }, [mapa]);
+  return null;
+}
+
 export function MapaLeaflet({
   puntos,
   altura = "clamp(280px, 45vh, 520px)",
@@ -88,6 +109,7 @@ export function MapaLeaflet({
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%" }}
       >
+        <AutoResize />
         <Encuadrar puntos={puntos} />
         <CapaBase />
         {puntos.map((p) => (
