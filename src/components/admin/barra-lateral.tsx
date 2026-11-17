@@ -24,6 +24,7 @@ const SECCIONES: { titulo: string; enlaces: EnlaceNav[] }[] = [
       { href: "/admin/panel", etiqueta: "Panel", icono: "panel" },
       { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
       { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
+      { href: "/admin/catalogo", etiqueta: "Catálogo", icono: "catalogo" },
     ],
   },
   {

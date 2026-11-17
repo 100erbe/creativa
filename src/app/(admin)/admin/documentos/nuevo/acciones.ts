@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import type { Database } from "@/lib/supabase/types";
 import { soporteDe } from "@/lib/soporte";
-import { accion } from "@/lib/accion";
+import { accion, desenvolver } from "@/lib/accion";
+import { guardarProducto } from "../../catalogo/acciones";
 
 type Alcance = Database["public"]["Enums"]["alcance_servicio"];
 type TipoSoporte = Database["public"]["Enums"]["tipo_soporte"];
@@ -181,7 +182,7 @@ export const anadirLinea = accion(async (
   refrescar(documentoId);
 });
 
-/** Concepto que no está en el catálogo (un desplazamiento, un trabajo suelto…): sin tarifa, con precio manual. */
+/** Concepto que no está en el catálogo (un desplazamiento, un trabajo suelto…): sin tarifa, con precio manual (y opción de guardarlo en el catálogo). */
 export const anadirLineaLibre = accion(
   async (
     documentoId: number,
@@ -193,6 +194,9 @@ export const anadirLineaLibre = accion(
       precio: number;
       descuento: number;
       iva: number;
+      guardarEnCatalogo?: boolean;
+      categoriaId?: number;
+      alcanceCatalogo?: Alcance;
     },
   ) => {
     await exigirAdmin();
@@ -202,11 +206,54 @@ export const anadirLineaLibre = accion(
     if (!IVAS_PERMITIDOS.includes(args.iva)) throw new Error("IVA no válido.");
     validarNumeros(args.piezas, args.precio, args.descuento);
     if (!Number.isFinite(args.precio)) throw new Error("Indica el precio.");
+    if (args.guardarEnCatalogo && (!args.categoriaId || !Number.isInteger(args.categoriaId) || args.categoriaId <= 0)) {
+      throw new Error("Elige una categoría para guardar el artículo en el catálogo.");
+    }
     const supabase = await createClient();
 
     const { data: doc } = await supabase.from("documentos").select("estado").eq("id", documentoId).maybeSingle();
     if (!doc) throw new Error("No se ha encontrado el documento.");
     if (doc.estado !== "borrador") throw new Error("Solo se pueden añadir líneas a un borrador.");
+
+    if (args.guardarEnCatalogo && args.categoriaId) {
+      const alcance: Alcance =
+        args.alcanceCatalogo && ["fabricacion", "instalacion", "fabricacion_instalacion"].includes(args.alcanceCatalogo)
+          ? args.alcanceCatalogo
+          : "fabricacion_instalacion";
+
+      const nuevoProductoId = await desenvolver(
+        guardarProducto(null, {
+          categoriaId: args.categoriaId,
+          nombre: descripcion,
+          unidadVenta: args.unidad,
+          admiteMedidaLibre: false,
+          permiteFabricacion: alcance !== "instalacion",
+          permiteInstalacion: alcance !== "fabricacion",
+          precioFabricacion: alcance === "instalacion" ? null : args.precio,
+          precioInstalacion: alcance === "instalacion" ? args.precio : null,
+          pedidoMinimo: null,
+          ivaPct: args.iva,
+          activo: true,
+        }),
+      );
+
+      const { error: errorRpc } = await supabase.rpc("anadir_linea", {
+        p_documento: documentoId,
+        p_producto: nuevoProductoId,
+        p_formato: null,
+        p_alcance: alcance,
+        p_piezas: args.piezas,
+        p_ancho_cm: null,
+        p_alto_cm: null,
+        p_precio: args.precio,
+        p_descuento: args.descuento,
+        p_descripcion: descripcion,
+        p_artista: args.artista?.trim() || null,
+      });
+      if (errorRpc) throw new Error(errorRpc.message);
+      refrescar(documentoId);
+      return;
+    }
 
     const { data: ultima } = await supabase
       .from("lineas_documento")

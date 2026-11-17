@@ -55,6 +55,15 @@ const COMANDOS: Comando[] = [
     palabrasClave: "ticket gasto deducible menor",
   },
   {
+    id: "nuevo-producto",
+    grupo: "Acciones rápidas",
+    etiqueta: "Nuevo producto o servicio",
+    descripcion: "Añadir artículo, servicio o formato al catálogo",
+    href: "/admin/catalogo?nuevo=1",
+    icono: "catalogo",
+    palabrasClave: "crear producto servicio articulo formato tarifa precio",
+  },
+  {
     id: "vencidas-90",
     grupo: "Riesgo y pipeline",
     etiqueta: "Facturas insolutas 90+ días",
@@ -137,6 +146,15 @@ const COMANDOS: Comando[] = [
     descripcion: "Instalaciones, puntos y fotos",
     href: "/admin/campanas",
     icono: "campanas",
+  },
+  {
+    id: "nav-catalogo",
+    grupo: "Navegación",
+    etiqueta: "Catálogo",
+    descripcion: "Productos, servicios, formatos y precios",
+    href: "/admin/catalogo",
+    icono: "catalogo",
+    palabrasClave: "productos servicios tarifas formatos precios",
   },
   {
     id: "nav-gastos",

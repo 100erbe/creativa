@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { BarraAccion, CAMPO, PanelBusqueda } from "@/components/ui/panel-busqueda";
+import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
 import { euros } from "@/lib/formato";
 import { ETIQUETA_ALCANCE, ETIQUETA_TIPO } from "@/lib/documentos";
@@ -48,16 +48,40 @@ type Linea = {
   importe: number;
 };
 
+export type FormatoCatalogo = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  ancho: number | null;
+  alto: number | null;
+  precioFabricacion: number | null;
+  precioInstalacion: number | null;
+  alias: string[];
+};
+
 export type ProductoCatalogo = {
   id: number;
+  codigo: string;
   nombre: string;
+  descripcionFactura: string | null;
   unidad: string;
   medidaLibre: boolean;
   fabricacion: boolean;
   instalacion: boolean;
+  precioFabricacion: number | null;
+  precioInstalacion: number | null;
+  pedidoMinimo: number | null;
+  ivaPct: number;
+  categoriaId: number | null;
   categoria: string;
   ordenCategoria: number;
-  formatos: { id: number; nombre: string; ancho: number | null; alto: number | null }[];
+  formatos: FormatoCatalogo[];
+};
+
+export type CategoriaOpcion = {
+  id: number;
+  nombre: string;
+  orden: number;
 };
 
 type Reciente = {
@@ -89,6 +113,13 @@ function texto(valor: number, decimales = 2) {
   return Number.isFinite(valor) ? String(Math.round(valor * 10 ** decimales) / 10 ** decimales).replace(".", ",") : "";
 }
 
+function normalizar(t: string) {
+  return t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 function alcancesDe(p: ProductoCatalogo): Alcance[] {
   if (p.fabricacion && p.instalacion) return ["fabricacion_instalacion", "fabricacion", "instalacion"];
   if (p.fabricacion) return ["fabricacion"];
@@ -96,15 +127,50 @@ function alcancesDe(p: ProductoCatalogo): Alcance[] {
   return ["fabricacion_instalacion"];
 }
 
+function calcularCantidadLocal(
+  unidad: string,
+  piezas: number,
+  anchoCm: number,
+  altoCm: number,
+  pedidoMinimo: number | null,
+) {
+  if (!Number.isFinite(piezas)) return NaN;
+  if ((unidad === "m2" || unidad === "ml") && Number.isFinite(anchoCm) && Number.isFinite(altoCm)) {
+    if (unidad === "m2") {
+      return piezas * Math.max((anchoCm * altoCm) / 10000, pedidoMinimo ?? 0);
+    }
+    return (piezas * 2 * (anchoCm + altoCm)) / 100;
+  }
+  return piezas;
+}
+
+function calcularPrecioBaseLocal(p: ProductoCatalogo, formatoId: number | null, alcance: Alcance) {
+  const f = formatoId != null ? p.formatos.find((x) => x.id === formatoId) : undefined;
+  const fabRaw = f?.precioFabricacion ?? p.precioFabricacion;
+  const instRaw = f?.precioInstalacion ?? p.precioInstalacion;
+  const fab = fabRaw ?? 0;
+  const inst = instRaw ?? 0;
+  const precio = alcance === "fabricacion" ? fab : alcance === "instalacion" ? inst : fab + inst;
+  const definido =
+    alcance === "fabricacion"
+      ? fabRaw != null
+      : alcance === "instalacion"
+        ? instRaw != null
+        : fabRaw != null || instRaw != null;
+  return { precio, definido };
+}
+
 export function PasoLineas({
   documento,
   lineas,
   catalogo,
+  categorias,
   recientes,
 }: {
   documento: Cabecera;
   lineas: Linea[];
   catalogo: ProductoCatalogo[];
+  categorias: CategoriaOpcion[];
   recientes: Reciente[];
 }) {
   const router = useRouter();
@@ -167,6 +233,7 @@ export function PasoLineas({
           <FormularioArticulo
             documento={documento}
             catalogo={catalogo}
+            categorias={categorias}
             artistas={[...new Set(lineas.map((l) => l.artista).filter((a): a is string => !!a))]}
             recientes={recientesVisibles}
             onAnadido={() => router.refresh()}
@@ -252,7 +319,7 @@ function ListaCompacta({ lineas }: { lineas: Linea[] }) {
 }
 
 // ---------------------------------------------------------------------
-//  Formulario para añadir un artículo del catálogo
+//  Formulario para añadir un artículo del catálogo (inserción rápida)
 // ---------------------------------------------------------------------
 
 const entrada = CAMPO;
@@ -260,18 +327,21 @@ const entrada = CAMPO;
 function FormularioArticulo({
   documento,
   catalogo,
+  categorias,
   artistas,
   recientes,
   onAnadido,
 }: {
   documento: Cabecera;
   catalogo: ProductoCatalogo[];
+  categorias: CategoriaOpcion[];
   artistas: string[];
   recientes: (Reciente & { etiqueta: string })[];
   onAnadido: () => void;
 }) {
   const [busqueda, setBusqueda] = useState("");
-  const [abierto, setAbierto] = useState(false);
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
+  const [listaAbierta, setListaAbierta] = useState(false);
   const [productoId, setProductoId] = useState<number | null>(null);
   const [formatoId, setFormatoId] = useState<number | null>(null);
   const [alcance, setAlcance] = useState<Alcance>("fabricacion_instalacion");
@@ -287,43 +357,84 @@ function FormularioArticulo({
   const [calculando, setCalculando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
+  const [pendienteRecienteKey, setPendienteRecienteKey] = useState<string | null>(null);
   const [libre, setLibre] = useState(false);
+  const [libreInicial, setLibreInicial] = useState("");
+
+  const inputBusquedaRef = useRef<HTMLInputElement>(null);
+  const inputPiezasRef = useRef<HTMLInputElement>(null);
+  const inputAnchoRef = useRef<HTMLInputElement>(null);
 
   const producto = catalogo.find((p) => p.id === productoId) ?? null;
   const conMedidas = producto?.unidad === "m2" || producto?.unidad === "ml";
 
+  const categoriasCatalogo = useMemo(() => {
+    const vistas = new Map<string, number>();
+    for (const p of catalogo) {
+      vistas.set(p.categoria, (vistas.get(p.categoria) ?? 0) + 1);
+    }
+    return [...vistas.entries()].map(([nombre, conteo]) => ({ nombre, conteo }));
+  }, [catalogo]);
+
   const resultados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    const lista = q
-      ? catalogo.filter((p) =>
-          `${p.nombre} ${p.categoria} ${p.formatos.map((f) => f.nombre).join(" ")}`.toLowerCase().includes(q),
-        )
-      : catalogo;
+    const q = normalizar(busqueda.trim());
+    const lista = catalogo.filter((p) => {
+      if (categoriaFiltro && categoriaFiltro !== "__todas__" && p.categoria !== categoriaFiltro) return false;
+      if (!q) return true;
+      const textoFormatos = p.formatos
+        .map((f) => `${f.nombre} ${f.codigo} ${f.alias.join(" ")}`)
+        .join(" ");
+      return normalizar(
+        `${p.nombre} ${p.codigo} ${p.descripcionFactura ?? ""} ${p.categoria} ${textoFormatos}`,
+      ).includes(q);
+    });
     const grupos = new Map<string, ProductoCatalogo[]>();
     for (const p of lista) grupos.set(p.categoria, [...(grupos.get(p.categoria) ?? []), p]);
     return [...grupos.entries()];
-  }, [busqueda, catalogo]);
+  }, [busqueda, categoriaFiltro, catalogo]);
 
-  function elegirProducto(p: ProductoCatalogo, opciones?: { formatoId?: number | null; alcance?: string; precio?: number; descuento?: number }) {
-    setProductoId(p.id);
-    const f = p.formatos.find((x) => x.id === opciones?.formatoId) ?? (p.formatos.length === 1 ? p.formatos[0] : undefined);
-    setFormatoId(f?.id ?? null);
+  const mostrarResultados = busqueda.trim() !== "" || categoriaFiltro !== null || listaAbierta;
+
+  function elegirProducto(
+    p: ProductoCatalogo,
+    opciones?: { formatoId?: number | null; alcance?: string; precio?: number; descuento?: number },
+  ) {
+    const f =
+      p.formatos.find((x) => x.id === opciones?.formatoId) ?? (p.formatos.length === 1 ? p.formatos[0] : undefined);
+    const nextFormatoId = f?.id ?? null;
     const permitidos = alcancesDe(p);
-    setAlcance(permitidos.includes(opciones?.alcance as Alcance) ? (opciones!.alcance as Alcance) : permitidos[0]!);
+    const nextAlcance = permitidos.includes(opciones?.alcance as Alcance)
+      ? (opciones!.alcance as Alcance)
+      : permitidos[0]!;
+
+    setProductoId(p.id);
+    setFormatoId(nextFormatoId);
+    setAlcance(nextAlcance);
     setPiezas("1");
     setAncho(f?.ancho != null ? texto(f.ancho) : "");
     setAlto(f?.alto != null ? texto(f.alto) : "");
     setDescripcion("");
     setError(null);
+
     if (opciones?.precio != null) {
       setPrecio(texto(opciones.precio, 4));
       setPrecioManual(true);
     } else {
+      const base = calcularPrecioBaseLocal(p, nextFormatoId, nextAlcance);
+      setPrecio(base.definido ? texto(base.precio, 4) : "");
       setPrecioManual(false);
     }
+
     setDescuento(texto(opciones?.descuento ?? documento.descuento_habitual));
     setBusqueda("");
-    setAbierto(false);
+    setListaAbierta(false);
+
+    const necesitaMedidas = (p.unidad === "m2" || p.unidad === "ml") && !(f?.ancho != null && f?.alto != null);
+    requestAnimationFrame(() => {
+      const campo = necesitaMedidas ? inputAnchoRef.current : inputPiezasRef.current;
+      campo?.focus();
+      campo?.select();
+    });
   }
 
   function elegirFormato(id: number | null) {
@@ -333,9 +444,76 @@ function FormularioArticulo({
       setAncho(texto(f.ancho));
       setAlto(texto(f.alto));
     }
+    if (producto && !precioManual) {
+      const base = calcularPrecioBaseLocal(producto, id, alcance);
+      if (base.definido) setPrecio(texto(base.precio, 4));
+    }
   }
 
-  // Precio de tarifa: se recalcula al cambiar producto, formato, alcance, cantidad o medidas.
+  function elegirAlcance(next: Alcance) {
+    setAlcance(next);
+    if (producto && !precioManual) {
+      const base = calcularPrecioBaseLocal(producto, formatoId, next);
+      if (base.definido) setPrecio(texto(base.precio, 4));
+    }
+  }
+
+  function alPulsarEnterEnBusqueda() {
+    const q = normalizar(busqueda.trim());
+    if (!q) return;
+    const formatosCoincidentes: { producto: ProductoCatalogo; formato: FormatoCatalogo }[] = [];
+    for (const [, prods] of resultados) {
+      for (const p of prods) {
+        for (const f of p.formatos) {
+          if (normalizar(`${f.nombre} ${f.codigo} ${f.alias.join(" ")}`).includes(q)) {
+            formatosCoincidentes.push({ producto: p, formato: f });
+          }
+        }
+      }
+    }
+    if (formatosCoincidentes.length === 1) {
+      const m = formatosCoincidentes[0]!;
+      elegirProducto(m.producto, { formatoId: m.formato.id });
+      return;
+    }
+    const productosPlanos = resultados.flatMap(([, prods]) => prods);
+    if (productosPlanos.length === 1) {
+      elegirProducto(productosPlanos[0]!);
+    }
+  }
+
+  function anadirRapidoReciente(r: Reciente & { etiqueta: string }, clave: string) {
+    const p = catalogo.find((c) => c.id === r.producto_id);
+    if (!p) return;
+    const f = p.formatos.find((x) => x.id === r.formato_id);
+    const permitidos = alcancesDe(p);
+    const alc = permitidos.includes(r.alcance as Alcance) ? (r.alcance as Alcance) : permitidos[0]!;
+    setError(null);
+    setPendienteRecienteKey(clave);
+    iniciar(async () => {
+      try {
+        await desenvolver(
+          anadirLinea(documento.id, {
+            productoId: p.id,
+            formatoId: f?.id ?? null,
+            alcance: alc,
+            piezas: 1,
+            anchoCm: f?.ancho ?? null,
+            altoCm: f?.alto ?? null,
+            precio: r.ultimo_precio,
+            descuento: r.ultimo_descuento,
+          }),
+        );
+        onAnadido();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo añadir el artículo.");
+      } finally {
+        setPendienteRecienteKey(null);
+      }
+    });
+  }
+
+  // Tarifa real del cliente/volumen en segundo plano (sin bloquear el alta ni la vista del precio base).
   const nPiezas = num(piezas);
   const nAncho = conMedidas ? num(ancho) : NaN;
   const nAlto = conMedidas ? num(alto) : NaN;
@@ -349,15 +527,17 @@ function FormularioArticulo({
     setCalculando(true);
     const t = setTimeout(async () => {
       try {
-        const r = await desenvolver(previsualizarPrecio({
-          clienteId: documento.cliente_id,
-          productoId: producto.id,
-          formatoId,
-          alcance,
-          piezas: nPiezas,
-          anchoCm: medidas ? nAncho : null,
-          altoCm: medidas ? nAlto : null,
-        }));
+        const r = await desenvolver(
+          previsualizarPrecio({
+            clienteId: documento.cliente_id,
+            productoId: producto.id,
+            formatoId,
+            alcance,
+            piezas: nPiezas,
+            anchoCm: medidas ? nAncho : null,
+            altoCm: medidas ? nAlto : null,
+          }),
+        );
         if (cancelado) return;
         setTarifa(r);
         if (!precioManual) setPrecio(texto(r.precio, 4));
@@ -366,7 +546,7 @@ function FormularioArticulo({
       } finally {
         if (!cancelado) setCalculando(false);
       }
-    }, 250);
+    }, 150);
     return () => {
       cancelado = true;
       clearTimeout(t);
@@ -377,7 +557,10 @@ function FormularioArticulo({
 
   const nPrecio = num(precio);
   const nDescuento = descuento.trim() === "" ? 0 : num(descuento);
-  const cantidad = tarifa?.cantidad ?? nPiezas;
+  const cantidadLocal = producto
+    ? calcularCantidadLocal(producto.unidad, nPiezas, nAncho, nAlto, producto.pedidoMinimo)
+    : nPiezas;
+  const cantidad = tarifa?.cantidad ?? cantidadLocal;
   const importe =
     Number.isFinite(cantidad) && Number.isFinite(nPrecio) && Number.isFinite(nDescuento)
       ? Math.round(cantidad * nPrecio * (1 - nDescuento / 100) * 100) / 100
@@ -392,27 +575,30 @@ function FormularioArticulo({
     if (!Number.isFinite(nDescuento) || nDescuento < 0 || nDescuento > 100)
       return setError("El descuento va de 0 a 100 %.");
     const medidas = conMedidas && Number.isFinite(nAncho) && Number.isFinite(nAlto);
-    if (conMedidas && (Number.isFinite(nAncho) !== Number.isFinite(nAlto)))
+    if (conMedidas && Number.isFinite(nAncho) !== Number.isFinite(nAlto))
       return setError("Indica ancho y alto, o deja los dos vacíos.");
 
     iniciar(async () => {
       try {
-        await desenvolver(anadirLinea(documento.id, {
-          productoId: producto.id,
-          formatoId,
-          alcance,
-          piezas: nPiezas,
-          anchoCm: medidas ? nAncho : null,
-          altoCm: medidas ? nAlto : null,
-          // Si coincide con la tarifa se deja que la base de datos la aplique.
-          precio: distintoDeTarifa || !tarifa ? nPrecio : null,
-          descuento: nDescuento,
-          descripcion,
-          artista,
-        }));
+        await desenvolver(
+          anadirLinea(documento.id, {
+            productoId: producto.id,
+            formatoId,
+            alcance,
+            piezas: nPiezas,
+            anchoCm: medidas ? nAncho : null,
+            altoCm: medidas ? nAlto : null,
+            // Si no se editó a mano, la BD aplica la tarifa exacta (cliente/volumen/formato).
+            precio: precioManual || distintoDeTarifa ? nPrecio : null,
+            descuento: nDescuento,
+            descripcion,
+            artista,
+          }),
+        );
         setProductoId(null);
         setTarifa(null);
         onAnadido();
+        requestAnimationFrame(() => inputBusquedaRef.current?.focus());
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo añadir el artículo.");
       }
@@ -423,9 +609,14 @@ function FormularioArticulo({
     return (
       <FormularioLineaLibre
         documento={documento}
+        categorias={categorias}
         artistas={artistas}
+        descripcionInicial={libreInicial}
         onAnadido={onAnadido}
-        onCancelar={() => setLibre(false)}
+        onCancelar={() => {
+          setLibre(false);
+          setLibreInicial("");
+        }}
       />
     );
   }
@@ -435,7 +626,7 @@ function FormularioArticulo({
       <div>
         <h2 className="text-base font-semibold text-texto-primario">Añadir artículo</h2>
         <p className="text-sm text-texto-secundario">
-          El precio sale de la tarifa del cliente; puedes cambiarlo a mano y aplicar un descuento.
+          Busca por nombre, código o alias (70C, sábana, mupi…) o elige una categoría para añadir en 1 clic.
         </p>
       </div>
 
@@ -446,103 +637,255 @@ function FormularioArticulo({
               <div className="flex items-center gap-esp2">
                 <Icono nombre="reloj" size={14} className="text-icono-secundario" />
                 <span className="text-xs font-medium text-texto-terciario">
-                  USADO RECIENTEMENTE CON ESTE CLIENTE
+                  USADO RECIENTEMENTE CON ESTE CLIENTE (clic para configurar · +1 para añadir ya)
                 </span>
               </div>
               <div className="flex flex-wrap gap-esp2">
-                {recientes.map((r, i) => (
-                  <button
-                    key={`${r.producto_id}-${r.formato_id}-${r.alcance}-${i}`}
-                    onClick={() => {
-                      const p = catalogo.find((c) => c.id === r.producto_id);
-                      if (p)
-                        elegirProducto(p, {
-                          formatoId: r.formato_id,
-                          alcance: r.alcance,
-                          precio: r.ultimo_precio,
-                          descuento: r.ultimo_descuento,
-                        });
-                    }}
-                    className="flex min-h-10 items-center gap-1 rounded-completo border border-borde-campo bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
-                  >
-                    <Icono nombre="mas" size={12} className="text-icono-marca" />
-                    {r.etiqueta}
-                    <span className="text-texto-terciario">· {euros(r.ultimo_precio)}</span>
-                  </button>
-                ))}
+                {recientes.map((r, i) => {
+                  const clave = `${r.producto_id}-${r.formato_id}-${r.alcance}-${i}`;
+                  return (
+                    <div
+                      key={clave}
+                      className="inline-flex min-h-10 items-center overflow-hidden rounded-completo border border-borde-campo bg-fondo-superficie text-xs font-medium text-texto-primario"
+                    >
+                      <button
+                        type="button"
+                        disabled={pendiente}
+                        onClick={() => {
+                          const p = catalogo.find((c) => c.id === r.producto_id);
+                          if (p)
+                            elegirProducto(p, {
+                              formatoId: r.formato_id,
+                              alcance: r.alcance,
+                              precio: r.ultimo_precio,
+                              descuento: r.ultimo_descuento,
+                            });
+                        }}
+                        className="flex h-full items-center gap-1 px-esp3 py-1.5 hover:bg-fondo-sutil disabled:opacity-50"
+                      >
+                        <span>{r.etiqueta}</span>
+                        <span className="text-texto-terciario">· {euros(r.ultimo_precio)}</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pendiente}
+                        title={`Añadir 1 ud de ${r.etiqueta} directamente`}
+                        aria-label={`Añadir 1 de ${r.etiqueta} ahora`}
+                        onClick={() => anadirRapidoReciente(r, clave)}
+                        className="flex h-full items-center border-l border-borde-default bg-fondo-marca-sutil/70 px-esp3 py-1.5 font-semibold text-texto-marca transition-colors hover:bg-fondo-marca hover:text-texto-sobre-marca disabled:opacity-50"
+                      >
+                        {pendienteRecienteKey === clave ? "…" : "+1"}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setAbierto(true)}
-              aria-haspopup="listbox"
-              aria-expanded={abierto}
-              className="flex h-11 w-full items-center gap-esp3 rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-left hover:bg-fondo-sutil md:h-10"
-            >
-              <Icono nombre="buscar" size={16} className="shrink-0 text-icono-secundario" />
-              <span className="truncate text-sm text-texto-terciario">
-                Buscar en el catálogo: lona, banderola, 70x100…
-              </span>
-            </button>
-            {abierto && (
-              <PanelBusqueda
-                busqueda={busqueda}
-                onBusqueda={setBusqueda}
-                placeholder="Buscar en el catálogo…"
-                onCerrar={() => {
-                  setAbierto(false);
-                  setBusqueda("");
+          {/* Buscador directo + píldoras de categoría */}
+          <div className="flex flex-col gap-esp3">
+            <div className="relative">
+              <Icono
+                nombre="buscar"
+                size={16}
+                className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
+              />
+              <input
+                ref={inputBusquedaRef}
+                type="search"
+                enterKeyHint="search"
+                value={busqueda}
+                onFocus={() => setListaAbierta(true)}
+                onChange={(e) => {
+                  setBusqueda(e.target.value);
+                  setListaAbierta(true);
                 }}
-                onEnter={() => {
-                  const unico = resultados.length === 1 && resultados[0]![1].length === 1 ? resultados[0]![1][0] : undefined;
-                  if (unico) elegirProducto(unico);
-                  else (document.activeElement as HTMLElement | null)?.blur();
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setListaAbierta(false);
+                    setBusqueda("");
+                    setCategoriaFiltro(null);
+                    inputBusquedaRef.current?.blur();
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    alPulsarEnterEnBusqueda();
+                  }
                 }}
+                placeholder="Buscar en el catálogo: lona, 70C, sábana, mupi, montaje…"
+                aria-label="Buscar en el catálogo"
+                className={`${entrada} pl-9`}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setCategoriaFiltro((prev) => (prev === "__todas__" ? null : "__todas__"))
+                }
+                aria-pressed={categoriaFiltro === "__todas__"}
+                className={cn(
+                  "inline-flex min-h-8 items-center rounded-completo px-esp3 text-xs font-medium transition-colors",
+                  categoriaFiltro === "__todas__"
+                    ? "bg-fondo-marca text-texto-sobre-marca"
+                    : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                )}
               >
+                Todos ({catalogo.length})
+              </button>
+              {categoriasCatalogo.map((c) => {
+                const activo = categoriaFiltro === c.nombre;
+                return (
+                  <button
+                    key={c.nombre}
+                    type="button"
+                    onClick={() => setCategoriaFiltro(activo ? null : c.nombre)}
+                    aria-pressed={activo}
+                    className={cn(
+                      "inline-flex min-h-8 items-center gap-1 rounded-completo px-esp3 text-xs font-medium transition-colors",
+                      activo
+                        ? "bg-fondo-marca text-texto-sobre-marca"
+                        : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                    )}
+                  >
+                    <span>{c.nombre}</span>
+                    <span className={cn("tabular-nums text-micro", activo ? "opacity-80" : "text-texto-terciario")}>
+                      {c.conteo}
+                    </span>
+                  </button>
+                );
+              })}
+              {mostrarResultados && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setListaAbierta(false);
+                    setCategoriaFiltro(null);
+                    setBusqueda("");
+                  }}
+                  className="ml-auto text-xs font-medium text-texto-terciario hover:text-texto-primario"
+                >
+                  Ocultar lista
+                </button>
+              )}
+            </div>
+
+            {mostrarResultados && (
+              <div className="flex max-h-96 flex-col divide-y divide-fondo-hover overflow-y-auto rounded-lg border border-borde-default bg-fondo-superficie shadow-sm">
                 {resultados.map(([categoria, productos]) => (
-                  <div key={categoria} className="flex flex-col gap-1">
-                    <span className="px-esp2 pt-esp2 text-micro font-medium uppercase tracking-wide text-texto-terciario">
+                  <div key={categoria} className="flex flex-col">
+                    <span className="sticky top-0 z-10 border-b border-fondo-hover bg-fondo-sutil/95 px-esp3 py-1.5 text-micro font-semibold uppercase tracking-wider text-texto-terciario backdrop-blur-sm">
                       {categoria}
                     </span>
-                    {productos.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => elegirProducto(p)}
-                        className="flex min-h-12 shrink-0 items-center gap-esp3 rounded-md px-esp2 py-1.5 text-left hover:bg-fondo-sutil active:bg-fondo-sutil md:min-h-10"
-                      >
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="text-sm text-texto-primario">{p.nombre}</span>
-                          {p.formatos.length > 0 && (
-                            <span className="text-xs text-texto-terciario">{p.formatos.length} formatos</span>
-                          )}
-                        </span>
-                        <span className="shrink-0 text-xs text-texto-terciario">por {UNIDAD[p.unidad] ?? p.unidad}</span>
-                      </button>
-                    ))}
+                    <div className="flex flex-col divide-y divide-fondo-hover">
+                      {productos.map((p) => {
+                        const alcDef = alcancesDe(p)[0]!;
+                        const base = calcularPrecioBaseLocal(p, null, alcDef);
+                        const unidad = UNIDAD[p.unidad] ?? p.unidad;
+                        return (
+                          <div key={p.id} className="flex flex-col gap-esp2 px-esp3 py-esp2 hover:bg-fondo-sutil/50">
+                            <button
+                              type="button"
+                              onClick={() => elegirProducto(p)}
+                              className="flex w-full items-center gap-esp3 text-left"
+                            >
+                              <span className="flex min-w-0 flex-1 flex-col">
+                                <span className="text-sm font-medium text-texto-primario">{p.nombre}</span>
+                                <span className="truncate text-xs text-texto-terciario">
+                                  {p.codigo} · por {unidad}
+                                  {p.descripcionFactura ? ` · ${p.descripcionFactura}` : ""}
+                                </span>
+                              </span>
+                              <span className="tabular-nums shrink-0 text-xs font-medium text-texto-secundario">
+                                {base.definido ? `${euros(base.precio)}/${unidad}` : `por ${unidad}`}
+                              </span>
+                            </button>
+
+                            {p.formatos.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pb-0.5">
+                                {p.formatos.map((f) => {
+                                  const precioFmt = calcularPrecioBaseLocal(p, f.id, alcDef);
+                                  return (
+                                    <button
+                                      key={f.id}
+                                      type="button"
+                                      onClick={() => elegirProducto(p, { formatoId: f.id })}
+                                      className="inline-flex min-h-8 items-center gap-1 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 py-1 text-xs text-texto-primario transition-colors hover:border-borde-foco hover:bg-fondo-marca-sutil hover:text-texto-marca"
+                                    >
+                                      <span className="font-medium">{f.nombre}</span>
+                                      {precioFmt.definido && (
+                                        <span className="tabular-nums text-texto-terciario">
+                                          · {euros(precioFmt.precio)}
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ))}
+
                 {resultados.length === 0 && (
-                  <p className="px-esp2 py-esp3 text-sm text-texto-terciario">Nada en el catálogo con «{busqueda}».</p>
+                  <div className="flex flex-col gap-esp2 px-esp4 py-esp4 text-sm text-texto-terciario">
+                    <p>Nada en el catálogo con «{busqueda}».</p>
+                    {categoriaFiltro && categoriaFiltro !== "__todas__" && (
+                      <button
+                        type="button"
+                        onClick={() => setCategoriaFiltro("__todas__")}
+                        className="w-fit text-xs font-medium text-texto-marca hover:underline"
+                      >
+                        Buscar en todas las categorías
+                      </button>
+                    )}
+                  </div>
                 )}
-              </PanelBusqueda>
+
+                {busqueda.trim() !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLibreInicial(busqueda.trim());
+                      setLibre(true);
+                    }}
+                    className="flex min-h-11 items-center gap-esp2 bg-fondo-sutil/60 px-esp3 py-esp2 text-left text-sm font-medium text-texto-marca hover:bg-fondo-marca-sutil"
+                  >
+                    <Icono nombre="mas" size={16} />
+                    Añadir «{busqueda.trim()}» como concepto nuevo (con opción de guardar en catálogo)
+                  </button>
+                )}
+              </div>
             )}
           </div>
+
+          {error && <p className="text-sm text-texto-peligro">{error}</p>}
+
           <button
             type="button"
-            onClick={() => setLibre(true)}
-            className="w-fit text-sm font-medium text-texto-marca"
+            onClick={() => {
+              setLibreInicial("");
+              setLibre(true);
+            }}
+            className="w-fit text-sm font-medium text-texto-marca hover:underline"
           >
-            ¿No está en el catálogo? Añadir un concepto libre
+            ¿No está en el catálogo? Añadir un concepto libre o crearlo al vuelo
           </button>
         </>
       )}
 
       {producto && (
-        <div className="flex flex-col gap-esp4">
+        <form
+          className="flex flex-col gap-esp4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            anadir();
+          }}
+        >
           <div className="flex items-center gap-esp3 rounded-md bg-fondo-sutil px-esp3 py-esp2">
             <div className="flex-1">
               <p className="text-sm font-medium text-texto-primario">{producto.nombre}</p>
@@ -551,6 +894,7 @@ function FormularioArticulo({
               </p>
             </div>
             <button
+              type="button"
               onClick={() => setProductoId(null)}
               className="text-sm font-medium text-texto-marca"
             >
@@ -563,24 +907,25 @@ function FormularioArticulo({
               <Etiqueta texto="Formato" className="col-span-2" grupo={producto.formatos.length <= 4}>
                 {producto.formatos.length <= 4 ? (
                   <div className="flex flex-wrap gap-esp2">
-                    {[{ id: null as number | null, nombre: producto.medidaLibre ? "A medida" : "Sin formato" }, ...producto.formatos].map(
-                      (f) => (
-                        <button
-                          key={f.id ?? "ninguno"}
-                          type="button"
-                          onClick={() => elegirFormato(f.id)}
-                          aria-pressed={formatoId === f.id}
-                          className={cn(
-                            "min-h-11 rounded-md border px-esp3 text-sm font-medium md:min-h-9",
-                            formatoId === f.id
-                              ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
-                              : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
-                          )}
-                        >
-                          {f.nombre}
-                        </button>
-                      ),
-                    )}
+                    {[
+                      { id: null as number | null, nombre: producto.medidaLibre ? "A medida" : "Sin formato" },
+                      ...producto.formatos,
+                    ].map((f) => (
+                      <button
+                        key={f.id ?? "ninguno"}
+                        type="button"
+                        onClick={() => elegirFormato(f.id)}
+                        aria-pressed={formatoId === f.id}
+                        className={cn(
+                          "min-h-11 rounded-md border px-esp3 text-sm font-medium md:min-h-9",
+                          formatoId === f.id
+                            ? "border-borde-foco bg-fondo-marca-sutil text-texto-marca"
+                            : "border-borde-campo bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                        )}
+                      >
+                        {f.nombre}
+                      </button>
+                    ))}
                   </div>
                 ) : (
                   <select
@@ -604,7 +949,7 @@ function FormularioArticulo({
                   <button
                     key={a}
                     type="button"
-                    onClick={() => setAlcance(a)}
+                    onClick={() => elegirAlcance(a)}
                     aria-pressed={alcance === a}
                     className={cn(
                       "min-h-11 flex-1 rounded-md border px-esp3 text-xs font-medium md:min-h-9",
@@ -620,19 +965,32 @@ function FormularioArticulo({
             </Etiqueta>
 
             <Etiqueta texto={conMedidas ? "Piezas" : `Cantidad (${UNIDAD[producto.unidad] ?? producto.unidad})`}>
-              <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
+              <input
+                ref={inputPiezasRef}
+                value={piezas}
+                onChange={(e) => setPiezas(e.target.value)}
+                inputMode="decimal"
+                enterKeyHint="done"
+                className={entrada}
+              />
             </Etiqueta>
             {conMedidas && (
               <>
                 <Etiqueta texto="Ancho (cm)">
-                  <input value={ancho} onChange={(e) => setAncho(e.target.value)} inputMode="decimal" className={entrada} />
+                  <input
+                    ref={inputAnchoRef}
+                    value={ancho}
+                    onChange={(e) => setAncho(e.target.value)}
+                    inputMode="decimal"
+                    className={entrada}
+                  />
                 </Etiqueta>
                 <Etiqueta texto="Alto (cm)">
                   <input value={alto} onChange={(e) => setAlto(e.target.value)} inputMode="decimal" className={entrada} />
                 </Etiqueta>
                 <div className="flex flex-col justify-end pb-2 text-xs text-texto-terciario">
-                  {tarifa && Number.isFinite(nAncho)
-                    ? `= ${texto(tarifa.cantidad, 3)} ${UNIDAD[producto.unidad]}`
+                  {Number.isFinite(cantidadLocal) && Number.isFinite(nAncho)
+                    ? `= ${texto(cantidadLocal, 3)} ${UNIDAD[producto.unidad]}`
                     : "Sin medidas = cantidad directa"}
                 </div>
               </>
@@ -648,6 +1006,7 @@ function FormularioArticulo({
                   setPrecioManual(true);
                 }}
                 inputMode="decimal"
+                placeholder="0,00"
                 className={cn(entrada, distintoDeTarifa && "border-borde-aviso bg-fondo-aviso-sutil")}
               />
             </Etiqueta>
@@ -656,7 +1015,7 @@ function FormularioArticulo({
             </Etiqueta>
             <div className="col-span-2 flex flex-col justify-end gap-1 text-xs">
               {calculando ? (
-                <span className="text-texto-terciario">Calculando tarifa…</span>
+                <span className="text-texto-terciario">Comprobando tarifa del cliente…</span>
               ) : tarifa ? (
                 <span className="text-texto-terciario">
                   Tarifa: {euros(tarifa.precio)}
@@ -715,7 +1074,7 @@ function FormularioArticulo({
             <input
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder={`${producto.nombre}${formatoId ? ` · ${producto.formatos.find((f) => f.id === formatoId)?.nombre ?? ""}` : ""}`}
+              placeholder={`${producto.descripcionFactura || producto.nombre}${formatoId ? ` · ${producto.formatos.find((f) => f.id === formatoId)?.nombre ?? ""}` : ""}`}
               className={entrada}
             />
           </Etiqueta>
@@ -729,15 +1088,15 @@ function FormularioArticulo({
                 {importe != null ? euros(importe) : "—"}
               </p>
             </div>
-            <Boton variante="secundario" className="min-h-11" onClick={() => setProductoId(null)}>
+            <Boton type="button" variante="secundario" className="min-h-11" onClick={() => setProductoId(null)}>
               Cancelar
             </Boton>
-            <Boton className="min-h-11" onClick={anadir} cargando={pendiente} disabled={calculando && !precioManual}>
+            <Boton type="submit" className="min-h-11" cargando={pendiente}>
               <Icono nombre="mas" size={16} />
               Añadir
             </Boton>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );
@@ -951,29 +1310,39 @@ function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 }
 
 // ---------------------------------------------------------------------
-//  Concepto libre: algo que no está en el catálogo
+//  Concepto libre: algo que no está en el catálogo (o alta rápida al vuelo)
 // ---------------------------------------------------------------------
 
 const IVAS = [21, 10, 4, 0];
 
 function FormularioLineaLibre({
   documento,
+  categorias,
   artistas,
+  descripcionInicial,
   onAnadido,
   onCancelar,
 }: {
   documento: Cabecera;
+  categorias: CategoriaOpcion[];
   artistas: string[];
+  descripcionInicial?: string;
   onAnadido: () => void;
   onCancelar: () => void;
 }) {
-  const [descripcion, setDescripcion] = useState("");
+  const catPorDefecto =
+    categorias.find((c) => normalizar(c.nombre).includes("servicio"))?.id ?? categorias[0]?.id ?? 0;
+
+  const [descripcion, setDescripcion] = useState(descripcionInicial ?? "");
   const [artista, setArtista] = useState("");
   const [unidad, setUnidad] = useState("ud");
   const [cantidad, setCantidad] = useState("1");
   const [precio, setPrecio] = useState("");
   const [descuento, setDescuento] = useState(texto(documento.descuento_habitual));
   const [iva, setIva] = useState("21");
+  const [guardarEnCatalogo, setGuardarEnCatalogo] = useState(false);
+  const [categoriaId, setCategoriaId] = useState(catPorDefecto ? String(catPorDefecto) : "");
+  const [alcanceCatalogo, setAlcanceCatalogo] = useState<Alcance>("instalacion");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, iniciar] = useTransition();
 
@@ -991,6 +1360,8 @@ function FormularioLineaLibre({
     if (!Number.isFinite(nCantidad) || nCantidad === 0) return setError("Indica la cantidad.");
     if (!Number.isFinite(nPrecio) || nPrecio < 0) return setError("Indica el precio unitario.");
     if (!Number.isFinite(nDescuento) || nDescuento < 0 || nDescuento > 100) return setError("El descuento va de 0 a 100 %.");
+    if (guardarEnCatalogo && !categoriaId) return setError("Elige una categoría para guardarlo en el catálogo.");
+
     iniciar(async () => {
       try {
         await desenvolver(
@@ -1002,6 +1373,9 @@ function FormularioLineaLibre({
             precio: nPrecio,
             descuento: nDescuento,
             iva: Number(iva),
+            guardarEnCatalogo,
+            categoriaId: guardarEnCatalogo ? Number(categoriaId) : undefined,
+            alcanceCatalogo: guardarEnCatalogo ? alcanceCatalogo : undefined,
           }),
         );
         onAnadido();
@@ -1013,19 +1387,25 @@ function FormularioLineaLibre({
   }
 
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+    <form
+      className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        anadir();
+      }}
+    >
       <div>
         <h2 className="text-base font-semibold text-texto-primario">Añadir concepto libre</h2>
         <p className="text-sm text-texto-secundario">
-          Para lo que no está en el catálogo (un desplazamiento, un trabajo suelto…). No tiene tarifa: el precio lo
-          escribes tú.
+          Para lo que no está en el catálogo (un desplazamiento, un trabajo suelto…). Puedes guardarlo también en tu
+          catálogo para próximos documentos.
         </p>
       </div>
       <Etiqueta texto="Concepto *">
         <input
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
-          autoFocus
+          autoFocus={!descripcionInicial}
           placeholder="Ej. Desplazamiento a Marbella"
           className={entrada}
         />
@@ -1044,7 +1424,13 @@ function FormularioLineaLibre({
           </select>
         </Etiqueta>
         <Etiqueta texto="Precio unitario (€)">
-          <input value={precio} onChange={(e) => setPrecio(e.target.value)} inputMode="decimal" className={entrada} />
+          <input
+            value={precio}
+            onChange={(e) => setPrecio(e.target.value)}
+            autoFocus={Boolean(descripcionInicial)}
+            inputMode="decimal"
+            className={entrada}
+          />
         </Etiqueta>
         <Etiqueta texto="Descuento (%)">
           <input value={descuento} onChange={(e) => setDescuento(e.target.value)} inputMode="decimal" className={entrada} />
@@ -1059,7 +1445,46 @@ function FormularioLineaLibre({
           </select>
         </Etiqueta>
       </div>
-      <Etiqueta texto="Artista / referencia (opcional)">
+
+      {categorias.length > 0 && (
+        <div className="flex flex-col gap-esp3 rounded-md border border-borde-default bg-fondo-sutil/60 p-esp3">
+          <label className="inline-flex cursor-pointer items-center gap-esp2 text-sm font-medium text-texto-primario">
+            <input
+              type="checkbox"
+              checked={guardarEnCatalogo}
+              onChange={(e) => setGuardarEnCatalogo(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Guardar también en el catálogo de productos y servicios
+          </label>
+          {guardarEnCatalogo && (
+            <div className="grid grid-cols-1 gap-esp3 sm:grid-cols-2">
+              <Etiqueta texto="Categoría del catálogo">
+                <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} className={entrada}>
+                  {categorias.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+              </Etiqueta>
+              <Etiqueta texto="Tipo de tarifa en el catálogo">
+                <select
+                  value={alcanceCatalogo}
+                  onChange={(e) => setAlcanceCatalogo(e.target.value as Alcance)}
+                  className={entrada}
+                >
+                  <option value="fabricacion">Fabricación / suministro</option>
+                  <option value="instalacion">Instalación / servicio</option>
+                  <option value="fabricacion_instalacion">Ambos (precio en fab.)</option>
+                </select>
+              </Etiqueta>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Etiqueta texto="Artista / referencia (opcional)" grupo>
         {artistas.length > 0 && (
           <div className="flex flex-wrap gap-esp2">
             {artistas.map((a) => (
@@ -1088,14 +1513,14 @@ function FormularioLineaLibre({
           <p className="text-xs text-texto-terciario">Importe de la línea</p>
           <p className="text-lg font-semibold text-texto-primario">{importe != null ? euros(importe) : "—"}</p>
         </div>
-        <Boton variante="secundario" className="min-h-11" onClick={onCancelar}>
+        <Boton type="button" variante="secundario" className="min-h-11" onClick={onCancelar}>
           Cancelar
         </Boton>
-        <Boton className="min-h-11" onClick={anadir} cargando={pendiente}>
+        <Boton type="submit" className="min-h-11" cargando={pendiente}>
           <Icono nombre="mas" size={16} />
           Añadir
         </Boton>
       </div>
-    </div>
+    </form>
   );
 }

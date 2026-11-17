@@ -139,7 +139,7 @@ export default async function PaginaNuevoDocumento({
   }
 
   // Paso 2: artículos.
-  const [{ data: lineas }, { data: productos }, { data: recientes }] = await Promise.all([
+  const [{ data: lineas }, { data: productos }, { data: recientes }, { data: categorias }] = await Promise.all([
     supabase
       .from("lineas_documento")
       .select("id, descripcion, artista, piezas, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, importe")
@@ -148,7 +148,7 @@ export default async function PaginaNuevoDocumento({
     supabase
       .from("productos")
       .select(
-        "id, nombre, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, categorias(nombre, orden), formatos(id, nombre, ancho_cm, alto_cm, activo)",
+        "id, codigo, nombre, descripcion_factura, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, categorias(id, nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
       )
       .eq("activo", true)
       .order("nombre"),
@@ -158,6 +158,11 @@ export default async function PaginaNuevoDocumento({
       .eq("cliente_id", doc.cliente_id)
       .order("usado_en", { ascending: false })
       .limit(6),
+    supabase
+      .from("categorias")
+      .select("id, nombre, orden")
+      .order("orden")
+      .order("nombre"),
   ]);
 
   const catalogo: ProductoCatalogo[] = (productos ?? [])
@@ -165,21 +170,33 @@ export default async function PaginaNuevoDocumento({
       const cat = Array.isArray(p.categorias) ? p.categorias[0] : p.categorias;
       return {
         id: p.id,
+        codigo: p.codigo,
         nombre: p.nombre,
+        descripcionFactura: p.descripcion_factura,
         unidad: p.unidad_venta,
         medidaLibre: p.admite_medida_libre,
         fabricacion: p.permite_fabricacion,
         instalacion: p.permite_instalacion,
+        precioFabricacion: p.precio_fabricacion == null ? null : Number(p.precio_fabricacion),
+        precioInstalacion: p.precio_instalacion == null ? null : Number(p.precio_instalacion),
+        pedidoMinimo: p.pedido_minimo == null ? null : Number(p.pedido_minimo),
+        ivaPct: Number(p.iva_pct),
+        categoriaId: cat?.id ?? null,
         categoria: cat?.nombre ?? "Otros",
         ordenCategoria: cat?.orden ?? 99,
         formatos: (p.formatos ?? [])
           .filter((f) => f.activo)
           .map((f) => ({
             id: f.id,
+            codigo: f.codigo,
             nombre: f.nombre,
             ancho: f.ancho_cm == null ? null : Number(f.ancho_cm),
             alto: f.alto_cm == null ? null : Number(f.alto_cm),
-          })),
+            precioFabricacion: f.precio_fabricacion == null ? null : Number(f.precio_fabricacion),
+            precioInstalacion: f.precio_instalacion == null ? null : Number(f.precio_instalacion),
+            alias: f.alias ?? [],
+          }))
+          .sort((a, b) => (a.ancho ?? 99999) - (b.ancho ?? 99999) || a.nombre.localeCompare(b.nombre)),
       };
     })
     .sort((a, b) => a.ordenCategoria - b.ordenCategoria || a.nombre.localeCompare(b.nombre));
@@ -200,6 +217,7 @@ export default async function PaginaNuevoDocumento({
         importe: Number(l.importe),
       }))}
       catalogo={catalogo}
+      categorias={categorias ?? []}
       recientes={(recientes ?? []).flatMap((r) =>
         r.producto_id != null && r.alcance != null
           ? [

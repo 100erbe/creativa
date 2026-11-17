@@ -27,10 +27,10 @@ const SECCIONES = [
     icono: "avisos",
   },
   {
-    href: "/admin/ajustes/catalogo",
+    href: "/admin/catalogo",
     titulo: "Catálogo y precios",
-    texto: "Precios de fabricación e instalación de cada producto y formato, IVA y qué artículos están activos.",
-    icono: "campanas",
+    texto: "Productos, servicios, formatos, precios de fabricación e instalación e IVA.",
+    icono: "catalogo",
   },
 ] as const;
 
