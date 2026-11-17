@@ -668,6 +668,109 @@ export type Database = {
           },
         ]
       }
+      cuenta_gmail: {
+        Row: {
+          conectada_en: string
+          conectada_por: string | null
+          email: string
+          id: number
+          refresh_token: string
+        }
+        Insert: {
+          conectada_en?: string
+          conectada_por?: string | null
+          email: string
+          id?: number
+          refresh_token: string
+        }
+        Update: {
+          conectada_en?: string
+          conectada_por?: string | null
+          email?: string
+          id?: number
+          refresh_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuenta_gmail_conectada_por_fkey"
+            columns: ["conectada_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuenta_gmail_conectada_por_fkey"
+            columns: ["conectada_por"]
+            isOneToOne: false
+            referencedRelation: "v_agenda_empleado"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
+      }
+      reclamaciones: {
+        Row: {
+          asunto: string
+          cliente_id: number
+          creada_en: string
+          creada_por: string | null
+          destinatarios: string[]
+          documentos: number[]
+          gmail_borrador_id: string | null
+          gmail_mensaje_id: string | null
+          id: number
+          remitente: string
+          total_insoluto: number
+        }
+        Insert: {
+          asunto: string
+          cliente_id: number
+          creada_en?: string
+          creada_por?: string | null
+          destinatarios?: string[]
+          documentos: number[]
+          gmail_borrador_id?: string | null
+          gmail_mensaje_id?: string | null
+          id?: number
+          remitente: string
+          total_insoluto: number
+        }
+        Update: {
+          asunto?: string
+          cliente_id?: number
+          creada_en?: string
+          creada_por?: string | null
+          destinatarios?: string[]
+          documentos?: number[]
+          gmail_borrador_id?: string | null
+          gmail_mensaje_id?: string | null
+          id?: number
+          remitente?: string
+          total_insoluto?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reclamaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reclamaciones_creada_por_fkey"
+            columns: ["creada_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reclamaciones_creada_por_fkey"
+            columns: ["creada_por"]
+            isOneToOne: false
+            referencedRelation: "v_agenda_empleado"
+            referencedColumns: ["usuario_id"]
+          },
+        ]
+      }
       cuentas_bancarias: {
         Row: {
           activa: boolean

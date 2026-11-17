@@ -11,6 +11,9 @@ import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { BotonActivo, BotonEliminarCliente, Contactos } from "./controles";
+import { cargarEstadoCuenta, mensajeReclamacion, nombreArchivoEstadoCuenta, nombreArchivoFactura } from "@/lib/estado-cuenta-datos";
+import { cuentaConectada } from "@/lib/gmail";
+import { ReclamarImpagadas } from "./reclamar-impagadas";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,9 @@ export default async function PaginaCliente({
     { data: cobros },
     { data: campanas },
     { data: tarifas },
+    estadoCuenta,
+    gmail,
+    { data: reclamaciones },
   ] = await Promise.all([
     cliente.grupo_id
       ? supabase.from("grupos_empresariales").select("nombre").eq("id", cliente.grupo_id).maybeSingle()
@@ -86,7 +92,17 @@ export default async function PaginaCliente({
       .from("tarifas_cliente")
       .select("id, precio_fabricacion, precio_instalacion, productos(nombre), formatos(nombre)")
       .eq("cliente_id", clienteId),
+    cargarEstadoCuenta(supabase, clienteId),
+    cuentaConectada(),
+    supabase
+      .from("reclamaciones")
+      .select("id, creada_en, documentos, total_insoluto, destinatarios, remitente")
+      .eq("cliente_id", clienteId)
+      .order("creada_en", { ascending: false })
+      .limit(5),
   ]);
+  const insolutas = estadoCuenta?.estado.insolutas ?? [];
+  const textoReclamacion = estadoCuenta ? mensajeReclamacion(estadoCuenta) : null;
 
   const facturado = (facturas ?? []).reduce((s, f) => s + Number(f.total), 0);
   const pendiente = (cobros ?? []).reduce((s, c) => s + Number(c.pendiente ?? 0), 0);
@@ -100,9 +116,10 @@ export default async function PaginaCliente({
     }));
 
   const vencidas = cobrosConAging.filter((c) => c.aging.diasVencido > 0 || c.estado_cobro === "vencida");
-  const criticas90 = cobrosConAging.filter((c) => c.aging.esCritica90);
-  const sumaCriticas90 = criticas90.reduce((s, c) => s + c.pendienteNum, 0);
-  const maxDiasVencido = cobrosConAging.reduce((m, c) => Math.max(m, c.aging.diasVencido), 0);
+  // Insolutas: sin cobrar y con más de 90 días desde la emisión (misma regla que el estado de cuenta).
+  const criticas90 = insolutas;
+  const sumaCriticas90 = estadoCuenta?.estado.totalInsoluto ?? 0;
+  const maxDiasVencido = insolutas.reduce((m, l) => Math.max(m, l.diasDesdeEmision), 0);
 
   const direccion = componerDireccion({
     direccion: cliente.direccion,
@@ -123,7 +140,7 @@ export default async function PaginaCliente({
           Clientes
         </Link>
 
-        <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:flex-row md:items-center md:p-esp5">
+        <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:p-esp5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 items-start gap-esp3 sm:items-center">
             <div
               aria-hidden="true"
@@ -161,10 +178,38 @@ export default async function PaginaCliente({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-esp2">
+          <div className="flex flex-wrap items-center gap-esp2 xl:max-w-[55%] xl:justify-end">
             <Link href={`/admin/clientes/${clienteId}/editar`}>
               <Boton variante="secundario">Editar</Boton>
             </Link>
+            {(estadoCuenta?.estado.lineas.length ?? 0) > 0 && (
+              <Link href={`/admin/clientes/${clienteId}/estado-cuenta`}>
+                <Boton variante="secundario">
+                  <Icono nombre="documentos" size={16} />
+                  Estado de cuenta
+                </Boton>
+              </Link>
+            )}
+            {estadoCuenta && textoReclamacion && insolutas.length > 0 && (
+              <ReclamarImpagadas
+                clienteId={clienteId}
+                razonSocial={cliente.razon_social}
+                insolutas={insolutas.map((l) => ({
+                  id: l.id,
+                  numero: l.numero,
+                  fecha: l.fecha,
+                  saldo: l.saldo,
+                  diasDesdeEmision: l.diasDesdeEmision,
+                  archivo: nombreArchivoFactura(l.tipo, l.numero, cliente.razon_social),
+                }))}
+                totalAReclamar={estadoCuenta.estado.totalAReclamar}
+                archivoEstado={nombreArchivoEstadoCuenta(cliente.razon_social, estadoCuenta.estado.fecha)}
+                destinatarios={estadoCuenta.destinatarios}
+                asunto={textoReclamacion.asunto}
+                cuerpo={textoReclamacion.cuerpo}
+                gmail={gmail?.email ?? null}
+              />
+            )}
             {cliente.activo && (
               <>
                 <Link href={`/admin/campanas/nueva?cliente=${clienteId}`}>
@@ -195,16 +240,16 @@ export default async function PaginaCliente({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-texto-critico">
               {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} insoluta
-              {criticas90.length === 1 ? "" : "s"} con 90+ días de retraso
+              {criticas90.length === 1 ? "" : "s"} con más de 90 días desde su emisión
             </p>
             <p className="tabular-nums text-xs text-texto-primario">
               Saldo en riesgo crítico: <strong className="text-texto-critico">{euros(sumaCriticas90)}</strong> (máximo{" "}
-              {maxDiasVencido} días vencida).
+              {maxDiasVencido} días desde la emisión).
             </p>
           </div>
-          <Link href={`/admin/documentos?cliente=${clienteId}&cobro=vencida_90`}>
+          <Link href={`/admin/clientes/${clienteId}/estado-cuenta`}>
             <Boton variante="critico" tamano="s">
-              Ver facturas 90+ días
+              Ver estado de cuenta
             </Boton>
           </Link>
         </div>
@@ -235,7 +280,7 @@ export default async function PaginaCliente({
                 : "text-texto-exito"
           }
           tono={criticas90.length > 0 ? "critico" : vencidas.length > 0 ? "aviso" : "default"}
-          href={`/admin/documentos?cliente=${clienteId}&cobro=${criticas90.length > 0 ? "vencida_90" : "pendiente"}`}
+          href={criticas90.length > 0 ? `/admin/clientes/${clienteId}/estado-cuenta` : `/admin/documentos?cliente=${clienteId}&cobro=pendiente`}
         />
         <TarjetaKpi etiqueta="Campañas" valor={String((campanas ?? []).length)} />
         <TarjetaKpi etiqueta="Descuento habitual" valor={`${Number(cliente.descuento_habitual ?? 0)} %`} />
@@ -389,6 +434,28 @@ export default async function PaginaCliente({
             <h2 className="text-base font-semibold text-texto-primario">Contactos</h2>
             <Contactos clienteId={clienteId} contactos={contactos ?? []} />
           </div>
+
+          {(reclamaciones ?? []).length > 0 && (
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
+              <h2 className="text-base font-semibold text-texto-primario">Reclamaciones de impagados</h2>
+              <ul className="flex flex-col divide-y divide-fondo-hover">
+                {(reclamaciones ?? []).map((r) => (
+                  <li key={r.id} className="flex flex-col gap-0.5 py-esp2 text-sm">
+                    <div className="flex items-center justify-between gap-esp2">
+                      <span className="font-medium text-texto-primario">{fechaMedia(r.creada_en)}</span>
+                      <span className="tabular-nums font-medium text-texto-critico">{euros(Number(r.total_insoluto))}</span>
+                    </div>
+                    <p className="text-xs text-texto-terciario">
+                      {r.documentos.length} factura{r.documentos.length === 1 ? "" : "s"} · para {r.destinatarios.join(", ")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-texto-terciario">
+                Borradores creados en Gmail ({(reclamaciones ?? [])[0]?.remitente}) desde la app.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
             <h2 className="text-base font-semibold text-texto-primario">Estado de la cuenta</h2>

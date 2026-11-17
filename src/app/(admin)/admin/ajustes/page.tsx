@@ -15,6 +15,12 @@ const SECCIONES = [
     icono: "contabilidad",
   },
   {
+    href: "/admin/ajustes/gmail",
+    titulo: "Gmail",
+    texto: "Conecta la cuenta de Gmail en la que se preparan los borradores para reclamar facturas impagadas.",
+    icono: "enviar",
+  },
+  {
     href: "/admin/ajustes/equipo",
     titulo: "Equipo",
     texto: "Personas que usan la app: dar de alta instaladores, cambiar su rol o desactivar una cuenta.",
