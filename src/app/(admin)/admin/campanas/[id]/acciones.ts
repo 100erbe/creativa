@@ -493,8 +493,8 @@ export const finalizarCampana = accion(async (campanaId: number) => {
 });
 
 /**
- * Borra una campaña que no ha llegado a nada: sin documentos vinculados, sin puntos trabajados y sin fotos.
- * Los puntos pendientes, sus asignaciones y los enlaces del cliente caen en cascada.
+ * Borra una campaña que no está vinculada a ningún documento (si lo está, forma parte de lo facturado).
+ * Se borran también sus fotos del almacenamiento; puntos, asignaciones y enlaces caen en cascada.
  */
 export const eliminarCampana = accion(async (campanaId: number) => {
   const admin = await exigirAdmin();
@@ -503,27 +503,30 @@ export const eliminarCampana = accion(async (campanaId: number) => {
   const [{ data: campana }, { count: documentos }, { data: puntos }] = await Promise.all([
     supabase.from("campanas").select("nombre, documento_id").eq("id", campanaId).maybeSingle(),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
-    supabase.from("puntos_campana").select("id, estado").eq("campana_id", campanaId),
+    supabase.from("puntos_campana").select("id").eq("campana_id", campanaId),
   ]);
   if (!campana) throw new Error("No se ha encontrado la campaña.");
   if (campana.documento_id || (documentos ?? 0) > 0) {
-    throw new Error("La campaña está vinculada a un documento: no se puede eliminar.");
+    throw new Error("La campaña está vinculada a un documento: no se puede eliminar. Cámbiala a «Cancelada».");
   }
-  const lista = puntos ?? [];
-  if (lista.some((p) => !["pendiente", "incidencia"].includes(p.estado))) {
-    throw new Error("La campaña tiene puntos ya instalados: no se puede eliminar. Cámbiala a «Cancelada».");
-  }
-  const ids = lista.map((p) => p.id);
-  if (ids.length) {
-    const { count: fotos } = await supabase.from("fotos_punto").select("id", { count: "exact", head: true }).in("punto_id", ids);
-    if ((fotos ?? 0) > 0) throw new Error("La campaña tiene fotos: no se puede eliminar. Cámbiala a «Cancelada».");
-  }
+  const ids = (puntos ?? []).map((p) => p.id);
 
-  // Antes de borrar: las asignaciones caen en cascada con los puntos.
-  const { data: asignados } = ids.length
-    ? await supabase.from("asignaciones_punto").select("usuario_id").in("punto_id", ids).in("estado", ["pendiente", "en_curso"])
-    : { data: [] };
-  const destinatarios = [...new Set((asignados ?? []).map((a) => a.usuario_id))];
+  let destinatarios: string[] = [];
+  if (ids.length) {
+    const [{ data: fotos, error: errorFotos }, { data: asignados }] = await Promise.all([
+      supabase.from("fotos_punto").select("id, url_foto").in("punto_id", ids),
+      supabase.from("asignaciones_punto").select("usuario_id").in("punto_id", ids).in("estado", ["pendiente", "en_curso"]),
+    ]);
+    if (errorFotos) throw new Error(errorFotos.message);
+    destinatarios = [...new Set((asignados ?? []).map((a) => a.usuario_id))];
+
+    if (fotos && fotos.length) {
+      const { error: errorArchivos } = await supabase.storage.from("fotos-puntos").remove(fotos.map((f) => f.url_foto));
+      if (errorArchivos) throw new Error(`No se pudieron borrar las fotos: ${errorArchivos.message}`);
+      const { error } = await supabase.from("fotos_punto").delete().in("punto_id", ids);
+      if (error) throw new Error(error.message);
+    }
+  }
 
   const { error } = await supabase.from("campanas").delete().eq("id", campanaId);
   if (error) throw new Error(error.message);
