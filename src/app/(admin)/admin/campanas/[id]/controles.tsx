@@ -18,6 +18,7 @@ import {
   programarRetirada,
   marcarRetirado,
   finalizarCampana,
+  eliminarCampana,
 } from "./acciones";
 import { FormularioPunto, type ArticuloPunto, type PuntoEditable } from "./formulario-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
@@ -401,8 +402,11 @@ export function BotonAnadirPunto({
 export function EditarCampana({
   campanaId,
   inicial,
+  eliminable,
 }: {
   campanaId: number;
+  /** Sin documentos vinculados, sin puntos trabajados y sin fotos: se puede borrar. */
+  eliminable: boolean;
   inicial: { nombre: string; estado: string; fechaInicio: string | null; fechaFin: string | null; descripcion: string | null };
 }) {
   const router = useRouter();
@@ -484,6 +488,27 @@ export function EditarCampana({
         <Boton type="button" variante="secundario" onClick={() => setAbierto(false)} disabled={pendiente}>
           Cancelar
         </Boton>
+        {eliminable && (
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={async () => {
+              if (!(await confirmar(`¿Eliminar la campaña «${inicial.nombre}» y sus puntos? No se puede deshacer.`))) return;
+              setError(null);
+              iniciar(async () => {
+                try {
+                  await desenvolver(eliminarCampana(campanaId));
+                  router.push("/admin/campanas");
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "No se pudo eliminar la campaña.");
+                }
+              });
+            }}
+            className="ml-auto text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
+          >
+            Eliminar campaña
+          </button>
+        )}
       </div>
     </form>
   );

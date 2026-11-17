@@ -43,7 +43,7 @@ export default async function PaginaCampana({
     await Promise.all([
       supabase
         .from("campanas")
-        .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin, descripcion, clientes(razon_social)")
+        .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin, descripcion, documento_id, clientes(razon_social)")
         .eq("id", campanaId)
         .maybeSingle(),
       supabase
@@ -64,9 +64,11 @@ export default async function PaginaCampana({
         .order("creado_en", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
     ]);
   lanzarSiError(...resultadosBase);
-  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }] = resultadosBase;
+  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }, { count: documentosVinculados }] =
+    resultadosBase;
 
   if (!campana) notFound();
 
@@ -166,6 +168,12 @@ export default async function PaginaCampana({
         )}
         <EditarCampana
           campanaId={campanaId}
+          eliminable={
+            !campana.documento_id &&
+            (documentosVinculados ?? 0) === 0 &&
+            lista.every((p) => p.estado === "pendiente" || p.estado === "incidencia") &&
+            (fotos ?? []).length === 0
+          }
           inicial={{
             nombre: campana.nombre,
             estado: campana.estado,
