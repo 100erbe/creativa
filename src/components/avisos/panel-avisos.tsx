@@ -88,7 +88,7 @@ export function PanelAvisos() {
     });
 
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 shadow-xs">
       <div className="flex items-center gap-esp3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-fondo-marca-sutil">
           <Icono nombre="avisos" size={20} className="text-icono-marca" />
@@ -159,7 +159,10 @@ export function PanelAvisos() {
       )}
 
       {mensaje && (
-        <p className={mensaje.tono === "ok" ? "text-sm text-texto-exito" : "text-sm text-texto-peligro"} role="status">
+        <p
+          className={mensaje.tono === "ok" ? "animate-estado-entrar text-sm text-texto-exito" : "animate-estado-entrar text-sm text-texto-peligro"}
+          role="status"
+        >
           {mensaje.texto}
         </p>
       )}
@@ -198,7 +201,7 @@ export function BannerAvisos() {
   return (
     <div
       role="status"
-      className="mx-esp4 mt-esp3 flex items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario"
+      className="animate-estado-entrar mx-esp4 mt-esp3 flex items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario"
     >
       <Icono nombre="avisos" size={16} className="text-texto-aviso" />
       <span className="min-w-0 flex-1">

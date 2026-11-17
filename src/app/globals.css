@@ -40,6 +40,14 @@
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
+
+    --motion-duration-fast: 150ms;
+    --motion-duration-base: 200ms;
+    --motion-duration-slow: 250ms;
+    --motion-duration-pulse: 1800ms;
+    --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-scale-press: 0.98;
   }
 
   html {
@@ -49,6 +57,7 @@
   :focus-visible {
     outline: 2px solid theme("colors.borde.foco");
     outline-offset: 2px;
+    transition: outline-offset var(--motion-duration-fast) var(--motion-ease-out);
   }
   body {
     @apply bg-fondo-lienzo text-texto-primario antialiased;
@@ -63,6 +72,12 @@
 
 /* Respeta la preferencia de movimiento reducido del sistema (WCAG 2.3.3). */
 @media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0.01ms;
+    --motion-duration-base: 0.01ms;
+    --motion-duration-slow: 0.01ms;
+    --motion-scale-press: 1;
+  }
   *,
   *::before,
   *::after {
@@ -93,7 +108,7 @@
   padding: 0 4px;
   border-top-left-radius: 4px;
   box-shadow: none;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard), color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .leaflet-container .leaflet-control-container .leaflet-control-attribution a {
   color: inherit;

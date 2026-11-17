@@ -141,8 +141,8 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
 
   const chip = (activo: boolean) =>
     activo
-      ? "rounded-completo bg-fondo-marca px-esp3 py-esp1 text-sm font-medium text-texto-sobre-marca"
-      : "rounded-completo border border-borde-default bg-fondo-superficie px-esp3 py-esp1 text-sm text-texto-secundario hover:bg-fondo-sutil";
+      ? "inline-flex min-h-10 items-center rounded-completo bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
+      : "inline-flex min-h-10 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8";
 
   return (
     <div className="flex flex-col gap-esp6">
@@ -194,7 +194,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[160px]">
+      <div className="grid grid-cols-2 gap-esp3 md:gap-esp4 xl:grid-cols-4">
         <TarjetaKpi
           etiqueta="Pendientes de aprobar"
           valor={euros(suma(porAprobar, "total"))}
@@ -221,7 +221,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-esp3">
+      <div className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
         <div className="flex flex-wrap gap-esp2">
           {[
             { v: "", e: "Todos" },
@@ -264,65 +264,75 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </form>
       </div>
 
-      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
-        {visibles.map((g) => (
-          <Link
-            key={g.id}
-            // Pendiente → panel de revisión (con enlace a la ficha); el resto → ficha del gasto.
-            href={g.estado === "pendiente" ? enlace(actual, { revisar: String(g.id) }) : `/admin/gastos/${g.id}`}
-            className="grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1 py-esp3 hover:bg-fondo-sutil lg:flex lg:gap-esp4"
-          >
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil lg:flex">
-              <Icono nombre="gastos" size={18} className="text-icono-default" />
+      <div className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario lg:flex">
+          <span className="flex-1">Concepto y responsable</span>
+          <span className="w-[100px]">Fecha</span>
+          <span className="w-[110px]">Pago</span>
+          <span className="w-[90px]">Ticket</span>
+          <span className="w-[110px] text-right">Importe</span>
+          <span className="w-[110px] text-right">Estado</span>
+        </div>
+        <div className="flex flex-col divide-y divide-borde-default">
+          {visibles.map((g) => (
+            <Link
+              key={g.id}
+              // Pendiente → panel de revisión (con enlace a la ficha); el resto → ficha del gasto.
+              href={g.estado === "pendiente" ? enlace(actual, { revisar: String(g.id) }) : `/admin/gastos/${g.id}`}
+              className="grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1 px-esp4 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 md:px-esp6 lg:flex lg:gap-esp4"
+            >
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil lg:flex">
+                <Icono nombre="gastos" size={18} className="text-icono-default" />
+              </div>
+              <div className="min-w-0 lg:flex-1">
+                <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario">
+                  {g.codigo} · {ETIQUETA_TIPO_GASTO[g.tipo]}
+                  {g.categorias_gasto?.nombre ? ` · ${g.categorias_gasto.nombre}` : ""}
+                </p>
+                <p className="truncate text-sm font-medium text-texto-primario">{g.concepto}</p>
+                <p className="truncate text-xs text-texto-terciario">
+                  {g.proveedor ? `${g.proveedor} · ` : ""}
+                  {g.usuarios?.nombre ?? "—"}
+                  <span className="lg:hidden"> · {fechaMedia(g.fecha)}</span>
+                </p>
+              </div>
+              <span className="tabular-nums hidden w-[100px] text-xs text-texto-terciario lg:block">{fechaMedia(g.fecha)}</span>
+              <span className="hidden w-[110px] text-xs text-texto-terciario lg:block">
+                {ETIQUETA_FORMA_PAGO_GASTO[g.forma_pago]}
+              </span>
+              <span className="hidden w-[90px] text-xs lg:block">
+                {g.ticket_path ? (
+                  <span className="text-texto-exito">✓ Adjunto</span>
+                ) : (
+                  <span className="text-texto-aviso">⚠ Falta ticket</span>
+                )}
+              </span>
+              <span className="tabular-nums whitespace-nowrap text-right lg:w-[110px]">
+                <span className="block text-sm font-medium text-texto-primario">{euros(Number(g.total))}</span>
+                {g.cuota_iva != null && (
+                  <span className="block text-xs text-texto-terciario">IVA {euros(Number(g.cuota_iva))}</span>
+                )}
+              </span>
+              <div className="col-span-2 flex flex-wrap items-center gap-1 lg:col-span-1 lg:w-[110px] lg:justify-end">
+                <Insignia tono={TONO_ESTADO_GASTO[g.estado]}>{ETIQUETA_ESTADO_GASTO[g.estado]}</Insignia>
+                {!g.ticket_path && <span className="text-xs text-texto-aviso lg:hidden">⚠ Falta ticket</span>}
+              </div>
+            </Link>
+          ))}
+          {visibles.length === 0 && (
+            <p className="px-esp4 py-esp5 text-sm text-texto-terciario md:px-esp6">No hay gastos con estos filtros.</p>
+          )}
+          {filtrados.length > 0 && (
+            <div className="tabular-nums flex flex-wrap items-center gap-x-esp5 gap-y-1 bg-fondo-sutil px-esp4 py-esp3 text-sm font-semibold text-texto-primario md:px-esp6">
+              <span className="flex-1">
+                Total ({filtrados.length} gasto{filtrados.length === 1 ? "" : "s"})
+              </span>
+              <span className="font-normal text-texto-secundario">Base {euros(suma(filtrados, "base_imponible"))}</span>
+              <span className="font-normal text-texto-secundario">IVA {euros(suma(filtrados, "cuota_iva"))}</span>
+              <span>{euros(suma(filtrados, "total"))}</span>
             </div>
-            <div className="min-w-0 lg:flex-1">
-              <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario">
-                {g.codigo} · {ETIQUETA_TIPO_GASTO[g.tipo]}
-                {g.categorias_gasto?.nombre ? ` · ${g.categorias_gasto.nombre}` : ""}
-              </p>
-              <p className="truncate text-sm font-medium text-texto-primario">{g.concepto}</p>
-              <p className="truncate text-xs text-texto-terciario">
-                {g.proveedor ? `${g.proveedor} · ` : ""}
-                {g.usuarios?.nombre ?? "—"}
-                <span className="lg:hidden"> · {fechaMedia(g.fecha)}</span>
-              </p>
-            </div>
-            <span className="hidden w-[100px] text-xs text-texto-terciario lg:block">{fechaMedia(g.fecha)}</span>
-            <span className="hidden w-[110px] text-xs text-texto-terciario lg:block">
-              {ETIQUETA_FORMA_PAGO_GASTO[g.forma_pago]}
-            </span>
-            <span className="hidden w-[90px] text-xs lg:block">
-              {g.ticket_path ? (
-                <span className="text-texto-exito">✓ Adjunto</span>
-              ) : (
-                <span className="text-texto-aviso">⚠ Falta ticket</span>
-              )}
-            </span>
-            <span className="whitespace-nowrap text-right lg:w-[110px]">
-              <span className="block text-sm font-medium text-texto-primario">{euros(Number(g.total))}</span>
-              {g.cuota_iva != null && (
-                <span className="block text-xs text-texto-terciario">IVA {euros(Number(g.cuota_iva))}</span>
-              )}
-            </span>
-            <div className="col-span-2 flex flex-wrap items-center gap-1 lg:col-span-1 lg:w-[110px] lg:justify-end">
-              <Insignia tono={TONO_ESTADO_GASTO[g.estado]}>{ETIQUETA_ESTADO_GASTO[g.estado]}</Insignia>
-              {!g.ticket_path && <span className="text-xs text-texto-aviso lg:hidden">⚠ Falta ticket</span>}
-            </div>
-          </Link>
-        ))}
-        {visibles.length === 0 && (
-          <p className="py-esp5 text-sm text-texto-terciario">No hay gastos con estos filtros.</p>
-        )}
-        {filtrados.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-esp5 gap-y-1 bg-fondo-sutil px-esp4 py-esp3 text-sm font-semibold text-texto-primario md:-mx-esp6 md:px-esp6">
-            <span className="flex-1">
-              Total ({filtrados.length} gasto{filtrados.length === 1 ? "" : "s"})
-            </span>
-            <span className="font-normal text-texto-secundario">Base {euros(suma(filtrados, "base_imponible"))}</span>
-            <span className="font-normal text-texto-secundario">IVA {euros(suma(filtrados, "cuota_iva"))}</span>
-            <span>{euros(suma(filtrados, "total"))}</span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {paginas > 1 && (

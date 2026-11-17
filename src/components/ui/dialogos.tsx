@@ -86,13 +86,13 @@ export function Dialogos() {
         aria-label="Cancelar"
         tabIndex={-1}
         onClick={() => cerrar(false)}
-        className="absolute inset-0 cursor-default bg-fondo-velo"
+        className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
       />
       <div
         role="alertdialog"
         aria-modal="true"
         aria-describedby="dialogo-texto"
-        className="relative flex w-full max-w-sm flex-col gap-esp4 rounded-lg bg-fondo-superficie p-esp5 shadow-xl"
+        className="animate-modal-entrar relative flex w-full max-w-sm flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado"
       >
         <p id="dialogo-texto" className="whitespace-pre-line text-sm text-texto-primario">
           {actual.texto}
@@ -106,7 +106,7 @@ export function Dialogos() {
           <button
             ref={botonAceptar}
             onClick={() => cerrar(true)}
-            className={`inline-flex h-10 min-h-11 flex-1 items-center justify-center rounded-md px-esp4 text-sm font-medium transition-colors sm:flex-none ${
+            className={`inline-flex h-10 min-h-11 flex-1 items-center justify-center rounded-md px-esp4 text-sm font-medium transition-colors duration-rapida ease-suave active:scale-press sm:flex-none ${
               actual.tipo === "confirmar" && actual.peligro
                 ? "bg-fondo-peligro text-texto-inverso hover:bg-fondo-peligro-hover"
                 : "bg-fondo-marca text-texto-sobre-marca hover:bg-fondo-marca-hover"

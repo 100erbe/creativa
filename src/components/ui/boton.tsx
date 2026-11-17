@@ -36,7 +36,7 @@ export function Boton({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-esp2 rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex items-center justify-center gap-esp2 rounded-md transition-[background-color,border-color,color,opacity,transform] duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
         variantes[variante],
         tamanos[tamano],
         className,
@@ -44,7 +44,18 @@ export function Boton({
       disabled={disabled || cargando}
       {...props}
     >
-      {cargando ? "…" : children}
+      {cargando && (
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          fill="none"
+          className="h-3.5 w-3.5 shrink-0 animate-spin"
+        >
+          <circle cx="8" cy="8" r="6" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
+          <path d="M14 8a6 6 0 0 0-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )}
+      {children}
     </button>
   );
 }

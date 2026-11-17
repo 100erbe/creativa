@@ -245,7 +245,7 @@ export function VistaCatalogo({
             onClick={() => setCategoriaFiltroId(null)}
             aria-pressed={categoriaFiltroId === null}
             className={cn(
-              "inline-flex min-h-9 items-center rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8",
+              "inline-flex min-h-9 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8",
               categoriaFiltroId === null
                 ? "bg-fondo-marca text-texto-sobre-marca"
                 : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
@@ -263,7 +263,7 @@ export function VistaCatalogo({
                 onClick={() => setCategoriaFiltroId(activo ? null : c.id)}
                 aria-pressed={activo}
                 className={cn(
-                  "inline-flex min-h-9 items-center gap-1.5 rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8",
+                  "inline-flex min-h-9 items-center gap-1.5 rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8",
                   activo
                     ? "bg-fondo-marca text-texto-sobre-marca"
                     : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
@@ -303,7 +303,7 @@ export function VistaCatalogo({
             </button>
           </div>
 
-          <div className="flex flex-col divide-y divide-fondo-hover overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+          <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
             {items.map((p) => (
               <FilaProducto
                 key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.admiteMedidaLibre}-${p.formatos.length}`}
@@ -377,7 +377,7 @@ function FilaProducto({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-esp3 px-esp4 py-esp3 hover:bg-fondo-sutil/60 md:px-esp5">
+      <div className="flex flex-wrap items-center gap-esp3 px-esp4 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 md:px-esp5">
         <button
           type="button"
           onClick={onAlternar}
@@ -426,14 +426,14 @@ function FilaProducto({
           <button
             type="button"
             onClick={onEditarFicha}
-            className="inline-flex min-h-8 items-center rounded-md border border-borde-default px-esp2 text-xs font-medium text-texto-primario hover:bg-fondo-sutil"
+            className="inline-flex min-h-8 items-center rounded-md border border-borde-default px-esp2 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             Editar
           </button>
           <button
             type="button"
             onClick={onAlternar}
-            className="inline-flex min-h-8 items-center gap-1 rounded-md px-esp2 text-xs font-medium text-texto-marca hover:bg-fondo-marca-sutil"
+            className="inline-flex min-h-8 items-center gap-1 rounded-md px-esp2 text-xs font-medium text-texto-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-sutil active:scale-press"
           >
             {expandido ? "Cerrar" : p.formatos.length > 0 ? `Formatos (${p.formatos.length})` : "Precios / Formatos"}
           </button>
@@ -441,7 +441,7 @@ function FilaProducto({
       </div>
 
       {expandido && (
-        <div className="flex flex-col gap-esp4 border-t border-borde-default bg-fondo-sutil/70 px-esp4 py-esp4 md:px-esp5">
+        <div className="animate-estado-entrar flex flex-col gap-esp4 border-t border-borde-default bg-fondo-sutil/70 px-esp4 py-esp4 md:px-esp5">
           {/* Ajuste rápido de precios y estado */}
           <form
             className="flex flex-col gap-esp3 rounded-md border border-borde-default bg-fondo-superficie p-esp3"
@@ -525,7 +525,7 @@ function FilaProducto({
               <Boton type="submit" tamano="s" cargando={pendiente}>
                 Guardar precios
               </Boton>
-              {guardado && !error && <span className="text-xs text-texto-exito">Guardado</span>}
+              {guardado && !error && <span className="animate-estado-entrar text-xs text-texto-exito">Guardado</span>}
               {error && <span className="text-xs text-texto-peligro">{error}</span>}
             </div>
           </form>
@@ -656,7 +656,7 @@ function FormularioFormato({
   return (
     <form
       className={cn(
-        "flex flex-col gap-esp3 rounded-md border bg-fondo-superficie p-esp3",
+        "animate-estado-entrar flex flex-col gap-esp3 rounded-md border bg-fondo-superficie p-esp3",
         f ? "border-borde-foco" : "border-borde-marca bg-fondo-marca-sutil/20",
       )}
       onSubmit={(e) => {
@@ -778,7 +778,7 @@ function FormularioFormato({
         >
           Cancelar
         </Boton>
-        {guardado && !error && <span className="text-xs text-texto-exito">Guardado</span>}
+        {guardado && !error && <span className="animate-estado-entrar text-xs text-texto-exito">Guardado</span>}
         {f && (
           <button
             type="button"
@@ -845,9 +845,9 @@ function ModalProducto({
       aria-modal="true"
       aria-label={p ? `Editar ${p.nombre}` : "Nuevo producto o servicio"}
     >
-      <button type="button" aria-label="Cerrar" onClick={onCerrar} className="absolute inset-0 bg-fondo-velo" />
+      <button type="button" aria-label="Cerrar" onClick={onCerrar} className="animate-velo-entrar absolute inset-0 bg-fondo-velo" />
       <form
-        className="relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl bg-fondo-superficie p-esp5 shadow-xl sm:max-w-2xl sm:rounded-xl"
+        className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado sm:max-w-2xl sm:rounded-xl"
         onSubmit={(e) => {
           e.preventDefault();
           const nFab = permiteFabricacion ? aNumero(precioFab) : null;
@@ -894,7 +894,7 @@ function ModalProducto({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </button>
@@ -1086,7 +1086,7 @@ function ModalProducto({
 
         {error && <p className="text-sm text-texto-peligro">{error}</p>}
 
-        <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp3">
+        <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3">
           {p && (
             <Boton
               type="button"
@@ -1147,9 +1147,9 @@ function ModalCategoria({
       aria-modal="true"
       aria-label={c ? `Editar categoría ${c.nombre}` : "Nueva categoría"}
     >
-      <button type="button" aria-label="Cerrar" onClick={onCerrar} className="absolute inset-0 bg-fondo-velo" />
+      <button type="button" aria-label="Cerrar" onClick={onCerrar} className="animate-velo-entrar absolute inset-0 bg-fondo-velo" />
       <form
-        className="relative flex w-full flex-col gap-esp4 rounded-t-xl bg-fondo-superficie p-esp5 shadow-xl sm:max-w-md sm:rounded-xl"
+        className="animate-hoja-subir sm:animate-modal-entrar relative flex w-full flex-col gap-esp4 rounded-t-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado sm:max-w-md sm:rounded-xl"
         onSubmit={(e) => {
           e.preventDefault();
           ejecutar(async () => {
@@ -1172,7 +1172,7 @@ function ModalCategoria({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </button>

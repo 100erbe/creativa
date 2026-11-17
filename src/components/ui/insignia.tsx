@@ -70,12 +70,15 @@ export function Insignia({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-esp1 rounded-completo border px-esp2 py-[2px] text-xs font-medium",
+        "inline-flex items-center gap-esp1 rounded-completo border px-esp2 py-[2px] text-xs font-medium transition-colors duration-rapida ease-suave",
         solido ? (tonosSolidos[tono] ?? tonos[tono]) : tonos[tono],
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
+      <span
+        className={cn("h-1.5 w-1.5 rounded-full bg-current", tono === "critico" && solido && "animate-pulse")}
+        aria-hidden="true"
+      />
       {children}
     </span>
   );

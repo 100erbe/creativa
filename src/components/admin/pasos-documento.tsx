@@ -34,7 +34,12 @@ export function PasosDocumento({ actual, documentoId }: { actual: number; docume
               />
             );
             return documentoId && paso.numero !== actual ? (
-              <Link key={paso.numero} href={paso.ruta(documentoId)} aria-label={paso.etiqueta} className="flex-1 py-2">
+              <Link
+                key={paso.numero}
+                href={paso.ruta(documentoId)}
+                aria-label={paso.etiqueta}
+                className="flex-1 py-2 transition-opacity duration-rapida ease-suave hover:opacity-80"
+              >
                 {barra}
               </Link>
             ) : (
@@ -74,7 +79,7 @@ export function PasosDocumento({ actual, documentoId }: { actual: number; docume
         return (
           <div key={paso.numero} className="flex items-center gap-esp3">
             {documentoId && estado !== "actual" ? (
-              <Link href={paso.ruta(documentoId)} className="rounded-md hover:opacity-80">
+              <Link href={paso.ruta(documentoId)} className="rounded-md transition-opacity duration-rapida ease-suave hover:opacity-80">
                 {contenido}
               </Link>
             ) : (

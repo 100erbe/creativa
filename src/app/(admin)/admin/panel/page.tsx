@@ -242,10 +242,10 @@ export default async function PaginaPanel() {
           </div>
           <Link
             href="/admin/documentos?cobro=vencida_90"
-            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-texto-marca hover:underline"
+            className="group inline-flex min-h-9 items-center gap-1 text-sm font-medium text-texto-marca transition-colors duration-rapida ease-suave hover:underline"
           >
             Revisar insolutas
-            <Icono nombre="flechaDerecha" size={14} />
+            <Icono nombre="flechaDerecha" size={14} className="transition-transform duration-rapida ease-salida group-hover:translate-x-0.5" />
           </Link>
         </div>
 
@@ -275,8 +275,8 @@ export default async function PaginaPanel() {
               href={t.href}
               className={
                 t.destacado
-                  ? "flex flex-col gap-1 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 p-esp3 transition-colors hover:bg-fondo-critico-sutil"
-                  : "flex flex-col gap-1 rounded-md border border-borde-default bg-fondo-sutil/50 p-esp3 transition-colors hover:bg-fondo-sutil"
+                  ? "flex flex-col gap-1 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 p-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil"
+                  : "flex flex-col gap-1 rounded-md border border-borde-default bg-fondo-sutil/50 p-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
               }
             >
               <div className="flex items-center gap-1.5">
@@ -313,8 +313,8 @@ export default async function PaginaPanel() {
                     href={`/admin/documentos/${d.id}`}
                     className={
                       es90
-                        ? "flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp3 transition-colors hover:bg-fondo-critico-sutil sm:flex-row sm:items-center sm:gap-esp4"
-                        : "flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors hover:bg-fondo-sutil sm:flex-row sm:items-center sm:gap-esp4"
+                        ? "group flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil sm:flex-row sm:items-center sm:gap-esp4"
+                        : "group flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil sm:flex-row sm:items-center sm:gap-esp4"
                     }
                   >
                     <div className="min-w-0 flex-1">
@@ -339,7 +339,7 @@ export default async function PaginaPanel() {
                       </span>
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-texto-marca">
                         Gestionar cobro
-                        <Icono nombre="flechaDerecha" size={13} />
+                        <Icono nombre="flechaDerecha" size={13} className="transition-transform duration-rapida ease-salida group-hover:translate-x-0.5" />
                       </span>
                     </div>
                   </Link>
@@ -369,7 +369,7 @@ export default async function PaginaPanel() {
               Ver pipeline
             </Link>
           </div>
-          <div className="flex flex-col divide-y divide-fondo-hover">
+          <div className="flex flex-col divide-y divide-borde-default">
             {(campanasActivas ?? []).map((c) => {
               const total = Number(c.puntos_totales) || 1;
               const hechos =
@@ -378,7 +378,7 @@ export default async function PaginaPanel() {
                 <Link
                   key={c.campana_id}
                   href={`/admin/campanas/${c.campana_id}`}
-                  className="-mx-esp2 flex items-center gap-esp4 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                  className="-mx-esp2 flex items-center gap-esp4 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-texto-primario">{c.campana}</p>
@@ -387,7 +387,7 @@ export default async function PaginaPanel() {
                   <div className="hidden w-[160px] items-center gap-esp3 sm:flex">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                       <div
-                        className="h-full rounded-completo bg-fondo-marca"
+                        className="h-full rounded-completo bg-fondo-marca transition-[width] duration-lenta ease-salida"
                         style={{ width: `${Math.round((hechos / total) * 100)}%` }}
                       />
                     </div>
@@ -420,12 +420,12 @@ export default async function PaginaPanel() {
               Ver todos
             </Link>
           </div>
-          <div className="flex flex-col divide-y divide-fondo-hover">
+          <div className="flex flex-col divide-y divide-borde-default">
             {(documentosRecientes ?? []).map((d) => (
               <Link
                 key={d.id}
                 href={`/admin/documentos/${d.id}`}
-                className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
               >
                 <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
                   <Icono nombre="documentos" size={18} className="text-icono-default" />

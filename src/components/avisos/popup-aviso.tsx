@@ -115,12 +115,12 @@ export function PopupAviso() {
       onFocus={() => setPausado(true)}
       onBlur={() => setPausado(false)}
       className={
-        "pointer-events-none fixed bottom-esp5 right-esp5 z-[3100] hidden w-[360px] md:block" +
-        "transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none " +
+        "pointer-events-none fixed bottom-esp5 right-esp5 z-[3100] hidden w-[360px] md:block " +
+        "transition-[opacity,transform] duration-media ease-salida motion-reduce:transition-none " +
         (visible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0 motion-reduce:translate-y-0")
       }
     >
-      <div className="pointer-events-auto relative flex items-start gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 pr-esp8 shadow-xl">
+      <div className="pointer-events-auto relative flex items-start gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 pr-esp8 shadow-elevado">
         <button
           onClick={abrir}
           className="flex min-w-0 flex-1 items-start gap-esp3 rounded-md text-left outline-offset-4"
@@ -138,7 +138,7 @@ export function PopupAviso() {
         <button
           onClick={cerrar}
           aria-label="Cerrar aviso"
-          className="absolute right-esp2 top-esp2 flex h-8 w-8 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+          className="absolute right-esp2 top-esp2 flex h-8 w-8 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="cerrar" size={16} />
         </button>

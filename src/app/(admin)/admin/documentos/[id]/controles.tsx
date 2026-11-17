@@ -69,8 +69,8 @@ function PlazosRapidos({
               aria-pressed={activo}
               className={
                 activo
-                  ? "h-8 rounded-md border border-borde-marca bg-fondo-marca-sutil px-esp2 text-xs font-medium text-texto-marca"
-                  : "h-8 rounded-md border border-borde-default px-esp2 text-xs text-texto-secundario hover:bg-fondo-sutil"
+                  ? "h-8 rounded-md border border-borde-marca bg-fondo-marca-sutil px-esp2 text-xs font-medium text-texto-marca transition-colors duration-rapida ease-suave active:scale-press"
+                  : "h-8 rounded-md border border-borde-default px-esp2 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               }
             >
               {dias} d
@@ -170,7 +170,7 @@ export function AccionesDocumento({
           <a
             href={mailto}
             onClick={alEnviar}
-            className="inline-flex h-10 items-center justify-center gap-esp2 rounded-md border border-borde-campo bg-fondo-superficie px-esp4 text-sm font-medium text-texto-primario hover:bg-fondo-sutil"
+            className="inline-flex h-10 items-center justify-center gap-esp2 rounded-md border border-borde-campo bg-fondo-superficie px-esp4 text-sm font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="enviar" size={16} />
             Enviar por email
@@ -184,7 +184,7 @@ export function AccionesDocumento({
       )}
 
       {ofrecerEnviado && puedeOfrecerEnviado && (
-        <div className="flex flex-col gap-esp2 rounded-md border border-borde-info bg-fondo-info-sutil px-esp3 py-esp3" role="status">
+        <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-md border border-borde-info bg-fondo-info-sutil px-esp3 py-esp3" role="status">
           <p className="text-xs text-texto-primario">¿Se lo has enviado al cliente?</p>
           <div className="flex gap-esp2">
             <Boton
@@ -225,7 +225,7 @@ export function AccionesDocumento({
               Emitir {etiquetaTipo.toLowerCase()}
             </Boton>
           ) : (
-            <div className="flex flex-col gap-esp2 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp3">
+            <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp3">
               {avisoEmision && (
                 <p className="text-xs font-semibold text-texto-aviso" role="alert">
                   {avisoEmision} Si querías anular la factura entera, cancela y corrige las líneas.
@@ -488,7 +488,7 @@ export function Cobros({
   return (
     <div className="flex flex-col gap-esp3">
       {cobros.length > 0 && (
-        <div className="flex flex-col divide-y divide-fondo-hover">
+        <div className="flex flex-col divide-y divide-borde-default">
           {cobros.map((c) => (
             <div key={c.id} className="flex items-center gap-esp2 py-esp2 text-sm">
               <div className="flex-1">
@@ -802,7 +802,7 @@ export function CondicionesDocumento({
           Guardar condiciones
         </Boton>
         {guardado && !error && (
-          <span className="text-xs text-texto-exito" role="status">
+          <span className="animate-estado-entrar text-xs text-texto-exito" role="status">
             Guardado
           </span>
         )}

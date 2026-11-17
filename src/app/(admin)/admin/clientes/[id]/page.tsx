@@ -134,9 +134,9 @@ export default async function PaginaCliente({
       <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/clientes"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
         >
-          <Icono nombre="atras" size={16} />
+          <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Clientes
         </Link>
 
@@ -298,12 +298,12 @@ export default async function PaginaCliente({
                 Ver todos
               </Link>
             </div>
-            <div className="flex flex-col divide-y divide-fondo-hover">
+            <div className="flex flex-col divide-y divide-borde-default">
               {(documentos ?? []).map((d) => (
                 <Link
                   key={d.id}
                   href={`/admin/documentos/${d.id}`}
-                  className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                  className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
                 >
                   <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
                     <Icono nombre="documentos" size={18} className="text-icono-default" />
@@ -333,12 +333,12 @@ export default async function PaginaCliente({
           {(campanas ?? []).length > 0 && (
             <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Campañas</h2>
-              <div className="flex flex-col divide-y divide-fondo-hover">
+              <div className="flex flex-col divide-y divide-borde-default">
                 {(campanas ?? []).map((c) => (
                   <Link
                     key={c.id}
                     href={`/admin/campanas/${c.id}`}
-                    className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors hover:bg-fondo-sutil"
+                    className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-texto-primario">{c.nombre}</p>
@@ -358,7 +358,7 @@ export default async function PaginaCliente({
           {(tarifas ?? []).length > 0 && (
             <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Tarifas especiales</h2>
-              <div className="flex flex-col divide-y divide-fondo-hover">
+              <div className="flex flex-col divide-y divide-borde-default">
                 {(tarifas ?? []).map((t) => {
                   const producto = Array.isArray(t.productos) ? t.productos[0] : t.productos;
                   const formato = Array.isArray(t.formatos) ? t.formatos[0] : t.formatos;
@@ -438,7 +438,7 @@ export default async function PaginaCliente({
           {(reclamaciones ?? []).length > 0 && (
             <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
               <h2 className="text-base font-semibold text-texto-primario">Reclamaciones de impagados</h2>
-              <ul className="flex flex-col divide-y divide-fondo-hover">
+              <ul className="flex flex-col divide-y divide-borde-default">
                 {(reclamaciones ?? []).map((r) => (
                   <li key={r.id} className="flex flex-col gap-0.5 py-esp2 text-sm">
                     <div className="flex items-center justify-between gap-esp2">

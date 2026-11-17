@@ -213,9 +213,9 @@ export default async function PaginaDocumento({
       <div className="flex flex-col gap-esp2">
         <Link
           href="/admin/documentos"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
         >
-          <Icono nombre="atras" size={16} />
+          <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Documentos
         </Link>
         {esBorrador && (
@@ -349,7 +349,7 @@ export default async function PaginaDocumento({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-1 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
+          <div className="flex flex-col gap-1 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 shadow-xs">
             <p className="text-xs text-texto-terciario">Cliente</p>
             <p className="text-sm font-medium text-texto-primario">{razonSocial}</p>
             {nif && <p className="text-xs text-texto-secundario">{nif}</p>}
@@ -357,7 +357,7 @@ export default async function PaginaDocumento({
           </div>
 
           {(campanaVinculada || esBorrador) && (
-            <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
+            <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 shadow-xs">
               <div className="flex-1">
                 <p className="text-xs text-texto-terciario">Campaña</p>
                 {campanaVinculada ? (
@@ -390,9 +390,9 @@ export default async function PaginaDocumento({
             </div>
           )}
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
             <h2 className="text-base font-semibold text-texto-primario">Líneas</h2>
-            <div className="flex flex-col divide-y divide-fondo-hover">
+            <div className="flex flex-col divide-y divide-borde-default">
               <div className="hidden grid-cols-[1fr_90px_90px_60px_100px] gap-esp3 pb-esp2 text-xs text-texto-terciario md:grid">
                 <span>Descripción</span>
                 <span className="text-right">Cantidad</span>
@@ -430,7 +430,7 @@ export default async function PaginaDocumento({
           </div>
 
           {(doc.notas_cliente || doc.texto_forma_pago || doc.motivo_exencion) && (
-            <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 text-xs text-texto-secundario">
+            <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 text-xs text-texto-secundario shadow-xs">
               {doc.texto_forma_pago && <p>Forma de pago: {doc.texto_forma_pago}</p>}
               {doc.iban_cobro && <p>IBAN: {doc.iban_cobro}</p>}
               {doc.motivo_exencion && <p>{doc.motivo_exencion}</p>}
@@ -441,7 +441,7 @@ export default async function PaginaDocumento({
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
           <ProveedorCondiciones>
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
             <h2 className="text-base font-semibold text-texto-primario">Resumen</h2>
             <Fila etiqueta="Suma de líneas" valor={euros(Number(doc.suma_lineas))} />
             {Number(doc.importe_descuento) !== 0 && (
@@ -520,7 +520,7 @@ export default async function PaginaDocumento({
           </div>
 
           {esBorrador && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
               <h2 className="text-base font-semibold text-texto-primario">Condiciones</h2>
               <CondicionesDocumento
                 documentoId={doc.id}
@@ -541,7 +541,7 @@ export default async function PaginaDocumento({
             </div>
           )}
 
-          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
             <h2 className="text-base font-semibold text-texto-primario">Acciones</h2>
             <AccionesDocumento
               documentoId={doc.id}
@@ -564,7 +564,7 @@ export default async function PaginaDocumento({
           </div>
 
           {cobrable && estadoCobro && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
               <h2 className="text-base font-semibold text-texto-primario">Cobros</h2>
               <Cobros
                 key={`${cobros?.length ?? 0}-${estadoCobro.pendiente}`}
@@ -600,14 +600,14 @@ export default async function PaginaDocumento({
 
       {/* Móvil: el resumen y el botón de emitir quedan al pie, sin tener que recorrer toda la página. */}
       {esBorrador && (
-        <div className="fixed inset-x-0 bottom-0 z-20 flex items-center gap-esp3 border-t border-borde-default bg-fondo-superficie px-esp4 pt-esp3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-lg xl:hidden print:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-20 flex items-center gap-esp3 border-t border-borde-default bg-fondo-superficie px-esp4 pt-esp3 pb-[calc(env(safe-area-inset-bottom)+12px)] shadow-elevado xl:hidden print:hidden">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-texto-terciario">Total</p>
             <p className="text-lg font-semibold leading-tight text-texto-primario">{euros(Number(doc.total))}</p>
           </div>
           <a
             href="#acciones"
-            className="inline-flex h-11 items-center rounded-md bg-fondo-marca px-esp5 text-sm font-medium text-texto-sobre-marca"
+            className="inline-flex h-11 items-center rounded-md bg-fondo-marca px-esp5 text-sm font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press"
           >
             Revisar y emitir
           </a>

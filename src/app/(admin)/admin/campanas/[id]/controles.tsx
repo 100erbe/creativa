@@ -35,7 +35,7 @@ const CLASE_SELECT_COMPACTO =
   "min-h-11 h-11 md:min-h-8 md:h-8 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-[9px] text-base leading-6 text-texto-primario outline-none focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50 md:py-[5px] md:text-xs md:leading-5";
 
 const CLASE_ACCION_COMPACTA =
-  "inline-flex min-h-11 h-11 md:min-h-8 md:h-8 items-center justify-center gap-1.5 rounded-md px-esp3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 md:text-xs";
+  "inline-flex min-h-11 h-11 md:min-h-8 md:h-8 items-center justify-center gap-1.5 rounded-md px-esp3 text-sm font-medium transition-colors duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 md:text-xs";
 
 /** Asignar / quitar personas de un punto y marcarlo como verificado. */
 export function ControlesPunto({
@@ -100,7 +100,7 @@ export function ControlesPunto({
                 }}
                 disabled={pendiente}
                 aria-label={`Quitar a ${a.nombre}`}
-                className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded text-texto-terciario transition-colors hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
+                className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded text-texto-terciario transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
               >
                 ✕
               </button>
@@ -170,7 +170,7 @@ export function ControlesPunto({
               if (!(await confirmar("¿Eliminar este punto? No se puede deshacer."))) return;
               ejecutar(() => desenvolver(eliminarPuntoCampana(campanaId, puntoId)));
             }}
-            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
+            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
           >
             <Icono nombre="eliminar" size={15} />
           </button>
@@ -178,7 +178,7 @@ export function ControlesPunto({
       </div>
 
       {instalado && (
-        <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp2 lg:justify-end">
+        <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp2 lg:justify-end">
           <span className="text-xs font-medium text-texto-secundario">Retirada</span>
           {!retiradaPendiente && (
             <div className="min-w-[148px] flex-1 sm:flex-initial">
@@ -309,7 +309,7 @@ export function EnlaceCliente({
           href={url}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex min-h-9 items-center rounded-md px-esp2 text-xs font-medium text-texto-marca transition-colors hover:bg-fondo-marca-sutil md:min-h-8"
+          className="inline-flex min-h-9 items-center rounded-md px-esp2 text-xs font-medium text-texto-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-sutil active:scale-press md:min-h-8"
         >
           Abrir ↗
         </a>
@@ -422,7 +422,7 @@ export function EditarCampana({
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   return (
     <form
-      className="mt-esp3 flex w-full basis-full max-w-2xl flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 shadow-xs"
+      className="animate-estado-entrar mt-esp3 flex w-full basis-full max-w-2xl flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 shadow-xs"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
@@ -517,7 +517,7 @@ export function AvisoFinalizar({ campanaId }: { campanaId: number }) {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-wrap items-center gap-esp3 rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3">
+    <div className="animate-estado-entrar flex flex-wrap items-center gap-esp3 rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3">
       <Icono nombre="check" size={18} className="text-texto-exito" />
       <p className="min-w-0 flex-1 text-sm text-texto-primario">Todos los puntos están retirados. ¿Cerramos la campaña?</p>
       <Boton

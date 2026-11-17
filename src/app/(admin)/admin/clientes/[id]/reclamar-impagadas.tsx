@@ -127,10 +127,10 @@ export function ReclamarImpagadas(p: Props) {
           <button
             type="button"
             aria-label="Cerrar"
-            className="absolute inset-0 cursor-default bg-fondo-velo"
+            className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
             onClick={() => !trabajando && setAbierto(false)}
           />
-          <div className="relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl bg-fondo-superficie p-esp5 shadow-xl sm:max-w-2xl sm:rounded-xl">
+          <div className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado sm:max-w-2xl sm:rounded-xl">
             <div className="flex items-start gap-esp3">
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-texto-terciario">{p.razonSocial}</p>
@@ -148,14 +148,14 @@ export function ReclamarImpagadas(p: Props) {
                 aria-label="Cerrar"
                 disabled={trabajando}
                 onClick={() => setAbierto(false)}
-                className="rounded-md p-esp1 text-icono-default hover:bg-fondo-sutil disabled:opacity-50"
+                className="rounded-md p-esp1 text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press disabled:opacity-50"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
             </div>
 
             {hecho ? (
-              <div className="flex flex-col gap-esp3 rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp4" role="status">
+              <div className="animate-estado-entrar flex flex-col gap-esp3 rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp4" role="status">
                 <p className="text-sm font-semibold text-texto-exito">Borrador creado en Gmail ({hecho.remitente})</p>
                 <p className="text-sm text-texto-primario">
                   Ábrelo, revísalo y pulsa «Enviar» en Gmail. El estado de cuenta y las facturas ya van adjuntos.
@@ -224,7 +224,7 @@ export function ReclamarImpagadas(p: Props) {
                       Ver estado de cuenta
                     </Link>
                   </div>
-                  <ul className="flex flex-col divide-y divide-fondo-hover rounded-md border border-borde-default">
+                  <ul className="flex flex-col divide-y divide-borde-default rounded-md border border-borde-default">
                     {archivos.map((a) => {
                       const estado = estados[a.clave] ?? "espera";
                       return (

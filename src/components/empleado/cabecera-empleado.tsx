@@ -74,7 +74,7 @@ export function CabeceraEmpleado({
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
           aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="menu" size={22} />
         </button>
@@ -83,7 +83,7 @@ export function CabeceraEmpleado({
         </div>
         <Link
           href="/app/gastos/nuevo"
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-completo border border-borde-marca bg-fondo-marca-sutil px-esp3 text-xs font-semibold text-texto-marca transition-colors hover:bg-fondo-marca hover:text-texto-sobre-marca"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-completo border border-borde-marca bg-fondo-marca-sutil px-esp3 text-xs font-semibold text-texto-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca hover:text-texto-sobre-marca active:scale-press"
         >
           <Icono nombre="camara" size={14} />
           <span>+ Gasto</span>
@@ -107,7 +107,7 @@ export function CabeceraEmpleado({
               href={enlace.href}
               aria-current={activo ? "page" : undefined}
               className={cn(
-                "relative flex min-h-[58px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors",
+                "relative flex min-h-[58px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors duration-rapida ease-suave",
                 activo ? "text-texto-marca" : "text-texto-secundario hover:text-texto-primario",
               )}
             >
@@ -140,9 +140,9 @@ export function CabeceraEmpleado({
             type="button"
             aria-label="Cerrar menú"
             onClick={() => setAbierto(false)}
-            className="absolute inset-0 bg-fondo-velo"
+            className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp5 bg-fondo-superficie px-esp4 py-esp5 shadow-xl">
+          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp5 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-elevado">
             <div className="flex items-center">
               <div className="pl-esp2">
                 <Logo alto={30} />
@@ -151,7 +151,7 @@ export function CabeceraEmpleado({
                 type="button"
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
@@ -159,7 +159,7 @@ export function CabeceraEmpleado({
 
             <Link
               href="/app/gastos/nuevo"
-              className="flex min-h-11 items-center gap-esp3 rounded-md bg-fondo-marca px-esp3 py-esp3 text-sm font-medium text-texto-sobre-marca hover:bg-fondo-marca-hover"
+              className="flex min-h-11 items-center gap-esp3 rounded-md bg-fondo-marca px-esp3 py-esp3 text-sm font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press"
             >
               <Icono nombre="camara" size={20} />
               Añadir gasto menor
@@ -176,7 +176,7 @@ export function CabeceraEmpleado({
                     href={enlace.href}
                     aria-current={activo ? "page" : undefined}
                     className={cn(
-                      "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm",
+                      "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm transition-colors duration-rapida ease-suave",
                       activo
                         ? "bg-fondo-marca-sutil font-medium text-texto-marca"
                         : "text-texto-secundario hover:bg-fondo-sutil",
@@ -214,7 +214,7 @@ export function CabeceraEmpleado({
               <Link
                 href="/cuenta/contrasena"
                 aria-label="Cambiar mi contraseña"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
               >
                 <Icono nombre="candado" size={18} />
               </Link>
@@ -222,7 +222,7 @@ export function CabeceraEmpleado({
                 type="button"
                 onClick={salir}
                 aria-label="Cerrar sesión"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
               >
                 <Icono nombre="salir" size={18} />
               </button>

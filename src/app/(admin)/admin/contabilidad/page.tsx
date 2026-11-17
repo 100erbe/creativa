@@ -140,7 +140,7 @@ export default async function PaginaContabilidad({
         </form>
       </div>
 
-      <div className="flex flex-wrap gap-esp4 [&>*]:min-w-[160px]">
+      <div className="grid grid-cols-2 gap-esp3 md:gap-esp4 xl:grid-cols-4">
         <TarjetaKpi etiqueta={`Base imponible ${ejercicio}`} valor={euros(baseAnio)} detalle={`${delAnio.length} documentos`} />
         <TarjetaKpi etiqueta="IVA repercutido" valor={euros(cuotaAnio)} />
         <TarjetaKpi etiqueta="Total facturado" valor={euros(suma(delAnio, "total"))} />
@@ -175,7 +175,7 @@ export default async function PaginaContabilidad({
             return (
               <div
                 key={t.n}
-                className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
+                className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 shadow-xs"
               >
                 <div className="flex items-baseline gap-esp2">
                   <h3 className="text-sm font-semibold text-texto-primario">T{t.n}</h3>
@@ -188,7 +188,7 @@ export default async function PaginaContabilidad({
                 ) : (
                   <>
                     {filas.map((r) => (
-                      <div key={String(r.iva_pct)} className="flex flex-col text-sm">
+                      <div key={String(r.iva_pct)} className="tabular-nums flex flex-col text-sm">
                         <span className="text-xs text-texto-terciario">
                           {Number(r.iva_pct)} % {Number(r.iva_pct) === 0 ? "(exento / inv. sujeto pasivo)" : ""}
                         </span>
@@ -202,12 +202,12 @@ export default async function PaginaContabilidad({
                         </span>
                       </div>
                     ))}
-                    <div className="h-px bg-fondo-hover" />
-                    <div className="flex text-sm font-semibold text-texto-primario">
+                    <div className="h-px bg-borde-default" />
+                    <div className="tabular-nums flex text-sm font-semibold text-texto-primario">
                       <span className="flex-1">IVA repercutido</span>
                       <span>{euros(cuota)}</span>
                     </div>
-                    <div className="flex text-xs text-texto-terciario">
+                    <div className="tabular-nums flex text-xs text-texto-terciario">
                       <span className="flex-1">Base total</span>
                       <span>{euros(base)}</span>
                     </div>
@@ -243,7 +243,7 @@ export default async function PaginaContabilidad({
             return (
               <div
                 key={t.n}
-                className="flex flex-col gap-esp1 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm"
+                className="tabular-nums flex flex-col gap-esp1 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm shadow-xs"
               >
                 <h3 className="font-semibold text-texto-primario">T{t.n}</h3>
                 <span className="flex text-texto-secundario">
@@ -254,7 +254,7 @@ export default async function PaginaContabilidad({
                   <span className="flex-1">Soportado</span>
                   <span className="text-texto-primario">− {euros(soportado)}</span>
                 </span>
-                <div className="my-1 h-px bg-fondo-hover" />
+                <div className="my-1 h-px bg-borde-default" />
                 <span className="flex font-semibold text-texto-primario">
                   <span className="flex-1">Saldo (303)</span>
                   <span>{euros(repercutido - soportado)}</span>
@@ -292,8 +292,8 @@ export default async function PaginaContabilidad({
                 href={enlace(actual, { trimestre: t.n ? String(t.n) : "", pagina: "" })}
                 className={
                   trimestre === t.n
-                    ? "rounded-completo bg-fondo-marca px-esp3 py-esp1 text-sm font-medium text-texto-sobre-marca"
-                    : "rounded-completo border border-borde-default bg-fondo-superficie px-esp3 py-esp1 text-sm text-texto-secundario hover:bg-fondo-sutil"
+                    ? "inline-flex min-h-10 items-center rounded-completo bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
+                    : "inline-flex min-h-10 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8"
                 }
               >
                 {t.etiqueta}
@@ -315,29 +315,29 @@ export default async function PaginaContabilidad({
           </form>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-borde-default bg-fondo-superficie">
+        <div className="overflow-x-auto rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
-              <tr className="border-b border-borde-default text-xs text-texto-terciario">
-                <th className="px-esp4 py-esp3 font-medium">Fecha</th>
-                <th className="px-esp3 py-esp3 font-medium">Número</th>
-                <th className="px-esp3 py-esp3 font-medium">Destinatario</th>
-                <th className="px-esp3 py-esp3 text-right font-medium">Base</th>
-                <th className="px-esp3 py-esp3 text-right font-medium">IVA</th>
-                <th className="px-esp3 py-esp3 text-right font-medium">Total</th>
-                <th className="px-esp4 py-esp3 font-medium">Cobro</th>
+              <tr className="border-b border-borde-default bg-fondo-sutil/70 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
+                <th className="px-esp4 py-esp3 font-semibold">Fecha</th>
+                <th className="px-esp3 py-esp3 font-semibold">Número</th>
+                <th className="px-esp3 py-esp3 font-semibold">Destinatario</th>
+                <th className="px-esp3 py-esp3 text-right font-semibold">Base</th>
+                <th className="px-esp3 py-esp3 text-right font-semibold">IVA</th>
+                <th className="px-esp3 py-esp3 text-right font-semibold">Total</th>
+                <th className="px-esp4 py-esp3 font-semibold">Cobro</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-fondo-hover">
+            <tbody className="divide-y divide-borde-default">
               {visibles.map((f) => (
-                <tr key={`${f.serie}-${f.numero}`} className="hover:bg-fondo-sutil">
-                  <td className="whitespace-nowrap px-esp4 py-esp2 text-texto-secundario">
+                <tr key={`${f.serie}-${f.numero}`} className="transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60">
+                  <td className="tabular-nums whitespace-nowrap px-esp4 py-esp2 text-texto-secundario">
                     {f.fecha_expedicion ? fechaMedia(f.fecha_expedicion) : "—"}
                   </td>
-                  <td className="whitespace-nowrap px-esp3 py-esp2">
+                  <td className="tabular-nums whitespace-nowrap px-esp3 py-esp2">
                     <Link
                       href={`/admin/documentos?q=${encodeURIComponent(f.numero ?? "")}`}
-                      className="font-medium text-texto-marca"
+                      className="font-medium text-texto-marca hover:underline"
                     >
                       {f.numero}
                     </Link>
@@ -347,11 +347,11 @@ export default async function PaginaContabilidad({
                   </td>
                   <td className="px-esp3 py-esp2">
                     <p className="text-texto-primario">{f.destinatario ?? "—"}</p>
-                    <p className="text-xs text-texto-terciario">{f.nif_destinatario ?? "Sin NIF"}</p>
+                    <p className="tabular-nums text-xs text-texto-terciario">{f.nif_destinatario ?? "Sin NIF"}</p>
                   </td>
-                  <td className="px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.base_imponible))}</td>
-                  <td className="px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.cuota_iva))}</td>
-                  <td className="px-esp3 py-esp2 text-right font-medium text-texto-primario">
+                  <td className="tabular-nums px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.base_imponible))}</td>
+                  <td className="tabular-nums px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.cuota_iva))}</td>
+                  <td className="tabular-nums px-esp3 py-esp2 text-right font-medium text-texto-primario">
                     {euros(Number(f.total))}
                   </td>
                   <td className="px-esp4 py-esp2">
@@ -373,7 +373,7 @@ export default async function PaginaContabilidad({
             </tbody>
             {filtradas.length > 0 && (
               <tfoot>
-                <tr className="border-t border-borde-default bg-fondo-sutil font-semibold text-texto-primario">
+                <tr className="tabular-nums border-t border-borde-default bg-fondo-sutil font-semibold text-texto-primario">
                   <td className="px-esp4 py-esp3" colSpan={3}>
                     Total ({filtradas.length} documento{filtradas.length === 1 ? "" : "s"})
                   </td>

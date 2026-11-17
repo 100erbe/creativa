@@ -65,8 +65,8 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
 
   return (
     <div className="fixed inset-0 z-[2500] flex items-end justify-center sm:items-center sm:p-esp4" role="dialog" aria-modal="true" aria-label="Revisar gasto">
-      <Link href={cerrarHref} aria-label="Cerrar" className="absolute inset-0 bg-fondo-velo" />
-      <div className="relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl bg-fondo-superficie p-esp5 shadow-xl sm:max-w-lg sm:rounded-xl">
+      <Link href={cerrarHref} aria-label="Cerrar" className="animate-velo-entrar absolute inset-0 bg-fondo-velo" />
+      <div className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado sm:max-w-lg sm:rounded-xl">
         <div className="flex items-start gap-esp3">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-texto-terciario">
@@ -78,7 +78,7 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
           <Link
             href={cerrarHref}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </Link>
@@ -133,7 +133,7 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
         {decidible ? (
           <div className="flex flex-col gap-esp3">
             {rechazando ? (
-              <div className="flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-sutil p-esp3">
+              <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-sutil p-esp3">
                 <input
                   autoFocus
                   value={motivo}

@@ -59,7 +59,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
   return (
     <div className="flex flex-col gap-esp3">
       {contactos.length > 0 && (
-        <div className="flex flex-col divide-y divide-fondo-hover">
+        <div className="flex flex-col divide-y divide-borde-default">
           {contactos.map((c) => (
             <div key={c.id} className="flex items-start gap-esp3 py-esp3">
               <div
@@ -97,7 +97,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
                   aria-label={`Editar a ${c.nombre}`}
                   disabled={pendiente}
                   onClick={() => abrir(c)}
-                  className="inline-flex min-h-9 items-center rounded-md border border-borde-default px-esp2 text-xs font-medium text-texto-primario hover:bg-fondo-sutil disabled:opacity-50"
+                  className="inline-flex min-h-9 items-center rounded-md border border-borde-default px-esp2 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press disabled:opacity-50"
                 >
                   Editar
                 </button>
@@ -109,7 +109,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
                     if (!(await confirmar(`¿Eliminar el contacto ${c.nombre}?`))) return;
                     ejecutar(() => desenvolver(eliminarContacto(clienteId, c.id)));
                   }}
-                  className="flex min-h-9 min-w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
+                  className="flex min-h-9 min-w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:opacity-50"
                 >
                   <Icono nombre="eliminar" size={16} />
                 </button>
@@ -124,7 +124,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
 
       {abierto ? (
         <form
-          className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-sutil/60 p-esp3"
+          className="animate-estado-entrar flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-sutil/60 p-esp3"
           onSubmit={(e) => {
             e.preventDefault();
             ejecutar(async () => {
@@ -212,7 +212,7 @@ export function BotonEliminarCliente({ clienteId, puedeEliminar }: { clienteId: 
 
   if (!puedeEliminar) return null;
   return (
-    <div className="flex flex-col gap-esp2 border-t border-fondo-hover pt-esp3">
+    <div className="flex flex-col gap-esp2 border-t border-borde-default pt-esp3">
       <p className="text-xs text-texto-terciario">
         ¿Lo creaste por error? Como no tiene documentos ni campañas, puedes eliminarlo del todo.
       </p>

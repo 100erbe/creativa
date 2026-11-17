@@ -291,9 +291,9 @@ export function PaletaComandos() {
         aria-label="Cerrar búsqueda rápida"
         tabIndex={-1}
         onClick={cerrar}
-        className="absolute inset-0 cursor-default bg-fondo-velo backdrop-blur-[1px]"
+        className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo backdrop-blur-[1px]"
       />
-      <div className="relative flex max-h-[75dvh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-borde-default bg-fondo-elevado shadow-elevado">
+      <div className="animate-modal-entrar relative flex max-h-[75dvh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-borde-default bg-fondo-elevado shadow-elevado">
         <div className="flex items-center gap-esp2 border-b border-borde-default px-esp4 py-esp3">
           <Icono nombre="buscar" size={18} className="text-icono-secundario" />
           <input
@@ -325,7 +325,7 @@ export function PaletaComandos() {
           <button
             type="button"
             onClick={cerrar}
-            className="rounded border border-borde-default bg-fondo-sutil px-2 py-0.5 text-micro font-medium text-texto-terciario hover:text-texto-primario"
+            className="rounded border border-borde-default bg-fondo-sutil px-2 py-0.5 text-micro font-medium text-texto-terciario transition-colors duration-rapida ease-suave hover:text-texto-primario active:scale-press"
           >
             ESC
           </button>
@@ -356,7 +356,7 @@ export function PaletaComandos() {
                         onMouseEnter={() => setIndiceActivo(idxGlobal)}
                         onClick={() => ejecutar(item)}
                         className={cn(
-                          "flex min-h-11 w-full items-center gap-esp3 rounded-lg px-esp3 py-esp2 text-left transition-colors",
+                          "group flex min-h-11 w-full items-center gap-esp3 rounded-lg px-esp3 py-esp2 text-left transition-colors duration-rapida ease-suave",
                           seleccionado ? "bg-fondo-marca-sutil/80 text-texto-primario" : "hover:bg-fondo-sutil",
                         )}
                       >
@@ -388,7 +388,11 @@ export function PaletaComandos() {
                             {item.badge}
                           </span>
                         )}
-                        <Icono nombre="flechaDerecha" size={14} className="shrink-0 text-icono-secundario" />
+                        <Icono
+                          nombre="flechaDerecha"
+                          size={14}
+                          className="shrink-0 text-icono-secundario transition-transform duration-rapida ease-salida group-hover:translate-x-0.5"
+                        />
                       </button>
                     );
                   })}

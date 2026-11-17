@@ -49,13 +49,13 @@ export function Campo({
         aria-invalid={!!error}
         aria-describedby={mensajeId}
         className={cn(
-          "min-h-11 h-11 md:min-h-9 md:h-9 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none placeholder:text-texto-terciario",
+          "min-h-11 h-11 md:min-h-9 md:h-9 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none transition-[border-color,box-shadow] duration-rapida ease-suave placeholder:text-texto-terciario",
           "focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20",
           error ? "border-borde-peligro" : "border-borde-campo",
         )}
       />
       {mensaje && (
-        <p id={mensajeId} className={cn("text-xs", error ? "text-texto-peligro" : "text-texto-terciario")}>
+        <p id={mensajeId} className={cn("animate-estado-entrar text-xs", error ? "text-texto-peligro" : "text-texto-terciario")}>
           {mensaje}
         </p>
       )}

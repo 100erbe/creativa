@@ -44,7 +44,7 @@ export function Bandeja({ avisos }: { avisos: NotificacionBandeja[] }) {
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie">
+    <ul className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
       {avisos.map((a) => {
         const contenido = (
           <>
@@ -57,13 +57,22 @@ export function Bandeja({ avisos }: { avisos: NotificacionBandeja[] }) {
               <span className="block text-sm text-texto-secundario">{a.cuerpo}</span>
               <span className="block text-xs text-texto-terciario">{a.creada}</span>
             </span>
-            {a.url && <Icono nombre="chevron" size={16} className="mt-1 text-icono-secundario" />}
+            {a.url && (
+              <Icono
+                nombre="chevron"
+                size={16}
+                className="mt-1 text-icono-secundario transition-transform duration-rapida ease-salida group-hover:translate-x-0.5"
+              />
+            )}
           </>
         );
         return (
           <li key={a.id}>
             {a.url ? (
-              <Link href={a.url} className="flex items-start gap-esp3 px-esp4 py-esp3 hover:bg-fondo-sutil">
+              <Link
+                href={a.url}
+                className="group flex items-start gap-esp3 px-esp4 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
+              >
                 {contenido}
               </Link>
             ) : (

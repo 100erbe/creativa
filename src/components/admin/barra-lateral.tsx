@@ -109,7 +109,7 @@ export function BarraLateral({
         abrirPaletaComandos();
       }}
       aria-label="Abrir búsqueda rápida y comandos (Ctrl+K)"
-      className="flex min-h-10 w-full items-center gap-esp2 rounded-md border border-borde-default bg-fondo-sutil/70 px-esp3 text-xs text-texto-secundario transition-colors hover:border-borde-campo hover:bg-fondo-sutil hover:text-texto-primario md:min-h-8 md:h-8"
+      className="flex min-h-10 w-full items-center gap-esp2 rounded-md border border-borde-default bg-fondo-sutil/70 px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-campo hover:bg-fondo-sutil hover:text-texto-primario active:scale-press md:min-h-8 md:h-8"
     >
       <Icono nombre="buscar" size={14} className="text-icono-secundario" />
       <span className="flex-1 text-left">Buscar o ir a…</span>
@@ -137,7 +137,7 @@ export function BarraLateral({
                 href={enlace.href}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm transition-colors md:min-h-8",
+                  "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm transition-colors duration-rapida ease-suave md:min-h-8",
                   activo
                     ? "bg-fondo-marca-sutil font-medium text-texto-marca"
                     : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
@@ -187,7 +187,7 @@ export function BarraLateral({
         href="/cuenta/contrasena"
         aria-label="Cambiar mi contraseña"
         title="Cambiar mi contraseña"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover hover:text-texto-primario"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover hover:text-texto-primario active:scale-press"
       >
         <Icono nombre="candado" size={16} />
       </Link>
@@ -195,7 +195,7 @@ export function BarraLateral({
         type="button"
         onClick={salir}
         aria-label="Cerrar sesión"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-hover hover:text-texto-primario"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover hover:text-texto-primario active:scale-press"
       >
         <Icono nombre="salir" size={16} />
       </button>
@@ -219,7 +219,7 @@ export function BarraLateral({
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
           aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="menu" size={22} />
         </button>
@@ -230,7 +230,7 @@ export function BarraLateral({
           type="button"
           onClick={abrirPaletaComandos}
           aria-label="Búsqueda rápida"
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="buscar" size={20} />
         </button>
@@ -251,7 +251,7 @@ export function BarraLateral({
                 href={item.href}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors",
+                  "relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors duration-rapida ease-suave",
                   activo ? "text-texto-marca" : "text-texto-secundario hover:text-texto-primario",
                 )}
               >
@@ -275,7 +275,7 @@ export function BarraLateral({
             onClick={() => setAbierto(true)}
             aria-label="Más opciones del menú"
             aria-expanded={abierto}
-            className="relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium text-texto-secundario hover:text-texto-primario"
+            className="relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
           >
             <span className="relative">
               <Icono nombre="menu" size={20} className="text-icono-secundario" />
@@ -295,16 +295,16 @@ export function BarraLateral({
             type="button"
             aria-label="Cerrar menú"
             onClick={() => setAbierto(false)}
-            className="absolute inset-0 bg-fondo-velo"
+            className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp4 bg-fondo-superficie px-esp4 py-esp4 shadow-xl">
+          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp4 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
             <div className="flex items-center">
               <Marca />
               <button
                 type="button"
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>

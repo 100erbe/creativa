@@ -60,7 +60,7 @@ const COBROS = [
 ] as const;
 
 const PILDORA =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-completo px-esp3 text-sm transition-colors md:min-h-8 md:text-xs";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-completo px-esp3 text-sm transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 md:text-xs";
 
 type Filtros = {
   tipo?: string;
@@ -334,7 +334,7 @@ export default async function PaginaDocumentos({
           <Link
             href={enlace(actual, { vista: "", pagina: "" })}
             aria-current={vista === "lista" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
               vista === "lista"
                 ? "bg-fondo-marca-sutil text-texto-marca"
                 : "text-texto-secundario hover:text-texto-primario"
@@ -346,7 +346,7 @@ export default async function PaginaDocumentos({
           <Link
             href={enlace(actual, { vista: "pipeline", pagina: "" })}
             aria-current={vista === "pipeline" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
               vista === "pipeline"
                 ? "bg-fondo-marca-sutil text-texto-marca"
                 : "text-texto-secundario hover:text-texto-primario"
@@ -574,7 +574,7 @@ export default async function PaginaDocumentos({
                 key={c.clave}
                 href={enlace(actual, { [c.clave]: "", pagina: "" })}
                 aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario md:min-h-8"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
               >
                 <span className="max-w-[60vw] truncate">{c.texto}</span>
                 <span aria-hidden="true" className="text-base leading-none text-texto-terciario">
@@ -600,7 +600,7 @@ export default async function PaginaDocumentos({
           <p className="mt-esp2 text-xs text-texto-secundario">
             Archivos de Drive que no se pudieron emparejar con ningún documento. Compáralos con los documentos «Sin PDF».
           </p>
-          <div className="mt-esp2 flex flex-col divide-y divide-fondo-hover">
+          <div className="mt-esp2 flex flex-col divide-y divide-borde-default">
             {(pdfsSinAsignar ?? []).map((p) => (
               <div key={p.id} className="flex flex-wrap items-center gap-x-esp3 gap-y-1 py-esp2 text-xs">
                 <span className="min-w-0 flex-1 break-all font-medium text-texto-primario">{p.archivo}</span>
@@ -669,8 +669,8 @@ export default async function PaginaDocumentos({
                       href={`/admin/documentos/${d.id}`}
                       className={
                         es90
-                          ? "flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/70 p-esp3 shadow-xs transition-colors hover:bg-fondo-critico-sutil"
-                          : "flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie p-esp3 shadow-xs transition-colors hover:border-borde-campo"
+                          ? "flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/70 p-esp3 shadow-xs transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:bg-fondo-critico-sutil"
+                          : "flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie p-esp3 shadow-xs transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo"
                       }
                     >
                       <div className="flex items-start justify-between gap-esp2">
@@ -732,7 +732,7 @@ export default async function PaginaDocumentos({
             <span className="w-[115px] text-right">Importe</span>
             <span className="w-[175px] text-right">Estado</span>
           </div>
-          <div className="flex flex-col divide-y divide-fondo-hover">
+          <div className="flex flex-col divide-y divide-borde-default">
             {filasEnriquecidas.map((d) => {
               const cobroEstado = d.cobroDoc?.estado_cobro;
               const es90 = d.aging?.esCritica90 ?? false;
@@ -741,7 +741,7 @@ export default async function PaginaDocumentos({
                 <Link
                   key={d.id}
                   href={`/admin/documentos/${d.id}`}
-                  className={`grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1.5 px-esp4 py-esp3 transition-colors md:px-esp6 lg:flex lg:gap-esp4 ${
+                  className={`grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1.5 px-esp4 py-esp3 transition-colors duration-rapida ease-suave md:px-esp6 lg:flex lg:gap-esp4 ${
                     es90
                       ? "border-l-4 border-l-borde-critico bg-fondo-critico-sutil/45 hover:bg-fondo-critico-sutil/75"
                       : "hover:bg-fondo-sutil/60"

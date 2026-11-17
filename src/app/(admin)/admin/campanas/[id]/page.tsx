@@ -149,9 +149,9 @@ export default async function PaginaCampana({
       <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/campanas"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
         >
-          <Icono nombre="atras" size={16} />
+          <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Campañas
         </Link>
 
@@ -213,7 +213,7 @@ export default async function PaginaCampana({
               </div>
               <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-completo bg-fondo-hover">
                 <div
-                  className="h-full rounded-completo bg-fondo-marca transition-all"
+                  className="h-full rounded-completo bg-fondo-marca transition-[width] duration-lenta ease-salida"
                   style={{ width: `${porcentaje}%` }}
                 />
               </div>
@@ -330,7 +330,7 @@ export default async function PaginaCampana({
               return (
                 <div
                   key={p.id}
-                  className={`flex flex-col gap-esp3 px-esp4 py-esp4 transition-colors hover:bg-fondo-sutil/40 md:px-esp5 ${
+                  className={`flex flex-col gap-esp3 px-esp4 py-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/40 md:px-esp5 ${
                     esIncidencia ? "border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/20" : ""
                   }`}
                 >
@@ -357,7 +357,7 @@ export default async function PaginaCampana({
                           href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-medium text-texto-secundario transition-colors hover:text-texto-marca"
+                          className="inline-flex items-center gap-1 font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-marca"
                         >
                           <Icono nombre="ubicacion" size={13} className="text-icono-marca" />
                           <span>{p.direccion || "Ver en Google Maps"}</span>
@@ -404,7 +404,7 @@ export default async function PaginaCampana({
                   )}
 
                   {fotosPunto.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-esp2 border-t border-fondo-hover pt-esp3">
+                    <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3">
                       {fotosPunto.map((f) => {
                         const url = urlPorRuta.get(f.url_foto);
                         const autor = f.usuario_id ? usuarioPorId.get(f.usuario_id) : undefined;
@@ -503,7 +503,11 @@ function ResumenArticulos({
               </div>
               <div className="h-1.5 overflow-hidden rounded-completo bg-fondo-sutil">
                 <div
-                  className={exceso ? "h-full bg-fondo-aviso" : "h-full bg-fondo-marca"}
+                  className={
+                    exceso
+                      ? "h-full bg-fondo-aviso transition-[width] duration-lenta ease-salida"
+                      : "h-full bg-fondo-marca transition-[width] duration-lenta ease-salida"
+                  }
                   style={{ width: `${porcentaje}%` }}
                 />
               </div>

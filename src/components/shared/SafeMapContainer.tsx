@@ -152,9 +152,9 @@ export function SafeMapContainer({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label={`${exploreLabel}: ${title}`}
-          className="absolute inset-0 z-[1100] flex items-end bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/10 to-transparent p-esp3 text-left md:hidden"
+          className="group absolute inset-0 z-[1100] flex items-end bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/10 to-transparent p-esp3 text-left transition-opacity duration-rapida ease-suave md:hidden"
         >
-          <span className="inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg border border-borde-campo bg-fondo-superficie px-esp4 py-esp2 text-xs font-semibold text-texto-primario shadow-md">
+          <span className="inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg border border-borde-campo bg-fondo-superficie px-esp4 py-esp2 text-xs font-semibold text-texto-primario shadow-md transition-transform duration-rapida ease-salida group-hover:scale-[1.02] group-active:scale-press">
             <Icono nombre="expandir" size={16} className="text-icono-marca" />
             <span>{exploreLabel}</span>
           </span>
@@ -165,7 +165,7 @@ export function SafeMapContainer({
             href={directionsUrl}
             target="_blank"
             rel="noreferrer"
-            className="absolute bottom-esp3 right-esp3 z-[1101] inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors hover:bg-fondo-marca-hover md:hidden"
+            className="absolute bottom-esp3 right-esp3 z-[1101] inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press md:hidden"
           >
             <Icono nombre="ubicacion" size={16} />
             <span>{directionsLabel}</span>
@@ -186,13 +186,13 @@ export function SafeMapContainer({
               aria-label="Cerrar mapa"
               tabIndex={-1}
               onClick={() => setOpen(false)}
-              className="absolute inset-0 cursor-default bg-fondo-velo"
+              className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
             />
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              className="relative flex h-[90dvh] w-full flex-col overflow-hidden rounded-xl border border-border bg-fondo-superficie shadow-lg"
+              className="animate-hoja-subir relative flex h-[90dvh] w-full flex-col overflow-hidden rounded-xl border border-border bg-fondo-superficie shadow-elevado"
             >
               <div className="relative z-10 flex items-center justify-between gap-esp2 border-b border-border bg-fondo-superficie px-esp4 py-esp3">
                 <h2
@@ -207,7 +207,7 @@ export function SafeMapContainer({
                       href={directionsUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-md bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors hover:bg-fondo-marca-hover"
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-md bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press"
                     >
                       <Icono nombre="ubicacion" size={16} />
                       <span>{directionsLabel}</span>
@@ -218,7 +218,7 @@ export function SafeMapContainer({
                     type="button"
                     aria-label="Cerrar mapa"
                     onClick={() => setOpen(false)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors hover:bg-fondo-sutil"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
                   >
                     <Icono nombre="cerrar" size={18} />
                   </button>

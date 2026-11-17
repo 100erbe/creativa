@@ -33,7 +33,8 @@ export function TarjetaKpi({
   const clases = cn(
     "flex min-w-0 flex-1 flex-col gap-esp2 rounded-lg border px-esp4 py-esp4 shadow-xs md:px-esp5 md:py-esp5",
     TONO_TARJETA[tono],
-    href && "transition-colors hover:border-borde-campo hover:bg-fondo-sutil",
+    href &&
+      "transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo hover:bg-fondo-sutil/70 active:scale-press",
   );
   const contenido = (
     <>

@@ -67,7 +67,7 @@ export function Campana({
         aria-label={pendientes > 0 ? `Avisos: ${pendientes} sin leer` : "Avisos"}
         aria-haspopup="dialog"
         className={cn(
-          "relative flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil",
+          "relative flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press",
           className,
         )}
       >
@@ -93,14 +93,18 @@ export function Campana({
           // Un aviso que lleva a la pantalla donde ya estás no cambia de ruta: se cierra al tocar cualquier enlace.
           onClick={(e) => (e.target as HTMLElement).closest("a") && setAbierto(false)}
         >
-          <button aria-label="Cerrar avisos" onClick={() => setAbierto(false)} className="absolute inset-0 bg-fondo-velo" />
-          <div className="relative flex max-h-[85dvh] w-full flex-col gap-esp3 rounded-t-xl bg-fondo-superficie p-esp4 shadow-xl sm:mt-12 sm:w-[420px] sm:rounded-xl">
+          <button
+            aria-label="Cerrar avisos"
+            onClick={() => setAbierto(false)}
+            className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
+          />
+          <div className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[85dvh] w-full flex-col gap-esp3 rounded-t-xl border border-borde-default bg-fondo-superficie p-esp4 shadow-elevado sm:mt-12 sm:w-[420px] sm:rounded-xl">
             <div className="flex items-center">
               <h2 className="flex-1 text-base font-semibold text-texto-primario">Avisos</h2>
               <button
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario hover:bg-fondo-sutil"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>

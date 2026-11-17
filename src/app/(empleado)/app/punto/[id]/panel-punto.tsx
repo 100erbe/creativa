@@ -477,7 +477,7 @@ export function PanelPunto({
             </p>
           )}
           {campana?.descripcion && (
-            <p className="whitespace-pre-line border-t border-fondo-hover pt-esp2 text-xs text-texto-terciario">
+            <p className="whitespace-pre-line border-t border-borde-default pt-esp2 text-xs text-texto-terciario">
               Campaña: {campana.descripcion}
             </p>
           )}
@@ -537,7 +537,7 @@ export function PanelPunto({
         </div>
 
         {panelAbierto && (
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4">
+          <div className="animate-estado-entrar flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
             <label className="flex items-start gap-esp3">
               <input
                 type="checkbox"
@@ -573,7 +573,10 @@ export function PanelPunto({
         )}
 
         {aviso && (
-          <p className={aviso.tono === "ok" ? "text-xs text-texto-exito" : "text-xs text-texto-aviso"} role="status">
+          <p
+            className={aviso.tono === "ok" ? "animate-estado-entrar text-xs text-texto-exito" : "animate-estado-entrar text-xs text-texto-aviso"}
+            role="status"
+          >
             {aviso.texto}
           </p>
         )}
@@ -653,7 +656,7 @@ export function PanelPunto({
       )}
 
       {mostrarIncidencia && (
-        <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp4">
+        <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
           <textarea
             value={notaIncidencia}
             onChange={(e) => setNotaIncidencia(e.target.value)}
@@ -672,7 +675,7 @@ export function PanelPunto({
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-x-esp4 bottom-24 z-30 mx-auto flex max-w-sm items-center gap-esp3 rounded-lg bg-fondo-inverso px-esp4 py-esp3 text-sm text-texto-inverso shadow-lg"
+          className="animate-estado-entrar fixed inset-x-esp4 bottom-24 z-30 mx-auto flex max-w-sm items-center gap-esp3 rounded-lg bg-fondo-inverso px-esp4 py-esp3 text-sm text-texto-inverso shadow-elevado"
         >
           <span className="flex-1">Punto marcado como instalado</span>
           <button onClick={deshacerAhora} className="font-semibold underline underline-offset-2">

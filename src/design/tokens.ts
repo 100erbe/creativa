@@ -91,3 +91,21 @@ export const tamanoTexto = {
   // Mínimo legible para etiquetas auxiliares (antes 10 px y 11 px sueltos).
   micro: ["0.6875rem", { lineHeight: "1rem" }] as [string, { lineHeight: string }],
 };
+
+// Tokens de movimiento y micro-interacciones (solo propiedades aceleradas por GPU: transform y opacity).
+// En @media (prefers-reduced-motion: reduce) las variables CSS se reducen a 0.01ms en globals.css.
+export const movimiento = {
+  duracion: {
+    rapida: "var(--motion-duration-fast, 150ms)",
+    media: "var(--motion-duration-base, 200ms)",
+    lenta: "var(--motion-duration-slow, 250ms)",
+    pulso: "var(--motion-duration-pulse, 1800ms)",
+  },
+  curva: {
+    suave: "var(--motion-ease-standard, cubic-bezier(0.4, 0, 0.2, 1))",
+    salida: "var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1))",
+  },
+  escala: {
+    press: "var(--motion-scale-press, 0.98)",
+  },
+};

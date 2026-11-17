@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 /** Estilo de campo: 44px y 16px en móvil (evita el zoom de iOS), compacto en escritorio. */
 export const CAMPO =
-  "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
+  "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none transition-[border-color,box-shadow,background-color] duration-rapida ease-suave focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
 
 /**
  * Buscador genérico.
@@ -72,8 +72,8 @@ export function PanelBusqueda({
           : undefined
       }
       className={cn(
-        "fixed inset-x-0 top-[var(--vv-arriba,0px)] z-50 flex h-[var(--vv-alto,100dvh)] flex-col bg-fondo-superficie",
-        "md:absolute md:inset-x-0 md:top-full md:z-20 md:mt-1 md:h-auto md:max-h-80 md:rounded-lg md:border md:border-borde-default md:shadow-lg",
+        "animate-estado-entrar fixed inset-x-0 top-[var(--vv-arriba,0px)] z-50 flex h-[var(--vv-alto,100dvh)] flex-col bg-fondo-superficie",
+        "md:absolute md:inset-x-0 md:top-full md:z-20 md:mt-1 md:h-auto md:max-h-80 md:rounded-lg md:border md:border-borde-default md:shadow-elevado",
       )}
     >
       <div className="flex items-center gap-esp2 border-b border-borde-default p-esp3 md:p-esp2">
@@ -81,7 +81,7 @@ export function PanelBusqueda({
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-texto-secundario hover:bg-fondo-sutil md:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:hidden"
         >
           <Icono nombre="atras" size={20} />
         </button>

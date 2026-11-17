@@ -195,7 +195,7 @@ export default async function PaginaClientes({
           <Link
             href={enlace(actual, { con_deuda: conDeuda ? "" : "1", pagina: "" })}
             aria-pressed={conDeuda}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-completo border px-esp3 text-xs font-medium transition-colors md:ml-auto md:min-h-8 ${
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-completo border px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:ml-auto md:min-h-8 ${
               conDeuda
                 ? "border-borde-critico bg-fondo-critico text-texto-inverso"
                 : "border-borde-critico-sutil bg-fondo-critico-sutil text-texto-critico hover:border-borde-critico"
@@ -216,7 +216,7 @@ export default async function PaginaClientes({
                   key={t.valor}
                   href={enlace(actual, { tipo: t.valor, pagina: "" })}
                   aria-current={activo ? "true" : undefined}
-                  className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+                  className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
                     activo
                       ? "bg-fondo-marca text-texto-sobre-marca"
                       : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
@@ -237,7 +237,7 @@ export default async function PaginaClientes({
                 key={c.clave}
                 href={enlace(actual, { [c.clave]: "", pagina: "" })}
                 aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-xs text-texto-primario md:min-h-8"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-xs text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
               >
                 <span className="max-w-[60vw] truncate">{c.texto}</span>
                 <span aria-hidden="true" className="text-sm leading-none text-texto-terciario">
@@ -265,7 +265,7 @@ export default async function PaginaClientes({
           <span className="text-right">Pendiente / Riesgo</span>
         </div>
 
-        <div className="flex flex-col divide-y divide-fondo-hover">
+        <div className="flex flex-col divide-y divide-borde-default">
           {filas.map((c) => {
             const fact = facturado.get(c.id) ?? 0;
             const pend = pendiente.get(c.id) ?? 0;
@@ -278,7 +278,7 @@ export default async function PaginaClientes({
               <Link
                 key={c.id}
                 href={`/admin/clientes/${c.id}`}
-                className={`flex flex-col gap-esp2 px-esp4 py-esp3 transition-colors md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] md:items-center md:gap-esp4 md:px-esp5 xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6 ${
+                className={`flex flex-col gap-esp2 px-esp4 py-esp3 transition-colors duration-rapida ease-suave md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] md:items-center md:gap-esp4 md:px-esp5 xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6 ${
                   esCritico90
                     ? "border-l-4 border-l-borde-critico bg-fondo-critico-sutil/40 hover:bg-fondo-critico-sutil/70"
                     : "hover:bg-fondo-sutil/60"

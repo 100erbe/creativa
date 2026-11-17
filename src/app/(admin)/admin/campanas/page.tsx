@@ -112,7 +112,7 @@ export default async function PaginaCampanas({
           <Link
             href={urlCampanas({ estado, vista: "lista" })}
             aria-current={vista === "lista" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
               vista === "lista"
                 ? "bg-fondo-marca-sutil text-texto-marca"
                 : "text-texto-secundario hover:text-texto-primario"
@@ -124,7 +124,7 @@ export default async function PaginaCampanas({
           <Link
             href={urlCampanas({ vista: "pipeline" })}
             aria-current={vista === "pipeline" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
               vista === "pipeline"
                 ? "bg-fondo-marca-sutil text-texto-marca"
                 : "text-texto-secundario hover:text-texto-primario"
@@ -152,7 +152,7 @@ export default async function PaginaCampanas({
                 key={f.valor}
                 href={urlCampanas({ estado: f.valor, vista: "lista" })}
                 aria-current={activo ? "true" : undefined}
-                className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors md:min-h-8 ${
+                className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
                   activo
                     ? "bg-fondo-marca text-texto-sobre-marca"
                     : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
@@ -197,7 +197,7 @@ export default async function PaginaCampanas({
                     <Link
                       key={c.id}
                       href={`/admin/campanas/${c.id}`}
-                      className={`flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 shadow-xs transition-colors ${
+                      className={`flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 shadow-xs transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
                         c.incidencias > 0
                           ? "border-borde-peligro-sutil border-l-4 border-l-borde-peligro hover:border-borde-peligro"
                           : "border-borde-default hover:border-borde-campo"
@@ -220,7 +220,7 @@ export default async function PaginaCampanas({
                       <div className="flex items-center gap-esp2">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                           <div
-                            className={`h-full rounded-completo ${
+                            className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
                               c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
                             }`}
                             style={{ width: `${c.porcentaje}%` }}
@@ -252,12 +252,12 @@ export default async function PaginaCampanas({
           })}
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-fondo-hover overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+        <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
           {filas.map((c) => (
             <Link
               key={c.id}
               href={`/admin/campanas/${c.id}`}
-              className={`flex flex-col gap-esp2 px-esp4 py-esp4 transition-colors hover:bg-fondo-sutil/60 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp6 ${
+              className={`flex flex-col gap-esp2 px-esp4 py-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp6 ${
                 c.incidencias > 0 ? "border-l-4 border-l-borde-peligro" : ""
               }`}
             >
@@ -275,7 +275,7 @@ export default async function PaginaCampanas({
                 <div className="flex flex-1 items-center gap-esp2 sm:w-[150px] sm:flex-none">
                   <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                     <div
-                      className={`h-full rounded-completo ${
+                      className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
                         c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
                       }`}
                       style={{ width: `${c.porcentaje}%` }}
