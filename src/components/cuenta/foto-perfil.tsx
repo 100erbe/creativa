@@ -13,8 +13,8 @@ import { guardarMiAvatar, quitarMiAvatar } from "@/lib/cuenta/acciones";
 
 /**
  * Foto de perfil: el avatar es el propio botón (objetivo táctil de 64 px) con una insignia de
- * cámara abajo a la derecha. Sin foto abre directamente el selector de archivos; con foto abre
- * un menú «Cambiar foto / Quitar foto». La foto se recorta en el navegador antes de subirla.
+ * cámara abajo a la derecha. Al pulsarlo abre un menú para hacer una foto con la cámara o elegirla
+ * de la galería (y quitarla si ya hay una). La foto se recorta en el navegador antes de subirla.
  */
 export function FotoPerfil({
   usuarioId,
@@ -30,7 +30,8 @@ export function FotoPerfil({
   detalle?: React.ReactNode;
 }) {
   const router = useRouter();
-  const entrada = useRef<HTMLInputElement>(null);
+  const entradaCamara = useRef<HTMLInputElement>(null);
+  const entradaGaleria = useRef<HTMLInputElement>(null);
   const contenedor = useRef<HTMLDivElement>(null);
   const boton = useRef<HTMLButtonElement>(null);
   const idMenu = useId();
@@ -68,9 +69,14 @@ export function FotoPerfil({
     };
   }, [menu]);
 
-  function abrirSelector() {
+  function abrirCamara() {
     setMenu(false);
-    entrada.current?.click();
+    entradaCamara.current?.click();
+  }
+
+  function abrirGaleria() {
+    setMenu(false);
+    entradaGaleria.current?.click();
   }
 
   async function elegir(e: React.ChangeEvent<HTMLInputElement>) {
@@ -124,7 +130,17 @@ export function FotoPerfil({
       <div className="flex items-center gap-esp4">
         <div ref={contenedor} className="relative shrink-0">
           <input
-            ref={entrada}
+            ref={entradaCamara}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={elegir}
+          />
+          <input
+            ref={entradaGaleria}
             type="file"
             accept="image/*"
             className="sr-only"
@@ -136,11 +152,11 @@ export function FotoPerfil({
             ref={boton}
             type="button"
             disabled={ocupado}
-            onClick={() => (vista ? setMenu((m) => !m) : abrirSelector())}
+            onClick={() => setMenu((m) => !m)}
             aria-label={vista ? "Cambiar o quitar la foto de perfil" : "Añadir foto de perfil"}
-            aria-haspopup={vista ? "menu" : undefined}
-            aria-expanded={vista ? menu : undefined}
-            aria-controls={vista && menu ? idMenu : undefined}
+            aria-haspopup="menu"
+            aria-expanded={menu}
+            aria-controls={menu ? idMenu : undefined}
             aria-busy={ocupado}
             className="group relative block rounded-lg outline-offset-4 transition-transform duration-rapida ease-salida active:scale-press disabled:cursor-wait"
           >
@@ -169,32 +185,43 @@ export function FotoPerfil({
             </span>
           </button>
 
-          {menu && vista && (
+          {menu && (
             <div
               id={idMenu}
               role="menu"
               aria-label="Foto de perfil"
-              className="animate-estado-entrar absolute left-0 top-full z-30 mt-esp2 flex w-48 flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-elevado p-esp1 shadow-elevado"
+              className="animate-estado-entrar absolute left-0 top-full z-30 mt-esp2 flex w-56 flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-elevado p-esp1 shadow-elevado"
             >
               <button
                 type="button"
                 role="menuitem"
                 autoFocus
-                onClick={abrirSelector}
+                onClick={abrirCamara}
                 className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
               >
                 <Icono nombre="camara" size={18} className="text-icono-default" />
-                Cambiar foto
+                Hacer foto
               </button>
               <button
                 type="button"
                 role="menuitem"
-                onClick={quitar}
-                className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-peligro transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil md:min-h-10"
+                onClick={abrirGaleria}
+                className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
               >
-                <Icono nombre="eliminar" size={18} />
-                Quitar foto
+                <Icono nombre="imagen" size={18} className="text-icono-default" />
+                Elegir de la galería
               </button>
+              {vista && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={quitar}
+                  className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-peligro transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil md:min-h-10"
+                >
+                  <Icono nombre="eliminar" size={18} />
+                  Quitar foto
+                </button>
+              )}
             </div>
           )}
         </div>
