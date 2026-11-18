@@ -11,7 +11,6 @@ import {
   verificarPunto,
   crearEnlaceCliente,
   actualizarCampana,
-  eliminarPuntoCampana,
   resolverIncidencia,
   revocarEnlaceCliente,
   renovarEnlaceCliente,
@@ -20,7 +19,6 @@ import {
   finalizarCampana,
   eliminarCampana,
 } from "./acciones";
-import type { PuntoEditable } from "./formulario-punto";
 import { useAnadirPunto } from "./anadir-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -41,24 +39,21 @@ const CLASE_ACCION_COMPACTA =
 export function ControlesPunto({
   campanaId,
   puntoId,
+  puntoNombre,
   estado,
   asignados,
   candidatos,
-  punto,
-  tieneFotos,
 }: {
   campanaId: number;
   puntoId: number;
+  puntoNombre: string;
   estado: string;
   asignados: Asignado[];
   candidatos: Candidato[];
-  punto: PuntoEditable;
-  tieneFotos: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
-  const { modo, editar } = useAnadirPunto();
-  const editandoEste = modo?.tipo === "editar" && modo.punto.id === puntoId;
+  const { editarPorId } = useAnadirPunto();
   const [error, setError] = useState<string | null>(null);
 
   function ejecutar(accion: () => Promise<void>) {
@@ -76,10 +71,9 @@ export function ControlesPunto({
   const libres = candidatos.filter((c) => !asignados.some((a) => a.usuarioId === c.id && a.rol !== "retirador"));
   const instalado = estado === "instalado" || estado === "verificado";
   const retiradaPendiente = asignados.some((a) => a.rol === "retirador" && a.estado !== "completada");
-  const sePuedeEliminar = (estado === "pendiente" || estado === "incidencia") && !tieneFotos;
 
   return (
-    <div className="flex w-full flex-col gap-esp2 lg:w-auto lg:items-end">
+    <div data-accion-fila="" className="flex w-full flex-col gap-esp2 lg:w-auto lg:items-end">
       {asignados.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
           {asignados.map((a) => (
@@ -119,7 +113,7 @@ export function ControlesPunto({
               if (!usuarioId) return;
               ejecutar(() => desenvolver(asignarPunto(campanaId, puntoId, usuarioId)));
             }}
-            aria-label={`Asignar responsable para ${punto.nombre}`}
+            aria-label={`Asignar responsable para ${puntoNombre}`}
             className={CLASE_SELECT_COMPACTO}
           >
             <option value="">{libres.length === 0 ? "Todos asignados" : "Asignar a…"}</option>
@@ -154,27 +148,12 @@ export function ControlesPunto({
         )}
         <button
           type="button"
-          disabled={pendiente || editandoEste}
-          onClick={() => editar(punto)}
+          disabled={pendiente}
+          onClick={() => editarPorId(puntoId)}
           className={`${CLASE_ACCION_COMPACTA} border border-borde-campo bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil`}
         >
-          {editandoEste ? "Editando…" : "Editar"}
+          Editar
         </button>
-        {sePuedeEliminar && (
-          <button
-            type="button"
-            disabled={pendiente}
-            title="Eliminar punto"
-            aria-label={`Eliminar punto ${punto.nombre}`}
-            onClick={async () => {
-              if (!(await confirmar("¿Eliminar este punto? No se puede deshacer."))) return;
-              ejecutar(() => desenvolver(eliminarPuntoCampana(campanaId, puntoId)));
-            }}
-            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
-          >
-            <Icono nombre="eliminar" size={15} />
-          </button>
-        )}
       </div>
 
       {instalado && (
@@ -362,23 +341,6 @@ export function EnlaceCliente({
       </div>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
     </div>
-  );
-}
-
-/** Botón "Añadir punto" que despliega el formulario con mapa a ancho completo. */
-/** Abre el formulario de punto nuevo junto al mapa de la campaña. */
-export function BotonAnadirPunto() {
-  const { modo, nuevo } = useAnadirPunto();
-  if (modo?.tipo === "nuevo") return null;
-  return (
-    <Boton
-      tamano="s"
-      className="!min-h-10 !h-10 md:!min-h-8 md:!h-8 w-fit"
-      onClick={() => nuevo()}
-    >
-      <Icono nombre="mas" size={15} />
-      Añadir punto
-    </Boton>
   );
 }
 

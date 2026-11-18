@@ -25,6 +25,7 @@ function refrescar(campanaId: number) {
   revalidatePath(`/admin/campanas/${campanaId}`);
   revalidatePath("/admin/campanas");
   revalidatePath("/admin/panel");
+  revalidatePath("/admin/documentos/nuevo");
 }
 
 export const asignarPunto = accion(async (campanaId: number, puntoId: number, usuarioId: string) => {
@@ -185,6 +186,113 @@ export type DatosPunto = {
   fechaRetirada: string;
   instrucciones: string;
 };
+
+/** Añade un punto en un toque desde el mapa y lo devuelve para abrir el modal de detalles. */
+export const anadirPuntoCampana = accion(
+  async (
+    campanaId: number,
+    d: {
+      direccion: string;
+      latitud: number;
+      longitud: number;
+      fechaColocacion: string;
+      fechaRetirada: string;
+    },
+  ) => {
+    await exigirAdmin();
+    if (!Number.isFinite(d.latitud) || !Number.isFinite(d.longitud)) {
+      throw new Error("Ubicación no válida.");
+    }
+    for (const f of [d.fechaColocacion, d.fechaRetirada]) {
+      if (f && !FECHA.test(f)) throw new Error("Fecha no válida.");
+    }
+    const supabase = await createClient();
+    const articulos = await articulosDeCampana(supabase, campanaId);
+    const unico = articulos.length === 1 ? articulos[0]! : null;
+    const tipoSoporte: TipoSoporte = unico ? soporteDe(unico.producto) : "cartel";
+
+    const { data: existentes, error: errorNombres } = await supabase
+      .from("puntos_campana")
+      .select("nombre")
+      .eq("campana_id", campanaId);
+    if (errorNombres) throw new Error(errorNombres.message);
+
+    const { data: creado, error } = await supabase
+      .from("puntos_campana")
+      .insert({
+        campana_id: campanaId,
+        nombre: siguienteNombrePunto((existentes ?? []).map((p) => p.nombre)),
+        tipo_soporte: tipoSoporte,
+        linea_id: unico ? unico.id : null,
+        direccion: d.direccion.trim() || null,
+        latitud: Math.round(d.latitud * 1e7) / 1e7,
+        longitud: Math.round(d.longitud * 1e7) / 1e7,
+        fecha_colocacion_prevista: d.fechaColocacion || null,
+        fecha_retirada_prevista: d.fechaRetirada || null,
+      })
+      .select(
+        "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
+      )
+      .single();
+    if (error || !creado) throw new Error(error?.message ?? "No se pudo añadir el punto.");
+
+    refrescar(campanaId);
+    return {
+      ...creado,
+      piezas: creado.piezas == null ? null : Number(creado.piezas),
+      latitud: Number(creado.latitud),
+      longitud: Number(creado.longitud),
+    };
+  },
+);
+
+/** Mueve un punto en el mapa desde el arrastre y avisa a quien lo tiene asignado. */
+export const moverPuntoCampana = accion(
+  async (campanaId: number, puntoId: number, latitud: number, longitud: number, direccion?: string) => {
+    const admin = await exigirAdmin();
+    if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+      throw new Error("Ubicación no válida.");
+    }
+    const supabase = await createClient();
+    const { data: antes } = await supabase
+      .from("puntos_campana")
+      .select("nombre")
+      .eq("id", puntoId)
+      .eq("campana_id", campanaId)
+      .maybeSingle();
+    if (!antes) throw new Error("No se ha encontrado el punto.");
+
+    const cambios: { latitud: number; longitud: number; direccion?: string | null } = {
+      latitud: Math.round(latitud * 1e7) / 1e7,
+      longitud: Math.round(longitud * 1e7) / 1e7,
+    };
+    if (direccion !== undefined) cambios.direccion = direccion.trim() || null;
+
+    const { error } = await supabase
+      .from("puntos_campana")
+      .update(cambios)
+      .eq("id", puntoId)
+      .eq("campana_id", campanaId);
+    if (error) throw new Error(error.message);
+
+    const destinatarios = await asignadosActivos(supabase, puntoId);
+    enSegundoPlano(() =>
+      notificar(
+        destinatarios,
+        {
+          tipo: "punto_modificado",
+          titulo: `Cambios en ${antes.nombre}`,
+          cuerpo: "Cambia: ubicación.",
+          url: `/app/punto/${puntoId}`,
+          tag: `punto-${puntoId}`,
+        },
+        { excluir: admin.id },
+      ),
+    );
+
+    refrescar(campanaId);
+  },
+);
 
 /** Crea (puntoId null) o modifica un punto de la campaña, también cuando el documento ya está emitido. */
 export const guardarPunto = accion(async (campanaId: number, puntoId: number | null, d: DatosPunto) => {

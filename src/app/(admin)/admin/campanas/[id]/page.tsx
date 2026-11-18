@@ -9,8 +9,9 @@ import { Icono } from "@/components/ui/iconos";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
-import { ProveedorAnadirPunto, ZonaMapaCampana } from "./anadir-punto";
-import { AvisoFinalizar, BotonAnadirPunto, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
+import { nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
+import { ProveedorAnadirPunto, TarjetaPuntoCampana, ZonaMapaCampana, type PuntoCampanaData } from "./anadir-punto";
+import { AvisoFinalizar, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +26,6 @@ function fechaHora(fecha: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(fecha));
-}
-
-function nombreVisiblePunto(nombre: string) {
-  const limpio = nombre.trim();
-  return /^\d+$/.test(limpio) ? `Punto ${limpio}` : limpio;
 }
 
 export default async function PaginaCampana({
@@ -122,11 +118,21 @@ export default async function PaginaCampana({
     piezas: a.piezas,
     repartidas: repartidas.get(a.id) ?? 0,
   }));
-  const puntosParaMapa = (puntos ?? []).map((p) => ({
+  const fotosPorPunto = new Set((fotos ?? []).map((f) => f.punto_id));
+  const puntosParaMapa: PuntoCampanaData[] = (puntos ?? []).map((p) => ({
     id: p.id,
     nombre: p.nombre,
+    tipo_soporte: p.tipo_soporte,
+    linea_id: p.linea_id,
+    piezas: p.piezas == null ? null : Number(p.piezas),
+    direccion: p.direccion,
     latitud: Number(p.latitud),
     longitud: Number(p.longitud),
+    fecha_colocacion_prevista: p.fecha_colocacion_prevista,
+    fecha_retirada_prevista: p.fecha_retirada_prevista,
+    estado: p.estado,
+    notas: p.notas,
+    tieneFotos: fotosPorPunto.has(p.id),
   }));
 
   const cliente = Array.isArray(campana.clientes) ? campana.clientes[0] : campana.clientes;
@@ -283,37 +289,34 @@ export default async function PaginaCampana({
         campanaId={campanaId}
         articulos={articulosPunto}
         fechasCampana={fechasCampana}
-        otrosPuntos={puntosParaMapa}
+        puntos={puntosParaMapa}
       >
-      {/* Blocco 2: Mappa panoramica & Riepilogo articoli (con el formulario de punto abierto: mapa para colocar + formulario) */}
+      {/* Blocco 2: Mappa panoramica & Riepilogo articoli */}
       <ZonaMapaCampana
         titulo={`Mapa · ${campana.nombre}`}
-        altura="clamp(240px, 34vh, 360px)"
-        puntos={lista.map((p) => ({
-          id: p.id,
-          nombre: p.nombre,
-          latitud: Number(p.latitud),
-          longitud: Number(p.longitud),
-          estado: p.estado,
-        }))}
         resumen={articulosPunto.length > 0 ? <ResumenArticulos articulos={articulosPunto} /> : null}
       />
 
       {/* Blocco 3: Sezione Puntos strutturata ad alta densità */}
       <section className="flex flex-col gap-esp3">
-        <div className="flex flex-wrap items-center justify-between gap-esp3">
+        <div className="flex flex-wrap items-baseline justify-between gap-esp2">
           <div className="flex items-center gap-esp2">
             <h2 className="text-titulo-panel text-texto-primario">Puntos</h2>
             <span className="tabular-nums rounded-completo border border-borde-default bg-fondo-superficie px-2 py-0.5 text-xs font-medium text-texto-secundario">
               {lista.length}
             </span>
           </div>
-          <BotonAnadirPunto />
+          {lista.length > 0 && (
+            <span className="text-etiqueta text-texto-secundario">
+              Pulsa un punto para editarlo o desliza a la izquierda para eliminarlo
+            </span>
+          )}
         </div>
 
         {lista.length > 0 ? (
           <div className="divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
             {lista.map((p, idx) => {
+              const puntoCampana = puntosParaMapa[idx]!;
               const asignados = (asignaciones ?? [])
                 .filter((a) => a.punto_id === p.id)
                 .map((a) => {
@@ -330,8 +333,9 @@ export default async function PaginaCampana({
               const esIncidencia = p.estado === "incidencia";
 
               return (
-                <div
+                <TarjetaPuntoCampana
                   key={p.id}
+                  punto={puntoCampana}
                   className={`flex flex-col gap-esp3 px-esp4 py-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/40 md:px-esp5 ${
                     esIncidencia ? "border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/20" : ""
                   }`}
@@ -379,23 +383,10 @@ export default async function PaginaCampana({
                     <ControlesPunto
                       campanaId={campanaId}
                       puntoId={p.id}
+                      puntoNombre={p.nombre}
                       estado={p.estado}
                       asignados={asignados}
                       candidatos={candidatos}
-                      punto={{
-                        id: p.id,
-                        linea_id: p.linea_id,
-                        nombre: p.nombre,
-                        tipo_soporte: p.tipo_soporte,
-                        direccion: p.direccion,
-                        latitud: Number(p.latitud),
-                        longitud: Number(p.longitud),
-                        piezas: p.piezas == null ? null : Number(p.piezas),
-                        fecha_colocacion_prevista: p.fecha_colocacion_prevista,
-                        fecha_retirada_prevista: p.fecha_retirada_prevista,
-                        notas: p.notas,
-                      }}
-                      tieneFotos={fotosPunto.length > 0}
                     />
                   </div>
 
@@ -460,13 +451,13 @@ export default async function PaginaCampana({
                       })}
                     </div>
                   )}
-                </div>
+                </TarjetaPuntoCampana>
               );
             })}
           </div>
         ) : (
           <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
-            Esta campaña aún no tiene puntos. Añade el primero desde el botón superior.
+            Esta campaña aún no tiene puntos. Pulsa «Añadir o modificar puntos» en el mapa para empezar.
           </p>
         )}
       </section>
