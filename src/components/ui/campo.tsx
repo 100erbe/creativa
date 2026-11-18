@@ -14,6 +14,10 @@ type Props = {
   requerido?: boolean;
   autoFocus?: boolean;
   placeholder?: string;
+  /** autocomplete del navegador ("given-name", "tel"…). */
+  autoCompletar?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
   className?: string;
 };
 
@@ -27,6 +31,9 @@ export function Campo({
   requerido,
   autoFocus,
   placeholder,
+  autoCompletar,
+  inputMode,
+  maxLength,
   className,
 }: Props) {
   const id = useId();
@@ -46,6 +53,9 @@ export function Campo({
         required={requerido}
         autoFocus={autoFocus}
         placeholder={placeholder}
+        autoComplete={autoCompletar}
+        inputMode={inputMode}
+        maxLength={maxLength}
         aria-invalid={!!error}
         aria-describedby={mensajeId}
         className={cn(

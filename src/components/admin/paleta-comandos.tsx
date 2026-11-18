@@ -199,6 +199,15 @@ const COMANDOS: Comando[] = [
     icono: "ajustes",
   },
   {
+    id: "nav-cuenta",
+    grupo: "Navegación",
+    etiqueta: "Mi cuenta",
+    descripcion: "Nombre, teléfono, email de acceso y contraseña",
+    href: "/admin/cuenta",
+    icono: "clientes",
+    palabrasClave: "perfil usuario datos personales telefono nombre",
+  },
+  {
     id: "nav-ayuda",
     grupo: "Navegación",
     etiqueta: "Ayuda",

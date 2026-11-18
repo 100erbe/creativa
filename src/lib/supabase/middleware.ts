@@ -37,6 +37,20 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const esRutaAdmin = pathname.startsWith("/admin");
   const esRutaEmpleado = pathname.startsWith("/app");
+  const esRutaCuenta = pathname.startsWith("/cuenta");
+
+  // Verificación en dos pasos: quien la tiene activada (nextLevel = aal2) y aún no ha escrito
+  // el código en esta sesión (currentLevel = aal1) no entra en la app ni en su cuenta.
+  if (user && (esRutaAdmin || esRutaEmpleado || esRutaCuenta)) {
+    const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (nivel && nivel.nextLevel === "aal2" && nivel.currentLevel !== "aal2") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/entrar/verificar";
+      url.search = "";
+      url.searchParams.set("volver", pathname);
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (!user && (esRutaAdmin || esRutaEmpleado)) {
     const url = request.nextUrl.clone();

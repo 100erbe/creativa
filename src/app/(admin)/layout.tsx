@@ -7,6 +7,7 @@ import { IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { PopupAviso } from "@/components/avisos/popup-aviso";
 import { contarNoLeidos } from "@/lib/push/bandeja";
 import { sumarDias } from "@/lib/documentos";
+import { urlAvatar } from "@/lib/avatar";
 
 export default async function LayoutAdmin({
   children,
@@ -23,7 +24,7 @@ export default async function LayoutAdmin({
   const hoyIso = new Date().toISOString().slice(0, 10);
   const limite90 = sumarDias(hoyIso, -90);
 
-  const [noLeidos, resVencidas90] = await Promise.all([
+  const [noLeidos, resVencidas90, avatar] = await Promise.all([
     contarNoLeidos(),
     supabase
       .from("v_estado_cobro")
@@ -31,6 +32,7 @@ export default async function LayoutAdmin({
       .in("estado_cobro", ["pendiente", "parcial", "vencida"])
       .gt("pendiente", 0.01)
       .lte("fecha_vencimiento", limite90),
+    urlAvatar(usuario.avatarUrl),
   ]);
 
   const vencidas90 = resVencidas90.error ? 0 : (resVencidas90.count ?? 0);
@@ -48,6 +50,7 @@ export default async function LayoutAdmin({
         nombre={`${usuario.nombre} ${usuario.apellidos ?? ""}`.trim()}
         rolEtiqueta="Administrador"
         iniciales={iniciales}
+        avatarUrl={avatar}
         noLeidos={noLeidos}
         vencidas90={vencidas90}
       />

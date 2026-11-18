@@ -223,16 +223,16 @@ export default async function PaginaPanel() {
       incidencias: Number(c.puntos_con_incidencia ?? 0),
     }));
 
-  const nombre = usuario?.nombre ? `${saludo(ahora)}, ${usuario.nombre} · ` : "";
+  // Saludo con el nombre de pila de quien ha entrado (se edita en Mi cuenta).
+  const nombrePila = usuario?.nombre.trim().split(/\s+/)[0];
 
   return (
     <div className="flex flex-col gap-esp5">
       <CabeceraPagina
-        titulo="Resumen"
+        titulo={nombrePila ? `${saludo(ahora)}, ${nombrePila}` : "Resumen"}
         subtitulo={
           <>
-            {nombre}
-            <span className={nombre ? "" : "capitalize"}>{fechaLarga(hoy)}</span>
+            Resumen de hoy · <span>{fechaLarga(hoy)}</span>
           </>
         }
         acciones={

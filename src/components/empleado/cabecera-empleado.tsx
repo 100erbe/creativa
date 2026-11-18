@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
+import { Avatar } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
@@ -30,12 +31,15 @@ const ENLACES: EnlaceEmpleado[] = [
 export function CabeceraEmpleado({
   nombre,
   iniciales,
+  avatarUrl = null,
   noLeidos,
   atrasadosCount = 0,
   gastosRechazadosCount = 0,
 }: {
   nombre: string;
   iniciales: string;
+  /** Foto de perfil ya firmada (o null: iniciales). */
+  avatarUrl?: string | null;
   noLeidos: number;
   atrasadosCount?: number;
   gastosRechazadosCount?: number;
@@ -204,13 +208,13 @@ export function CabeceraEmpleado({
             </nav>
 
             <div className="mt-auto flex items-center gap-esp3 rounded-md border border-borde-sutil bg-fondo-sutil px-esp2 py-esp2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-fondo-inverso text-xs font-medium text-texto-inverso">
-                {iniciales}
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="truncate text-sm font-medium text-texto-primario">{nombre}</p>
-                <p className="truncate text-xs text-texto-terciario">Instalador</p>
-              </div>
+              <Link href="/app/cuenta" className="flex min-w-0 flex-1 items-center gap-esp3 rounded-lg" aria-label="Mi cuenta">
+                <Avatar url={avatarUrl} iniciales={iniciales} />
+                <div className="flex-1 overflow-hidden">
+                  <p className="truncate text-etiqueta text-texto-primario">{nombre}</p>
+                  <p className="truncate text-etiqueta text-texto-secundario">Mi cuenta</p>
+                </div>
+              </Link>
               <Link
                 href="/cuenta/contrasena"
                 aria-label="Cambiar mi contraseña"

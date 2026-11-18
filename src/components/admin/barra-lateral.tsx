@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
-import { Monograma } from "@/components/ui/monograma";
+import { Avatar } from "@/components/ui/avatar";
 import { Campana } from "@/components/avisos/campana";
 import { abrirPaletaComandos } from "@/components/admin/paleta-comandos";
 import { createClient } from "@/lib/supabase/client";
@@ -65,12 +65,15 @@ export function BarraLateral({
   nombre,
   rolEtiqueta,
   iniciales,
+  avatarUrl = null,
   noLeidos = 0,
   vencidas90 = 0,
 }: {
   nombre: string;
   rolEtiqueta: string;
   iniciales: string;
+  /** Foto de perfil ya firmada (o null: iniciales). */
+  avatarUrl?: string | null;
   noLeidos?: number;
   vencidas90?: number;
 }) {
@@ -162,7 +165,7 @@ export function BarraLateral({
     </nav>
   );
 
-  const cuenta = <MenuCuenta nombre={nombre} rolEtiqueta={rolEtiqueta} iniciales={iniciales} onSalir={salir} />;
+  const cuenta = <MenuCuenta nombre={nombre} rolEtiqueta={rolEtiqueta} iniciales={iniciales} avatarUrl={avatarUrl} onSalir={salir} />;
 
   return (
     <>
@@ -292,11 +295,13 @@ function MenuCuenta({
   nombre,
   rolEtiqueta,
   iniciales,
+  avatarUrl,
   onSalir,
 }: {
   nombre: string;
   rolEtiqueta: string;
   iniciales: string;
+  avatarUrl: string | null;
   onSalir: () => void;
 }) {
   const [abierto, setAbierto] = useState(false);
@@ -326,7 +331,7 @@ function MenuCuenta({
         aria-label={`Cuenta de ${nombre}`}
         className="flex min-h-[60px] w-full items-center gap-esp3 rounded-lg py-esp3 text-left transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
       >
-        <Monograma texto={iniciales} variante="avatar" />
+        <Avatar url={avatarUrl} iniciales={iniciales} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-etiqueta text-texto-primario">{nombre}</span>
           <span className="block truncate text-etiqueta text-texto-secundario">{rolEtiqueta}</span>
@@ -342,6 +347,14 @@ function MenuCuenta({
           role="menu"
           className="animate-estado-entrar absolute bottom-full left-0 right-0 z-40 mb-esp2 flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-elevado p-esp1 shadow-elevado"
         >
+          <Link
+            role="menuitem"
+            href="/admin/cuenta"
+            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
+          >
+            <Icono nombre="clientes" size={18} className="text-icono-default" />
+            Mi cuenta
+          </Link>
           <Link
             role="menuitem"
             href="/cuenta/contrasena"

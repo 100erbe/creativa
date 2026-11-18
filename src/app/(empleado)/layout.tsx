@@ -7,6 +7,7 @@ import { contarNoLeidos } from "@/lib/push/bandeja";
 import { avisosUrgentesPendientes } from "@/lib/avisos/pendientes";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
+import { urlAvatar } from "@/lib/avatar";
 
 function hoyEnEspana() {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
@@ -24,7 +25,7 @@ export default async function LayoutEmpleado({
   const hoy = hoyEnEspana();
   const iniciales = `${usuario.nombre[0] ?? ""}${usuario.apellidos?.[0] ?? ""}`.toUpperCase();
 
-  const [noLeidos, urgentes, resAtrasados, resRechazados] = await Promise.all([
+  const [noLeidos, urgentes, resAtrasados, resRechazados, avatar] = await Promise.all([
     contarNoLeidos(),
     avisosUrgentesPendientes(),
     supabase
@@ -38,6 +39,7 @@ export default async function LayoutEmpleado({
       .select("id", { count: "exact", head: true })
       .eq("usuario_id", usuario.id)
       .eq("estado", "rechazado"),
+    urlAvatar(usuario.avatarUrl),
   ]);
 
   const atrasadosCount = resAtrasados.error ? 0 : (resAtrasados.count ?? 0);
@@ -54,6 +56,7 @@ export default async function LayoutEmpleado({
       <CabeceraEmpleado
         nombre={usuario.nombre}
         iniciales={iniciales}
+        avatarUrl={avatar}
         noLeidos={noLeidos}
         atrasadosCount={atrasadosCount}
         gastosRechazadosCount={gastosRechazadosCount}
