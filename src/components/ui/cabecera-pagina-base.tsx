@@ -34,7 +34,7 @@ export function CabeceraPaginaBase({
       <div className="flex flex-wrap items-center gap-esp3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">{titulo}</h1>
-          {subtitulo && <p className="mt-esp1 text-cuerpo text-texto-secundario">{subtitulo}</p>}
+          {subtitulo && <p className="mt-esp1 text-pretty text-cuerpo text-texto-secundario">{subtitulo}</p>}
         </div>
         {(conAvisos || acciones) && (
           <div className="flex shrink-0 flex-wrap items-center gap-esp3">

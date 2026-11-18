@@ -77,7 +77,7 @@ export async function updateSession(request: NextRequest) {
 
     if (esRutaAdmin && rol !== "admin") {
       const url = request.nextUrl.clone();
-      url.pathname = "/app/agenda";
+      url.pathname = "/app/inicio";
       return NextResponse.redirect(url);
     }
 

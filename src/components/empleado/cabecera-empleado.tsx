@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
-import { Avatar } from "@/components/ui/avatar";
+import { MenuCuenta } from "@/components/ui/menu-cuenta";
+import { Campana } from "@/components/avisos/campana";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
@@ -17,7 +18,15 @@ type EnlaceEmpleado = {
   badgeKey?: "atrasados" | "rechazados" | "noLeidos";
 };
 
-const ENLACES: EnlaceEmpleado[] = [
+const ENLACES_BARRA: EnlaceEmpleado[] = [
+  { href: "/app/inicio", etiqueta: "Inicio", icono: "panel" },
+  { href: "/app/agenda", etiqueta: "Agenda", icono: "calendario", badgeKey: "atrasados" },
+  { href: "/app/mapa", etiqueta: "Mapa", icono: "ubicacion" },
+  { href: "/app/gastos", etiqueta: "Gastos", icono: "gastos", badgeKey: "rechazados" },
+];
+
+const ENLACES_CAJON: EnlaceEmpleado[] = [
+  { href: "/app/inicio", etiqueta: "Inicio", icono: "panel" },
   { href: "/app/agenda", etiqueta: "Agenda", icono: "calendario", badgeKey: "atrasados" },
   { href: "/app/mapa", etiqueta: "Mapa", icono: "ubicacion" },
   { href: "/app/gastos", etiqueta: "Mis gastos", icono: "gastos", badgeKey: "rechazados" },
@@ -26,10 +35,11 @@ const ENLACES: EnlaceEmpleado[] = [
 
 /**
  * Cabecera y barra de navegación inferior de la PWA del empleado:
- * acceso con una sola mano a Agenda, Mapa, Gastos y Avisos, más botón rápido de gasto menor.
+ * unificada con el shell móvil administrativo (avisos arriba a la derecha y menú abajo a la derecha).
  */
 export function CabeceraEmpleado({
   nombre,
+  rolEtiqueta = "Empleado",
   iniciales,
   avatarUrl = null,
   noLeidos,
@@ -37,6 +47,7 @@ export function CabeceraEmpleado({
   gastosRechazadosCount = 0,
 }: {
   nombre: string;
+  rolEtiqueta?: string;
   iniciales: string;
   /** Foto de perfil ya firmada (o null: iniciales). */
   avatarUrl?: string | null;
@@ -72,34 +83,30 @@ export function CabeceraEmpleado({
 
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center gap-esp2 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm">
+      <header className="sticky top-0 z-30 flex items-center gap-esp1 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm">
         <button
           type="button"
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
           aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="menu" size={22} />
         </button>
-        <div className="flex flex-1 items-center pl-esp1">
-          <Logo alto={26} />
+        <div className="flex flex-1 items-center">
+          <Link href="/app/inicio" aria-label="Ir a Inicio" className="inline-flex rounded-lg outline-offset-4">
+            <Logo alto={28} />
+          </Link>
         </div>
-        <Link
-          href="/app/gastos/nuevo"
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-completo border border-borde-marca bg-fondo-marca-sutil px-esp3 text-xs font-semibold text-texto-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca hover:text-texto-sobre-marca active:scale-press"
-        >
-          <Icono nombre="camara" size={14} />
-          <span>+ Gasto</span>
-        </Link>
+        <Campana href="/app/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
       </header>
 
       {/* Barra inferior fija de navegación rápida para uso con el pulgar */}
       <nav
         aria-label="Navegación principal de campo"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 gap-esp1 border-t border-borde-default bg-fondo-superficie px-esp2 pt-esp1 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-esp1 border-t border-borde-default bg-fondo-superficie px-esp1 pt-esp1 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
       >
-        {ENLACES.map((enlace) => {
+        {ENLACES_BARRA.map((enlace) => {
           const activo =
             pathname.startsWith(enlace.href) ||
             (enlace.href === "/app/agenda" && pathname.startsWith("/app/punto/"));
@@ -111,7 +118,7 @@ export function CabeceraEmpleado({
               href={enlace.href}
               aria-current={activo ? "page" : undefined}
               className={cn(
-                "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg px-esp1 py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
+                "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
                 activo
                   ? "bg-fondo-marca-sutil text-texto-marca"
                   : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
@@ -134,10 +141,25 @@ export function CabeceraEmpleado({
                   </span>
                 )}
               </span>
-              <span className="max-w-full truncate">{enlace.etiqueta === "Mis gastos" ? "Gastos" : enlace.etiqueta}</span>
+              <span className="max-w-full truncate">{enlace.etiqueta}</span>
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          aria-label="Más opciones del menú"
+          aria-expanded={abierto}
+          className={cn(
+            "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
+            abierto
+              ? "bg-fondo-marca-sutil text-texto-marca"
+              : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
+          )}
+        >
+          <Icono nombre="menu" size={20} className={abierto ? "text-icono-marca" : "text-icono-default"} />
+          <span className="max-w-full truncate">Menú</span>
+        </button>
       </nav>
 
       {abierto && (
@@ -148,16 +170,21 @@ export function CabeceraEmpleado({
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp5 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-elevado">
-            <div className="flex items-center">
-              <div className="pl-esp2">
-                <Logo alto={30} />
-              </div>
+          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+            <div className="flex items-center pb-esp2">
+              <Link
+                href="/app/inicio"
+                onClick={() => setAbierto(false)}
+                aria-label="Ir a Inicio"
+                className="inline-flex rounded-lg pl-esp1 outline-offset-4"
+              >
+                <Logo alto={32} />
+              </Link>
               <button
                 type="button"
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
@@ -165,14 +192,14 @@ export function CabeceraEmpleado({
 
             <Link
               href="/app/gastos/nuevo"
-              className="flex min-h-11 items-center gap-esp3 rounded-md bg-fondo-marca px-esp3 py-esp3 text-sm font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press"
+              className="flex min-h-11 items-center gap-esp3 rounded-lg bg-fondo-marca px-esp3 py-esp3 text-sm font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press"
             >
               <Icono nombre="camara" size={20} />
               Añadir gasto menor
             </Link>
 
-            <nav aria-label="Menú completo" className="flex flex-col gap-1">
-              {ENLACES.map((enlace) => {
+            <nav aria-label="Menú completo" className="flex flex-col gap-esp1 pt-esp2">
+              {ENLACES_CAJON.map((enlace) => {
                 const activo = pathname.startsWith(enlace.href);
                 const conteo = obtenerConteo(enlace.badgeKey);
                 const esCritico = enlace.badgeKey === "atrasados" || enlace.badgeKey === "rechazados";
@@ -182,18 +209,18 @@ export function CabeceraEmpleado({
                     href={enlace.href}
                     aria-current={activo ? "page" : undefined}
                     className={cn(
-                      "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm transition-colors duration-rapida ease-suave",
+                      "flex min-h-11 items-center gap-esp3 rounded-lg px-esp3 text-cuerpo transition-colors duration-rapida ease-suave",
                       activo
-                        ? "bg-fondo-marca-sutil font-medium text-texto-marca"
-                        : "text-texto-secundario hover:bg-fondo-sutil",
+                        ? "bg-fondo-marca-sutil text-texto-marca"
+                        : "text-texto-primario hover:bg-fondo-sutil",
                     )}
                   >
                     <Icono
                       nombre={enlace.icono}
                       size={20}
-                      className={activo ? "text-icono-marca" : "text-icono-secundario"}
+                      className={activo ? "text-icono-marca" : "text-icono-default"}
                     />
-                    <span className="flex-1">{enlace.etiqueta}</span>
+                    <span className="min-w-0 flex-1 truncate">{enlace.etiqueta}</span>
                     {conteo > 0 && (
                       <span
                         className={cn(
@@ -209,30 +236,16 @@ export function CabeceraEmpleado({
               })}
             </nav>
 
-            <div className="mt-auto flex items-center gap-esp3 rounded-md border border-borde-sutil bg-fondo-sutil px-esp2 py-esp2">
-              <Link href="/app/cuenta" className="flex min-w-0 flex-1 items-center gap-esp3 rounded-lg" aria-label="Mi cuenta">
-                <Avatar url={avatarUrl} iniciales={iniciales} />
-                <div className="flex-1 overflow-hidden">
-                  <p className="truncate text-etiqueta text-texto-primario">{nombre}</p>
-                  <p className="truncate text-etiqueta text-texto-secundario">Mi cuenta</p>
-                </div>
-              </Link>
-              <Link
-                href="/cuenta/contrasena"
-                aria-label="Cambiar mi contraseña"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
-              >
-                <Icono nombre="candado" size={18} />
-              </Link>
-              <button
-                type="button"
-                onClick={salir}
-                aria-label="Cerrar sesión"
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
-              >
-                <Icono nombre="salir" size={18} />
-              </button>
-            </div>
+            <div className="flex-1" />
+            <div className="h-px bg-borde-default" />
+            <MenuCuenta
+              nombre={nombre}
+              rolEtiqueta={rolEtiqueta}
+              iniciales={iniciales}
+              avatarUrl={avatarUrl}
+              hrefCuenta="/app/cuenta"
+              onSalir={salir}
+            />
           </aside>
         </div>
       )}

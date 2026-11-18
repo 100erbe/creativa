@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia } from "@/components/ui/insignia";
 import { Boton, clasesBoton } from "@/components/ui/boton";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros } from "@/lib/formato";
@@ -139,6 +140,7 @@ export default async function PaginaClientes({
   return (
     <div className="flex flex-col gap-esp5">
       <CabeceraPagina
+        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Clientes"
         subtitulo={
           <span className="tabular-nums">

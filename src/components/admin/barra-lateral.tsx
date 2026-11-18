@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
-import { Avatar } from "@/components/ui/avatar";
+import { MenuCuenta } from "@/components/ui/menu-cuenta";
 import { Campana } from "@/components/avisos/campana";
 import { abrirPaletaComandos } from "@/components/admin/paleta-comandos";
 import { createClient } from "@/lib/supabase/client";
@@ -24,7 +24,7 @@ type EnlaceNav = {
 };
 
 const SECCIONES: { titulo?: string; enlaces: EnlaceNav[] }[] = [
-  { enlaces: [{ href: "/admin/panel", etiqueta: "Resumen", icono: "panel" }] },
+  { enlaces: [{ href: "/admin/panel", etiqueta: "Inicio", icono: "panel" }] },
   {
     titulo: "Gestión",
     enlaces: [
@@ -50,7 +50,7 @@ const INFERIOR: EnlaceNav[] = [
 ];
 
 const ACCESOS_MOVIL: EnlaceNav[] = [
-  { href: "/admin/panel", etiqueta: "Resumen", icono: "panel" },
+  { href: "/admin/panel", etiqueta: "Inicio", icono: "panel" },
   { href: "/admin/documentos", etiqueta: "Docs", icono: "documentos" },
   { href: "/admin/cobros", etiqueta: "Cobros", icono: "cobros", badgeKey: "vencidas90" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
@@ -165,14 +165,23 @@ export function BarraLateral({
     </nav>
   );
 
-  const cuenta = <MenuCuenta nombre={nombre} rolEtiqueta={rolEtiqueta} iniciales={iniciales} avatarUrl={avatarUrl} onSalir={salir} />;
+  const cuenta = (
+    <MenuCuenta
+      nombre={nombre}
+      rolEtiqueta={rolEtiqueta}
+      iniciales={iniciales}
+      avatarUrl={avatarUrl}
+      hrefCuenta="/admin/cuenta"
+      onSalir={salir}
+    />
+  );
 
   return (
     <>
       {/* Escritorio */}
       <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col gap-esp2 overflow-y-auto bg-fondo-superficie pb-esp4 pl-esp4 pr-esp4 pt-esp6 md:flex print:hidden">
         <div className="pb-esp4 pl-esp3">
-          <Link href="/admin/panel" aria-label="Ir a Resumen" className="inline-flex rounded-lg outline-offset-4">
+          <Link href="/admin/panel" aria-label="Ir a Inicio" className="inline-flex rounded-lg outline-offset-4">
             <Logo alto={40} />
           </Link>
         </div>
@@ -196,7 +205,7 @@ export function BarraLateral({
           <Icono nombre="menu" size={22} />
         </button>
         <div className="flex flex-1 items-center">
-          <Link href="/admin/panel" aria-label="Ir a Resumen" className="inline-flex rounded-lg outline-offset-4">
+          <Link href="/admin/panel" aria-label="Ir a Inicio" className="inline-flex rounded-lg outline-offset-4">
             <Logo alto={28} />
           </Link>
         </div>
@@ -279,7 +288,7 @@ export function BarraLateral({
               <Link
                 href="/admin/panel"
                 onClick={() => setAbierto(false)}
-                aria-label="Ir a Resumen"
+                aria-label="Ir a Inicio"
                 className="inline-flex rounded-lg pl-esp1 outline-offset-4"
               >
                 <Logo alto={32} />
@@ -303,93 +312,5 @@ export function BarraLateral({
         </div>
       )}
     </>
-  );
-}
-
-/** Menú de cuenta ("Account menu" de Figma): avatar, nombre y rol; el chevron abre Contraseña y Cerrar sesión. */
-function MenuCuenta({
-  nombre,
-  rolEtiqueta,
-  iniciales,
-  avatarUrl,
-  onSalir,
-}: {
-  nombre: string;
-  rolEtiqueta: string;
-  iniciales: string;
-  avatarUrl: string | null;
-  onSalir: () => void;
-}) {
-  const [abierto, setAbierto] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
-
-  useEffect(() => setAbierto(false), [pathname]);
-  useEffect(() => {
-    if (!abierto) return;
-    const fuera = (e: PointerEvent) => ref.current && !ref.current.contains(e.target as Node) && setAbierto(false);
-    const tecla = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
-    document.addEventListener("pointerdown", fuera);
-    document.addEventListener("keydown", tecla);
-    return () => {
-      document.removeEventListener("pointerdown", fuera);
-      document.removeEventListener("keydown", tecla);
-    };
-  }, [abierto]);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        aria-expanded={abierto}
-        aria-haspopup="menu"
-        aria-label={`Cuenta de ${nombre}`}
-        className="flex min-h-[60px] w-full items-center gap-esp3 rounded-lg py-esp3 text-left transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
-      >
-        <Avatar url={avatarUrl} iniciales={iniciales} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-etiqueta text-texto-primario">{nombre}</span>
-          <span className="block truncate text-etiqueta text-texto-secundario">{rolEtiqueta}</span>
-        </span>
-        <Icono
-          nombre="chevron"
-          size={20}
-          className={cn("text-icono-default transition-transform duration-rapida ease-salida", abierto && "-rotate-90")}
-        />
-      </button>
-      {abierto && (
-        <div
-          role="menu"
-          className="animate-estado-entrar absolute bottom-full left-0 right-0 z-40 mb-esp2 flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-elevado p-esp1 shadow-elevado"
-        >
-          <Link
-            role="menuitem"
-            href="/admin/cuenta"
-            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
-          >
-            <Icono nombre="clientes" size={18} className="text-icono-default" />
-            Mi cuenta
-          </Link>
-          <Link
-            role="menuitem"
-            href="/cuenta/contrasena"
-            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
-          >
-            <Icono nombre="candado" size={18} className="text-icono-default" />
-            Cambiar contraseña
-          </Link>
-          <button
-            role="menuitem"
-            type="button"
-            onClick={onSalir}
-            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
-          >
-            <Icono nombre="salir" size={18} className="text-icono-default" />
-            Cerrar sesión
-          </button>
-        </div>
-      )}
-    </div>
   );
 }

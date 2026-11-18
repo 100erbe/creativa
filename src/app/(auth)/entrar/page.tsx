@@ -28,7 +28,7 @@ export default async function PaginaEntrar({
       .single();
 
     if (fila?.activo && fila.rol === "admin") redirect(rutaSegura(volver, "/admin/panel"));
-    if (fila?.activo && fila.rol === "empleado") redirect(rutaSegura(volver, "/app/agenda"));
+    if (fila?.activo && fila.rol === "empleado") redirect(rutaSegura(volver, "/app/inicio"));
     sesionSinAcceso = true;
   }
 

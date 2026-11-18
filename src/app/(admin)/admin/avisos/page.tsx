@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { clasesBoton } from "@/components/ui/boton";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
@@ -29,6 +30,7 @@ export default async function PaginaAvisos() {
   return (
     <div className="flex flex-col gap-esp6">
       <CabeceraPagina
+        antes={<BotonVolver href="/admin/panel" usarHistorial />}
         titulo="Avisos al equipo"
         subtitulo="Comunicaciones al equipo. Los urgentes se repiten hasta que cada persona confirma."
         acciones={

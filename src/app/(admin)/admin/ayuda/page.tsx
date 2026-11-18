@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Tarjeta, CabeceraTarjeta } from "@/components/ui/tarjeta";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
@@ -108,7 +109,11 @@ const ATAJOS: { teclas: string[]; texto: string }[] = [
 export default function PaginaAyuda() {
   return (
     <div className="flex flex-col gap-esp5">
-      <CabeceraPagina titulo="Ayuda" subtitulo="Guías rápidas de las tareas habituales y atajos de teclado." />
+      <CabeceraPagina
+        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
+        titulo="Ayuda"
+        subtitulo="Guías rápidas de las tareas habituales y atajos de teclado."
+      />
 
       <div className="grid grid-cols-1 gap-esp5 lg:grid-cols-2">
         {GUIAS.map((g) => (

@@ -14,7 +14,7 @@ export default async function PaginaContrasena() {
   if (!usuario) redirect("/entrar?volver=/cuenta/contrasena");
 
   const recuperacion = esRecuperacionValida((await cookies()).get(COOKIE_RECUPERACION)?.value, usuario.id);
-  const inicio = usuario.rol === "admin" ? "/admin/panel" : "/app/agenda";
+  const inicio = usuario.rol === "admin" ? "/admin/panel" : "/app/inicio";
 
   return (
     <main className="flex min-h-dvh items-center justify-center bg-fondo-lienzo px-esp4">

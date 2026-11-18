@@ -54,7 +54,8 @@ export default async function LayoutEmpleado({
         Saltar al contenido principal
       </a>
       <CabeceraEmpleado
-        nombre={usuario.nombre}
+        nombre={`${usuario.nombre} ${usuario.apellidos ?? ""}`.trim()}
+        rolEtiqueta="Empleado"
         iniciales={iniciales}
         avatarUrl={avatar}
         noLeidos={noLeidos}

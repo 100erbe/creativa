@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { SeccionesCuenta } from "@/components/cuenta/secciones-cuenta";
 
@@ -12,7 +13,11 @@ export default async function PaginaMiCuenta() {
 
   return (
     <div className="flex max-w-4xl flex-col gap-esp5">
-      <CabeceraPagina titulo="Mi cuenta" subtitulo="Tus datos personales y el acceso a la aplicación." />
+      <CabeceraPagina
+        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
+        titulo="Mi cuenta"
+        subtitulo="Tus datos personales y el acceso a la aplicación."
+      />
       <SeccionesCuenta usuario={usuario} enlaceAvisos="/admin/ajustes/avisos" />
     </div>
   );

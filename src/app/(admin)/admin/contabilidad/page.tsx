@@ -4,6 +4,7 @@ import { lanzarSiError } from "@/lib/supabase/consulta";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
@@ -115,6 +116,7 @@ export default async function PaginaContabilidad({
   return (
     <div className="flex flex-col gap-esp6">
       <CabeceraPagina
+        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Contabilidad"
         subtitulo="Libro registro de facturas emitidas e IVA repercutido."
         acciones={

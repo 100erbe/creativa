@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
+import { SubtituloHoy } from "@/components/ui/subtitulo-hoy";
 import { AlertaDescartable } from "@/components/ui/alerta-descartable";
 import { TarjetaKpiDinamica, type SerieKpi } from "@/components/ui/tarjeta-kpi-dinamica";
 import { Tarjeta, CabeceraTarjeta } from "@/components/ui/tarjeta";
@@ -12,7 +13,7 @@ import { FilaDocumento } from "@/components/ui/fila-documento";
 import { EstadoVacio } from "@/components/ui/estado-vacio";
 import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { euros, fechaLarga } from "@/lib/formato";
+import { euros } from "@/lib/formato";
 import { saludo } from "@/lib/saludo";
 import { clasificarAgingCobro, ETIQUETA_TIPO } from "@/lib/documentos";
 import { hoyEnEspana } from "@/lib/estado-cuenta";
@@ -230,11 +231,7 @@ export default async function PaginaPanel() {
     <div className="flex flex-col gap-esp5">
       <CabeceraPagina
         titulo={nombrePila ? `${saludo(ahora)}, ${nombrePila}` : "Resumen"}
-        subtitulo={
-          <>
-            Resumen de hoy · <span>{fechaLarga(hoy)}</span>
-          </>
-        }
+        subtitulo={<SubtituloHoy prefijo="Resumen de hoy" fecha={hoy} />}
         acciones={
           <Link href="/admin/documentos/nuevo" className={clasesBoton("primario", "m", "shrink-0")} aria-label="Nuevo documento">
             <Icono nombre="mas" size={16} />

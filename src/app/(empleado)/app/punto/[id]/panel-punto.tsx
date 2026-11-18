@@ -11,13 +11,10 @@ import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_FICHA } from "@/components/mapa/config-mapa";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
-import { comprimirImagen } from "@/lib/comprimir-imagen";
-import { encolarFoto, esErrorDeRed } from "@/lib/cola-fotos";
 import { leerExifFoto } from "@/lib/exif-foto";
-import type { OrigenFoto, OrigenUbicacion } from "@/lib/foto-metadatos";
+import { subirOEncolarFotoPunto, type DatosFotoSubida } from "@/lib/subir-foto-punto";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
 import {
-  subirFotoPunto,
   eliminarFotoPunto,
   marcarPuntoInstalado,
   marcarPuntoRetirado,
@@ -60,11 +57,7 @@ type Foto = {
   origen_ubicacion: string | null;
 };
 
-type DatosFoto = {
-  origenFoto: OrigenFoto;
-  ubicacion: { latitud: number; longitud: number; origen: OrigenUbicacion } | null;
-  tomadaEn?: string;
-};
+type DatosFoto = DatosFotoSubida;
 
 function etiquetaUbicacion(f: Foto): { texto: string; ayuda: string } {
   switch (f.origen_ubicacion) {
@@ -150,38 +143,7 @@ export function PanelPunto({
    * sola más tarde ("encolada"); cualquier otro fallo se lanza como error.
    */
   async function subirUna(archivo: File, datos: DatosFoto): Promise<"subida" | "encolada"> {
-    const comprimida = await comprimirImagen(archivo);
-    const formData = new FormData();
-    formData.set("archivo", comprimida);
-    formData.set("puntoId", String(punto.id));
-    if (asignacion) formData.set("asignacionId", String(asignacion.id));
-    formData.set("tipo", "instalacion");
-    formData.set("origenFoto", datos.origenFoto);
-    if (datos.ubicacion) {
-      formData.set("latitud", String(datos.ubicacion.latitud));
-      formData.set("longitud", String(datos.ubicacion.longitud));
-      formData.set("origenUbicacion", datos.ubicacion.origen);
-    }
-    if (datos.tomadaEn) formData.set("tomadaEn", datos.tomadaEn);
-    try {
-      await desenvolver(subirFotoPunto(formData));
-      return "subida";
-    } catch (e) {
-      if (esErrorDeRed(e)) {
-        const campos: Record<string, string> = {};
-        formData.forEach((valor, clave) => {
-          if (typeof valor === "string") campos[clave] = valor;
-        });
-        const guardada = await encolarFoto({
-          puntoId: punto.id,
-          nombre: comprimida.name || "foto.webp",
-          archivo: comprimida,
-          campos,
-        });
-        if (guardada) return "encolada";
-      }
-      throw e;
-    }
+    return subirOEncolarFotoPunto(punto.id, asignacion?.id ?? null, archivo, datos);
   }
 
   // ── Cámara ────────────────────────────────────────────────────────────────

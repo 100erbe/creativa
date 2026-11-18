@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Boton } from "@/components/ui/boton";
+import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPaginaBase } from "@/components/ui/cabecera-pagina-base";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
@@ -168,6 +169,7 @@ export function VistaCatalogo({
     <div className="flex flex-col gap-esp5">
       {/* Cabecera */}
       <CabeceraPaginaBase
+        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Catálogo de productos y servicios"
         subtitulo="Artículos, servicios, formatos y tarifas base que aparecen al crear presupuestos, albaranes y facturas. Los documentos ya creados conservan sus propios precios."
         noLeidos={noLeidos}
