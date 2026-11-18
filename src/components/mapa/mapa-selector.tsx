@@ -28,7 +28,6 @@ export function MapaSelector(props: {
   onElegir: (p: Posicion) => void;
   onClicPunto?: (punto: PuntoExistente) => void;
   onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => void;
-  onPulsacionLargaPunto?: (punto: PuntoExistente) => void;
   centrarEn?: number;
   soloLectura?: boolean;
   altura?: number | string;

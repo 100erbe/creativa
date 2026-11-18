@@ -84,7 +84,7 @@ export function Dialogos() {
   const detalle = resto.join("\n");
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
+    <div className="fixed inset-0 z-[10010] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
       <button
         type="button"
         aria-label="Cancelar"

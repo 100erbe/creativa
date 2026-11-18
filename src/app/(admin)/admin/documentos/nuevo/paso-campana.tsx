@@ -17,7 +17,7 @@ import { fechaMedia } from "@/lib/formato";
 import type { Cabecera } from "./paso-lineas";
 import { actualizarPunto, anadirPunto, crearCampana, eliminarPunto, moverPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
-import { avisar, confirmar } from "@/components/ui/dialogos";
+import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
@@ -318,6 +318,7 @@ function FormularioDetallesPunto({
   etiquetaCerrar,
   onLimpiarError,
   onGuardar,
+  onEliminar,
   onCerrar,
 }: {
   punto: Punto;
@@ -336,6 +337,7 @@ function FormularioDetallesPunto({
     fecha_retirada_prevista: string;
     notas: string;
   }) => void;
+  onEliminar?: () => void;
   onCerrar: () => void;
 }) {
   const [lineaId, setLineaId] = useState<string>(
@@ -445,13 +447,26 @@ function FormularioDetallesPunto({
         />
       </Etiqueta>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
-      <div className="flex justify-end gap-esp2">
-        <Boton type="button" variante="secundario" disabled={pendiente} onClick={onCerrar}>
-          {etiquetaCerrar}
-        </Boton>
-        <Boton type="submit" cargando={pendiente}>
-          {etiquetaGuardar}
-        </Boton>
+      <div className="flex flex-wrap items-center justify-between gap-esp2">
+        {onEliminar && (
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={onEliminar}
+            className="inline-flex min-h-11 items-center gap-esp1 rounded-lg px-esp2 text-etiqueta text-texto-peligro transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil active:scale-press disabled:opacity-50 md:min-h-[42px]"
+          >
+            <Icono nombre="eliminar" size={16} />
+            Eliminar punto
+          </button>
+        )}
+        <div className="ml-auto flex gap-esp2">
+          <Boton type="button" variante="secundario" disabled={pendiente} onClick={onCerrar}>
+            {etiquetaCerrar}
+          </Boton>
+          <Boton type="submit" cargando={pendiente}>
+            {etiquetaGuardar}
+          </Boton>
+        </div>
       </div>
     </form>
   );
@@ -541,6 +556,17 @@ function ModalDetallesPunto({
           etiquetaCerrar="Cerrar"
           onLimpiarError={() => setError(null)}
           onCerrar={onCerrar}
+          onEliminar={
+            punto.estado === "pendiente"
+              ? async () => {
+                  if (!(await confirmar(`¿Eliminar el punto «${punto.nombre}»?`))) return;
+                  ejecutar(async () => {
+                    await desenvolver(eliminarPunto(documentoId, campanaId, punto.id));
+                    onCerrar();
+                  });
+                }
+              : undefined
+          }
           onGuardar={(datos) => {
             ejecutar(async () => {
               await desenvolver(actualizarPunto(documentoId, campanaId, punto.id, datos));
@@ -790,15 +816,6 @@ function MapaCampana({
     });
   }
 
-  async function solicitarEliminarPunto(punto: PuntoExistente) {
-    if (punto.estado && punto.estado !== "pendiente") {
-      await avisar(`El punto «${punto.nombre}» ya está ${punto.estado} y no se puede eliminar.`);
-      return;
-    }
-    if (!(await confirmar(`¿Eliminar el punto «${punto.nombre}»?`))) return;
-    ejecutar(() => desenvolver(eliminarPunto(documentoId, campana.id, punto.id)));
-  }
-
   const puntosMapa: PuntoExistente[] = puntos.map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -861,7 +878,6 @@ function MapaCampana({
             onElegir={elegirEnMapa}
             onClicPunto={clicEnPuntoExistente}
             onMoverPunto={moverPuntoEnMapa}
-            onPulsacionLargaPunto={solicitarEliminarPunto}
             centrarEn={centrarEn}
             soloLectura={!seleccionando}
           />
@@ -956,7 +972,7 @@ function ControlesEnMapa({
               ? "Guardando punto en la campaña…"
               : seleccionando
                 ? "Toca el mapa para añadir un punto. Arrástralo para moverlo o tócalo para editar sus detalles."
-                : "Arrastra un punto para moverlo o tócalo para editar sus detalles. Mantén pulsado para eliminarlo."}
+                : "Arrastra un punto para moverlo o tócalo para editarlo o eliminarlo."}
           </p>
         </div>
       )}
