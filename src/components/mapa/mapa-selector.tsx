@@ -25,11 +25,13 @@ export function MapaSelector(props: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
   vistaBuscada?: Posicion | null;
+  creandoEn?: Posicion | null;
   onElegir: (p: Posicion) => void;
   onClicPunto?: (punto: PuntoExistente) => void;
-  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => void;
+  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => boolean | void | Promise<boolean | void>;
   centrarEn?: number;
   soloLectura?: boolean;
+  zoomConRueda?: boolean;
   altura?: number | string;
 }) {
   return <MapaSelectorLeaflet {...props} />;

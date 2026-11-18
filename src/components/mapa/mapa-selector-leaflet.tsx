@@ -31,6 +31,12 @@ function icono(color: string, tamano = 16, areaTactil = tamano) {
 }
 const ICONO_EXISTENTE = icono(colorMapa.estado.retirado, 16, 44);
 const ICONO_NUEVO = icono(colorMapa.defecto, 22, 44);
+const ICONO_CREANDO_ONDA = L.divIcon({
+  className: "",
+  html: `<span style="position:relative;display:flex;align-items:center;justify-content:center;width:64px;height:64px;pointer-events:none"><span style="position:absolute;inset:12px;border-radius:50%;border:2px solid ${colorMapa.defecto};animation:punto-onda 650ms cubic-bezier(0.16, 1, 0.3, 1) infinite"></span><span style="position:absolute;inset:12px;border-radius:50%;border:2px solid ${colorMapa.defecto};animation:punto-onda 650ms cubic-bezier(0.16, 1, 0.3, 1) 200ms infinite"></span><span style="position:relative;display:block;width:16px;height:16px;border-radius:50%;background:${colorMapa.defecto};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra};animation:punto-nucleo 260ms cubic-bezier(0.16, 1, 0.3, 1) both"></span></span>`,
+  iconSize: [64, 64],
+  iconAnchor: [32, 32],
+});
 
 // Centro por defecto: Málaga (zona habitual de trabajo de Creativa).
 const CENTRO_DEFECTO: [number, number] = [36.7213, -4.4214];
@@ -85,7 +91,7 @@ function MarcadorExistente({
 }: {
   punto: PuntoExistente;
   onClic?: (p: PuntoExistente) => void;
-  onMover?: (p: PuntoExistente, pos: Posicion) => void;
+  onMover?: (p: PuntoExistente, pos: Posicion) => boolean | void | Promise<boolean | void>;
   ultimoGestoRef: React.MutableRefObject<number>;
 }) {
   const onClicRef = useRef(onClic);
@@ -109,10 +115,15 @@ function MarcadorExistente({
         dragstart() {
           ultimoGestoRef.current = Date.now();
         },
-        dragend(e) {
+        async dragend(e) {
           ultimoGestoRef.current = Date.now();
-          const ll = (e.target as L.Marker).getLatLng();
-          onMoverRef.current?.(puntoRef.current, { latitud: ll.lat, longitud: ll.lng });
+          const marcador = e.target as L.Marker;
+          const ll = marcador.getLatLng();
+          const origen: [number, number] = [puntoRef.current.latitud, puntoRef.current.longitud];
+          const confirmado = await onMoverRef.current?.(puntoRef.current, { latitud: ll.lat, longitud: ll.lng });
+          if (confirmado === false) {
+            marcador.setLatLng(origen);
+          }
         },
       }}
     >
@@ -235,30 +246,48 @@ function AutoResize() {
   return null;
 }
 
+function ControlZoomRueda({ activo }: { activo: boolean }) {
+  const mapa = useMap();
+  useEffect(() => {
+    if (activo) {
+      mapa.scrollWheelZoom.enable();
+    } else {
+      mapa.scrollWheelZoom.disable();
+    }
+  }, [mapa, activo]);
+  return null;
+}
+
 export function MapaSelectorLeaflet({
   puntos,
   posicion,
   vistaBuscada,
+  creandoEn,
   onElegir,
   onClicPunto,
   onMoverPunto,
   centrarEn,
   soloLectura = false,
+  zoomConRueda = false,
   altura = "clamp(380px, 62vh, 640px)",
 }: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
   /** Posición a enfocar desde el buscador sin colocar marcador. */
   vistaBuscada?: Posicion | null;
+  /** Coordenadas donde mostrar la microanimación de punto con cerchi concentrici antes de abrir el modal. */
+  creandoEn?: Posicion | null;
   onElegir: (p: Posicion) => void;
   /** Clic corto sobre un punto ya añadido. */
   onClicPunto?: (punto: PuntoExistente) => void;
-  /** Al terminar de arrastrar un punto ya añadido a otra ubicación. */
-  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => void;
+  /** Al terminar de arrastrar un punto ya añadido a otra ubicación (devolver false cancela y devuelve el punto a su origen). */
+  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => boolean | void | Promise<boolean | void>;
   /** Incrementar solo al elegir una dirección en el buscador para centrar el mapa en ella. */
   centrarEn?: number;
   /** En modo solo lectura muestra los puntos ya seleccionados sin permitir colocar uno nuevo al hacer clic. */
   soloLectura?: boolean;
+  /** Habilita zoom con rueda del ratón / pellizco en trackpad (ej. dentro del modal a pantalla completa). */
+  zoomConRueda?: boolean;
   altura?: number | string;
 }) {
   const ultimoGestoRef = useRef(0);
@@ -277,10 +306,11 @@ export function MapaSelectorLeaflet({
         zoom={puntos.length > 0 ? 13 : 12}
         dragging
         touchZoom
-        scrollWheelZoom={false}
+        scrollWheelZoom={zoomConRueda}
         style={{ height: "100%", width: "100%", cursor: soloLectura ? "grab" : "crosshair" }}
       >
         <AutoResize />
+        <ControlZoomRueda activo={zoomConRueda} />
         <Encuadrar puntos={puntos} posicion={posicion} />
         <CapaBase />
         {!soloLectura && <Clics onElegir={onElegir} ultimoGestoRef={ultimoGestoRef} />}
@@ -294,6 +324,14 @@ export function MapaSelectorLeaflet({
             ultimoGestoRef={ultimoGestoRef}
           />
         ))}
+        {creandoEn && (
+          <Marker
+            key={`creando-${creandoEn.latitud}-${creandoEn.longitud}`}
+            position={[creandoEn.latitud, creandoEn.longitud]}
+            icon={ICONO_CREANDO_ONDA}
+            interactive={false}
+          />
+        )}
         {posicion && (
           <Marker
             position={[posicion.latitud, posicion.longitud]}

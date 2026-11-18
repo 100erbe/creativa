@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Icono } from "@/components/ui/iconos";
+import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
 
 export type SafeMapCoordinates = {
@@ -39,6 +39,14 @@ export interface SafeMapContainerProps {
   modalAction?: React.ReactNode | ((cerrar: () => void) => React.ReactNode);
   /** Comprobación antes de cerrar el modal con X, Escape o tocando fuera. Si devuelve false no se cierra. */
   onBeforeClose?: () => boolean | Promise<boolean>;
+  /** Cuando es true, la vista previa + modal en viewport se usan también en desktop, no solo en móvil. */
+  modalSiempre?: boolean;
+  /** Cuando es true, el modal ocupa el tamaño máximo del viewport (100vw × 100dvh). */
+  tamanoMaximo?: boolean;
+  /** Estilo visual del CTA sobre la vista previa del mapa. */
+  varianteTrigger?: "superficie" | "primario";
+  /** Icono del CTA sobre la vista previa del mapa (por defecto "expandir"). */
+  exploreIcon?: NombreIcono;
   /** Classi opzionali sul contenitore esterno */
   className?: string;
 }
@@ -81,6 +89,10 @@ export function SafeMapContainer({
   onOpenChange,
   modalAction,
   onBeforeClose,
+  modalSiempre = false,
+  tamanoMaximo = false,
+  varianteTrigger = "superficie",
+  exploreIcon = "expandir",
   className,
 }: SafeMapContainerProps) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -140,13 +152,14 @@ export function SafeMapContainer({
 
     const modalEl = modalOverlayRef.current;
     const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
+      const enMapa = (e.target as HTMLElement | null)?.closest(".leaflet-container");
+      if (!enMapa) e.preventDefault();
     };
     modalEl?.addEventListener("wheel", onWheel, { passive: false });
 
     const media = window.matchMedia("(min-width: 768px)");
     const onBreakpointChange = (e: MediaQueryListEvent) => {
-      if (e.matches) {
+      if (!modalSiempre && e.matches) {
         setOpenRef.current(false);
       }
     };
@@ -162,7 +175,7 @@ export function SafeMapContainer({
       media.removeEventListener("change", onBreakpointChange);
       triggerEl?.focus();
     };
-  }, [open]);
+  }, [open, modalSiempre]);
 
   const directionsUrl = buildDirectionsUrl(coordinates, address);
   const inlineCtx = { enModal: false, cerrar: () => setOpen(false) };
@@ -173,13 +186,20 @@ export function SafeMapContainer({
       <div
         data-safe-map-container=""
         className={cn(
-          "relative mx-2 h-48 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
+          modalSiempre
+            ? "relative h-52 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:h-64"
+            : "relative mx-2 h-48 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
           className,
         )}
       >
         <div
           data-safe-map-inline-layer=""
-          className="h-full w-full select-none touch-pan-y pointer-events-none max-md:isolate max-md:[&>*]:!h-full max-md:[&>*]:!rounded-none max-md:[&>*]:!border-0 max-md:[&_.leaflet-control-zoom]:!hidden max-md:[&_*]:!pointer-events-none max-md:[&_*]:![touch-action:pan-y] md:pointer-events-auto md:h-auto md:select-auto md:touch-auto"
+          className={cn(
+            "h-full w-full select-none touch-pan-y pointer-events-none",
+            modalSiempre
+              ? "isolate [&>*]:!h-full [&>*]:!rounded-none [&>*]:!border-0 [&_.leaflet-control-zoom]:!hidden [&_*]:!pointer-events-none [&_*]:![touch-action:pan-y]"
+              : "max-md:isolate max-md:[&>*]:!h-full max-md:[&>*]:!rounded-none max-md:[&>*]:!border-0 max-md:[&_.leaflet-control-zoom]:!hidden max-md:[&_*]:!pointer-events-none max-md:[&_*]:![touch-action:pan-y] md:pointer-events-auto md:h-auto md:select-auto md:touch-auto",
+          )}
         >
           <SafeMapContext.Provider value={inlineCtx}>{children}</SafeMapContext.Provider>
         </div>
@@ -191,10 +211,24 @@ export function SafeMapContainer({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label={`${exploreLabel}: ${title}`}
-          className="group absolute inset-0 z-[1100] flex items-end bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/10 to-transparent p-esp3 text-left transition-opacity duration-rapida ease-suave md:hidden"
+          className={cn(
+            "group absolute inset-0 z-[1100] flex items-end bg-gradient-to-t from-fondo-inverso/60 via-fondo-inverso/10 to-transparent p-esp3 text-left transition-opacity duration-rapida ease-suave",
+            !modalSiempre && "md:hidden",
+          )}
         >
-          <span className="inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg border border-borde-campo bg-fondo-superficie px-esp4 py-esp2 text-xs font-semibold text-texto-primario shadow-md transition-transform duration-rapida ease-salida group-hover:scale-[1.02] group-active:scale-press">
-            <Icono nombre="expandir" size={16} className="text-icono-marca" />
+          <span
+            className={cn(
+              "inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg px-esp4 py-esp2 text-xs font-semibold shadow-md transition-all duration-rapida ease-salida group-hover:scale-[1.02] group-active:scale-press",
+              varianteTrigger === "primario"
+                ? "bg-fondo-marca text-texto-sobre-marca group-hover:bg-fondo-marca-hover"
+                : "border border-borde-campo bg-fondo-superficie text-texto-primario",
+            )}
+          >
+            <Icono
+              nombre={exploreIcon}
+              size={16}
+              className={varianteTrigger === "primario" ? "text-icono-sobre-marca" : "text-icono-marca"}
+            />
             <span>{exploreLabel}</span>
           </span>
         </button>
@@ -204,7 +238,10 @@ export function SafeMapContainer({
             href={directionsUrl}
             target="_blank"
             rel="noreferrer"
-            className="absolute bottom-esp3 right-esp3 z-[1101] inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press md:hidden"
+            className={cn(
+              "absolute bottom-esp3 right-esp3 z-[1101] inline-flex min-h-11 min-w-11 items-center justify-center gap-esp2 rounded-lg bg-fondo-marca px-esp3 py-esp2 text-xs font-semibold text-texto-sobre-marca shadow-md transition-colors duration-rapida ease-suave hover:bg-fondo-marca-hover active:scale-press",
+              !modalSiempre && "md:hidden",
+            )}
           >
             <Icono nombre="ubicacion" size={16} />
             <span>{directionsLabel}</span>
@@ -217,7 +254,11 @@ export function SafeMapContainer({
         createPortal(
           <div
             ref={modalOverlayRef}
-            className="fixed inset-0 z-[9999] flex flex-col justify-end overscroll-contain p-2 sm:p-4 md:hidden"
+            className={cn(
+              "fixed inset-0 z-[9999] flex flex-col justify-end overscroll-contain",
+              tamanoMaximo ? "p-0" : "p-2 sm:p-4",
+              !modalSiempre && "md:hidden",
+            )}
             role="presentation"
           >
             <button
@@ -231,7 +272,10 @@ export function SafeMapContainer({
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
-              className="animate-hoja-subir relative flex h-[90dvh] w-full flex-col overflow-hidden rounded-xl border border-border bg-fondo-superficie shadow-elevado"
+              className={cn(
+                "animate-hoja-subir relative flex w-full flex-col overflow-hidden bg-fondo-superficie shadow-elevado",
+                tamanoMaximo ? "h-[100dvh] rounded-none border-0" : "h-[90dvh] rounded-xl border border-border",
+              )}
             >
               <div className="relative z-10 flex items-center justify-between gap-esp2 border-b border-border bg-fondo-superficie px-esp4 py-esp3">
                 <h2

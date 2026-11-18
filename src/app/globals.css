@@ -74,6 +74,32 @@
   }
 }
 
+@keyframes punto-onda {
+  0% {
+    transform: scale(0.32);
+    opacity: 0.78;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+@keyframes punto-nucleo {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Respeta la preferencia de movimiento reducido del sistema (WCAG 2.3.3). */
 @media (prefers-reduced-motion: reduce) {
   :root {
