@@ -157,6 +157,7 @@ export const tamanoTexto: Record<string, TamanoTexto> = {
   kpi: ["1.75rem", { lineHeight: "2.375rem", fontWeight: "700" }],
   importe: ["1.25rem", { lineHeight: "1.75rem", fontWeight: "600" }],
   "titulo-panel": ["1.125rem", { lineHeight: "1.625rem", fontWeight: "700" }],
+  "titulo-fila-movil": ["0.8125rem", { lineHeight: "1.125rem", fontWeight: "700" }],
   "importe-fila": ["1.125rem", { lineHeight: "1.625rem", fontWeight: "600" }],
   destacado: ["1rem", { lineHeight: "1.5rem", fontWeight: "600" }],
   cuerpo: ["0.875rem", { lineHeight: "1.375rem", fontWeight: "400" }],

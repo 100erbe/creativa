@@ -172,7 +172,9 @@ export function BarraLateral({
       {/* Escritorio */}
       <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col gap-esp2 overflow-y-auto bg-fondo-superficie pb-esp4 pl-esp4 pr-esp4 pt-esp6 md:flex print:hidden">
         <div className="pb-esp4 pl-esp3">
-          <Logo alto={40} />
+          <Link href="/admin/panel" aria-label="Ir a Resumen" className="inline-flex rounded-lg outline-offset-4">
+            <Logo alto={40} />
+          </Link>
         </div>
         {botonPaleta}
         <div className="pt-esp4">{navegacion}</div>
@@ -193,8 +195,10 @@ export function BarraLateral({
         >
           <Icono nombre="menu" size={22} />
         </button>
-        <div className="flex-1">
-          <Logo alto={28} />
+        <div className="flex flex-1 items-center">
+          <Link href="/admin/panel" aria-label="Ir a Resumen" className="inline-flex rounded-lg outline-offset-4">
+            <Logo alto={28} />
+          </Link>
         </div>
         <button
           type="button"
@@ -211,7 +215,7 @@ export function BarraLateral({
       {!ocultarBarraInferior && (
         <nav
           aria-label="Navegación rápida móvil"
-          className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-borde-default bg-fondo-superficie/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden print:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 gap-esp1 border-t border-borde-default bg-fondo-superficie px-esp1 pt-esp1 pb-[max(0.25rem,env(safe-area-inset-bottom))] md:hidden print:hidden"
         >
           {ACCESOS_MOVIL.map((item) => {
             const activo = pathname.startsWith(item.href);
@@ -222,8 +226,10 @@ export function BarraLateral({
                 href={item.href}
                 aria-current={activo ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors duration-rapida ease-suave",
-                  activo ? "text-texto-marca" : "text-texto-secundario hover:text-texto-primario",
+                  "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
+                  activo
+                    ? "bg-fondo-marca-sutil text-texto-marca"
+                    : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
                 )}
               >
                 <span className="relative">
@@ -231,13 +237,13 @@ export function BarraLateral({
                   {conteo > 0 && (
                     <span
                       aria-label={`${conteo} vencidas 90+ días`}
-                      className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-critico px-1 text-micro font-bold leading-none text-texto-inverso"
+                      className="tabular-nums absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-completo bg-fondo-critico px-esp1 text-micro font-semibold leading-none text-texto-inverso"
                     >
                       {conteo > 9 ? "9+" : conteo}
                     </span>
                   )}
                 </span>
-                <span className="truncate">{item.etiqueta}</span>
+                <span className="max-w-full truncate">{item.etiqueta}</span>
               </Link>
             );
           })}
@@ -246,10 +252,15 @@ export function BarraLateral({
             onClick={() => setAbierto(true)}
             aria-label="Más opciones del menú"
             aria-expanded={abierto}
-            className="relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
+            className={cn(
+              "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
+              abierto
+                ? "bg-fondo-marca-sutil text-texto-marca"
+                : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
+            )}
           >
-            <Icono nombre="menu" size={20} className="text-icono-default" />
-            <span>Menú</span>
+            <Icono nombre="menu" size={20} className={abierto ? "text-icono-marca" : "text-icono-default"} />
+            <span className="max-w-full truncate">Menú</span>
           </button>
         </nav>
       )}
@@ -265,9 +276,14 @@ export function BarraLateral({
           />
           <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
             <div className="flex items-center pb-esp2">
-              <div className="pl-esp1">
+              <Link
+                href="/admin/panel"
+                onClick={() => setAbierto(false)}
+                aria-label="Ir a Resumen"
+                className="inline-flex rounded-lg pl-esp1 outline-offset-4"
+              >
                 <Logo alto={32} />
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => setAbierto(false)}

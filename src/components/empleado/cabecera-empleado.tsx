@@ -97,7 +97,7 @@ export function CabeceraEmpleado({
       {/* Barra inferior fija de navegación rápida para uso con el pulgar */}
       <nav
         aria-label="Navegación principal de campo"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-borde-default bg-fondo-superficie/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 gap-esp1 border-t border-borde-default bg-fondo-superficie px-esp2 pt-esp1 pb-[max(0.25rem,env(safe-area-inset-bottom))]"
       >
         {ENLACES.map((enlace) => {
           const activo =
@@ -111,20 +111,22 @@ export function CabeceraEmpleado({
               href={enlace.href}
               aria-current={activo ? "page" : undefined}
               className={cn(
-                "relative flex min-h-[58px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium transition-colors duration-rapida ease-suave",
-                activo ? "text-texto-marca" : "text-texto-secundario hover:text-texto-primario",
+                "relative flex min-h-12 flex-col items-center justify-center gap-esp1 rounded-lg px-esp1 py-esp1 text-etiqueta transition-[background-color,color,transform] duration-rapida ease-suave active:scale-press",
+                activo
+                  ? "bg-fondo-marca-sutil text-texto-marca"
+                  : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
               )}
             >
               <span className="relative">
                 <Icono
                   nombre={enlace.icono}
                   size={20}
-                  className={activo ? "text-icono-marca" : "text-icono-secundario"}
+                  className={activo ? "text-icono-marca" : "text-icono-default"}
                 />
                 {conteo > 0 && (
                   <span
                     className={cn(
-                      "tabular-nums absolute -right-2.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-micro font-bold leading-none text-texto-inverso",
+                      "tabular-nums absolute -right-2.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-completo px-esp1 text-micro font-semibold leading-none text-texto-inverso",
                       esCritico ? "bg-fondo-critico" : "bg-fondo-peligro",
                     )}
                   >
@@ -132,7 +134,7 @@ export function CabeceraEmpleado({
                   </span>
                 )}
               </span>
-              <span className="truncate">{enlace.etiqueta === "Mis gastos" ? "Gastos" : enlace.etiqueta}</span>
+              <span className="max-w-full truncate">{enlace.etiqueta === "Mis gastos" ? "Gastos" : enlace.etiqueta}</span>
             </Link>
           );
         })}

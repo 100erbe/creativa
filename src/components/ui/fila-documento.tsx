@@ -46,7 +46,7 @@ export function FilaDocumento({
       >
         <Monograma texto={iniciales ?? inicialesDe(cliente)} />
         <div className="flex min-w-0 flex-1 flex-col gap-esp1">
-          <p className="truncate text-base font-bold text-texto-primario md:text-titulo-panel">
+          <p className="break-words text-titulo-fila-movil text-texto-primario md:text-titulo-panel">
             {cliente ?? "Sin cliente"}
           </p>
           <p className="flex min-w-0 items-center gap-esp2 text-meta font-medium text-texto-secundario">

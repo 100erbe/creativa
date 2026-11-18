@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 
 // Sustituye a window.confirm / window.alert: tienen el aspecto de la app, no se bloquean en el
 // navegador del móvil instalado como PWA y no tapan la pantalla con el rótulo del navegador.
@@ -80,9 +80,13 @@ export function Dialogos() {
 
   if (!actual) return null;
 
+  const [titulo, ...resto] = actual.texto.split(/\n+/);
+  const detalle = resto.join("\n");
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
+    <div className="fixed inset-0 z-[10000] flex items-end justify-center p-esp4 sm:items-center" role="presentation">
       <button
+        type="button"
         aria-label="Cancelar"
         tabIndex={-1}
         onClick={() => cerrar(false)}
@@ -91,26 +95,35 @@ export function Dialogos() {
       <div
         role="alertdialog"
         aria-modal="true"
-        aria-describedby="dialogo-texto"
-        className="animate-modal-entrar relative flex w-full max-w-sm flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado"
+        aria-labelledby="dialogo-titulo"
+        aria-describedby={detalle ? "dialogo-detalle" : undefined}
+        className="animate-hoja-subir sm:animate-modal-entrar relative flex w-full max-w-sm flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado md:p-esp6"
       >
-        <p id="dialogo-texto" className="whitespace-pre-line text-sm text-texto-primario">
-          {actual.texto}
-        </p>
+        <div className="flex flex-col gap-esp2">
+          <p id="dialogo-titulo" className="text-destacado text-texto-primario">
+            {titulo}
+          </p>
+          {detalle && (
+            <p id="dialogo-detalle" className="whitespace-pre-line text-cuerpo text-texto-secundario">
+              {detalle}
+            </p>
+          )}
+        </div>
         <div className="flex justify-end gap-esp2">
           {actual.tipo === "confirmar" && (
-            <Boton variante="secundario" className="min-h-11 flex-1 sm:flex-none" onClick={() => cerrar(false)}>
+            <Boton type="button" variante="secundario" className="flex-1 sm:flex-none" onClick={() => cerrar(false)}>
               Cancelar
             </Boton>
           )}
           <button
             ref={botonAceptar}
+            type="button"
             onClick={() => cerrar(true)}
-            className={`inline-flex h-10 min-h-11 flex-1 items-center justify-center rounded-md px-esp4 text-sm font-medium transition-colors duration-rapida ease-suave active:scale-press sm:flex-none ${
-              actual.tipo === "confirmar" && actual.peligro
-                ? "bg-fondo-peligro text-texto-inverso hover:bg-fondo-peligro-hover"
-                : "bg-fondo-marca text-texto-sobre-marca hover:bg-fondo-marca-hover"
-            }`}
+            className={clasesBoton(
+              actual.tipo === "confirmar" && actual.peligro ? "peligro" : "primario",
+              "m",
+              "flex-1 sm:flex-none",
+            )}
           >
             {actual.tipo === "confirmar" ? actual.aceptar : "Entendido"}
           </button>

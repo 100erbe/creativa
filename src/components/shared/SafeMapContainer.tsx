@@ -32,6 +32,10 @@ export interface SafeMapContainerProps {
   exploreLabel?: string;
   /** Testo del pulsante indicazioni (default: "Cómo llegar") */
   directionsLabel?: string;
+  /** Acción opcional en la cabecera del modal móvil (recibe `cerrar` para cerrarlo sin confirmar descarte). */
+  modalAction?: React.ReactNode | ((cerrar: () => void) => React.ReactNode);
+  /** Comprobación antes de cerrar el modal con X, Escape o tocando fuera. Si devuelve false no se cierra. */
+  onBeforeClose?: () => boolean | Promise<boolean>;
   /** Classi opzionali sul contenitore esterno */
   className?: string;
 }
@@ -70,6 +74,8 @@ export function SafeMapContainer({
   address,
   exploreLabel = "Explorar mapa",
   directionsLabel = "Cómo llegar",
+  modalAction,
+  onBeforeClose,
   className,
 }: SafeMapContainerProps) {
   const [open, setOpen] = useState(false);
@@ -78,6 +84,24 @@ export function SafeMapContainer({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const modalOverlayRef = useRef<HTMLDivElement>(null);
+  const onBeforeCloseRef = useRef(onBeforeClose);
+  onBeforeCloseRef.current = onBeforeClose;
+  const confirmandoCierreRef = useRef(false);
+
+  async function solicitarCierre() {
+    if (confirmandoCierreRef.current) return;
+    if (!onBeforeCloseRef.current) {
+      setOpen(false);
+      return;
+    }
+    confirmandoCierreRef.current = true;
+    try {
+      const permitir = await onBeforeCloseRef.current();
+      if (permitir) setOpen(false);
+    } finally {
+      confirmandoCierreRef.current = false;
+    }
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -95,7 +119,8 @@ export function SafeMapContainer({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false);
+        if (document.querySelector('[role="alertdialog"]')) return;
+        void solicitarCierre();
       }
     };
 
@@ -185,7 +210,7 @@ export function SafeMapContainer({
               type="button"
               aria-label="Cerrar mapa"
               tabIndex={-1}
-              onClick={() => setOpen(false)}
+              onClick={() => void solicitarCierre()}
               className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
             />
             <div
@@ -202,6 +227,7 @@ export function SafeMapContainer({
                   {title}
                 </h2>
                 <div className="flex shrink-0 items-center gap-esp2">
+                  {typeof modalAction === "function" ? modalAction(() => setOpen(false)) : modalAction}
                   {directionsUrl && (
                     <a
                       href={directionsUrl}
@@ -217,7 +243,7 @@ export function SafeMapContainer({
                     ref={closeRef}
                     type="button"
                     aria-label="Cerrar mapa"
-                    onClick={() => setOpen(false)}
+                    onClick={() => void solicitarCierre()}
                     className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
                   >
                     <Icono nombre="cerrar" size={18} />

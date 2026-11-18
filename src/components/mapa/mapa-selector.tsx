@@ -25,6 +25,9 @@ export function MapaSelector(props: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
   onElegir: (p: Posicion) => void;
+  onPulsacionLargaPunto?: (punto: PuntoExistente) => void;
+  centrarEn?: number;
+  soloLectura?: boolean;
   altura?: number | string;
 }) {
   return <MapaSelectorLeaflet {...props} />;

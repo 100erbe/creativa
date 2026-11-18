@@ -61,9 +61,13 @@ function aSugerencia(e: Elemento): Sugerencia | null {
 export function BuscadorDireccion({
   onElegir,
   placeholder = "Buscar dirección o lugar: Calle Larios 5, Málaga",
+  className,
+  inputClassName,
 }: {
   onElegir: (s: Sugerencia) => void;
   placeholder?: string;
+  className?: string;
+  inputClassName?: string;
 }) {
   const idLista = useId();
   const [texto, setTexto] = useState("");
@@ -156,6 +160,7 @@ export function BuscadorDireccion({
       if (s) elegir(s);
       else e.currentTarget.blur();
     } else if (e.key === "Escape") {
+      if (mostrarPanel) e.stopPropagation();
       setAbierto(false);
     }
   }
@@ -163,7 +168,7 @@ export function BuscadorDireccion({
   const mostrarPanel = abierto && texto.trim().length >= MIN_CARACTERES && (resultados.length > 0 || mensaje || cargando);
 
   return (
-    <div ref={contenedor} className="relative">
+    <div ref={contenedor} className={cn("relative", className)}>
       <div className="relative">
         <Icono
           nombre="buscar"
@@ -188,7 +193,7 @@ export function BuscadorDireccion({
           onFocus={() => setAbierto(true)}
           onKeyDown={alTeclear}
           placeholder={placeholder}
-          className={cn(CAMPO, "pl-9")}
+          className={cn(CAMPO, "pl-9", inputClassName)}
         />
       </div>
 

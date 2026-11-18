@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { MapaSelector, type Posicion } from "@/components/mapa/mapa-selector";
-import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
+import { MapaSelector, type Posicion, type PuntoExistente } from "@/components/mapa/mapa-selector";
+import { SafeMapContainer, useSafeMap } from "@/components/shared/SafeMapContainer";
 import { BuscadorDireccion, type Sugerencia } from "@/components/mapa/buscador-direccion";
 import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
@@ -16,7 +16,7 @@ import { fechaMedia } from "@/lib/formato";
 import type { Cabecera } from "./paso-lineas";
 import { anadirPunto, crearCampana, eliminarPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
-import { confirmar } from "@/components/ui/dialogos";
+import { avisar, confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
@@ -278,7 +278,7 @@ function CampanaVinculada({
           </div>
         )}
         {puntos.length === 0 && (
-          <p className="text-sm text-texto-terciario">Aún no hay puntos. Haz clic en el mapa para añadir el primero.</p>
+          <p className="text-sm text-texto-terciario">Aún no hay puntos. Pulsa «Nuevo punto» para añadir el primero.</p>
         )}
         <div className="flex flex-col divide-y divide-borde-default">
           {puntos.map((p, i) => (
@@ -347,7 +347,9 @@ function NuevoPunto({
   puntos: Punto[];
 }) {
   const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+  const [abierto, setAbierto] = useState(false);
   const [posicion, setPosicion] = useState<Posicion | null>(null);
+  const [centrarEn, setCentrarEn] = useState(0);
   const [lineaId, setLineaId] = useState<string>(articulos.length === 1 ? String(articulos[0]!.id) : "");
   const [piezas, setPiezas] = useState("");
   // Piezas del artículo elegido: ya repartidas en otros puntos + las de este.
@@ -360,9 +362,13 @@ function NuevoPunto({
   const [colocacion, setColocacion] = useState(campana.fecha_inicio ?? "");
   const [retirada, setRetirada] = useState(campana.fecha_fin ?? "");
   const [notas, setNotas] = useState("");
-  // Al elegir una sugerencia: se coloca el punto y se rellena la dirección.
+  const formulario = useRef<HTMLFormElement>(null);
+  const selectArticulo = useRef<HTMLSelectElement>(null);
+
+  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y se centra el mapa.
   function elegirBusqueda(sugerencia: Sugerencia) {
     setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
+    setCentrarEn((n) => n + 1);
     setDireccion(sugerencia.direccion);
     setError(null);
   }
@@ -382,9 +388,10 @@ function NuevoPunto({
     }
   }
 
-  const formulario = useRef<HTMLFormElement>(null);
   function elegirEnMapa(p: Posicion) {
+    if (!abierto) return;
     setPosicion(p);
+    setError(null);
     // En tablet/desktop estrecho el formulario queda bajo el mapa: lo acercamos (no dentro del modal móvil).
     if (window.matchMedia("(min-width: 768px) and (max-width: 1279px)").matches) {
       setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
@@ -401,29 +408,163 @@ function NuevoPunto({
     setPiezas("");
   }
 
+  function guardarPunto(despues?: () => void) {
+    if (!posicion) {
+      setError("Primero marca la ubicación en el mapa.");
+      return;
+    }
+    if (articulos.length > 0 && !lineaId) {
+      setError("Elige a qué artículo del documento corresponde el punto.");
+      return;
+    }
+    const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
+    ejecutar(async () => {
+      await desenvolver(
+        anadirPunto(documentoId, campana.id, {
+          lineaId: lineaId ? Number(lineaId) : null,
+          piezas: nPiezas,
+          direccion,
+          latitud: posicion.latitud,
+          longitud: posicion.longitud,
+          fecha_colocacion_prevista: colocacion,
+          fecha_retirada_prevista: retirada,
+          notas,
+        }),
+      );
+      limpiar();
+      despues?.();
+      setAbierto(false);
+    });
+  }
+
+  function anadirDesdeMapa(cerrarModal: () => void) {
+    if (!posicion) return;
+    if (articulos.length > 0 && !lineaId) {
+      setError("Elige a qué artículo del documento corresponde el punto.");
+      cerrarModal();
+      setTimeout(() => {
+        formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        selectArticulo.current?.focus();
+      }, 150);
+      return;
+    }
+    guardarPunto(cerrarModal);
+  }
+
+  async function confirmarDescartarSeleccion() {
+    if (!posicion) return true;
+    const descartar = await confirmar("¿Descartar el punto seleccionado en el mapa?", {
+      aceptar: "Descartar",
+      peligro: true,
+    });
+    if (!descartar) return false;
+    setPosicion(null);
+    setDireccion("");
+    setError(null);
+    return true;
+  }
+
+  async function cerrarFormulario() {
+    if (!(await confirmarDescartarSeleccion())) return;
+    limpiar();
+    setError(null);
+    setAbierto(false);
+  }
+
+  async function solicitarEliminarPunto(punto: PuntoExistente) {
+    if (punto.estado && punto.estado !== "pendiente") {
+      await avisar(`El punto «${punto.nombre}» ya está ${punto.estado} y no se puede eliminar.`);
+      return;
+    }
+    if (!(await confirmar(`¿Eliminar el punto «${punto.nombre}»?`))) return;
+    ejecutar(() => desenvolver(eliminarPunto(documentoId, campana.id, punto.id)));
+  }
+
+  const puntosMapa: PuntoExistente[] = puntos.map((p) => ({
+    id: p.id,
+    nombre: p.nombre,
+    latitud: p.latitud,
+    longitud: p.longitud,
+    detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
+    estado: p.estado,
+  }));
+
+  if (!abierto) {
+    return (
+      <div className="flex flex-col gap-esp3">
+        <div className="flex flex-wrap items-center justify-between gap-esp3">
+          <p className="text-sm text-texto-secundario">
+            {puntos.length > 0
+              ? `${puntos.length} ${puntos.length === 1 ? "punto marcado" : "puntos marcados"} en el mapa.`
+              : "Pulsa «Nuevo punto» para marcar una ubicación en el mapa."}
+          </p>
+          <Boton
+            type="button"
+            onClick={() => {
+              setError(null);
+              setAbierto(true);
+            }}
+          >
+            <Icono nombre="mas" size={16} />
+            Nuevo punto
+          </Boton>
+        </div>
+        <SafeMapContainer title={`Puntos de la campaña · ${campana.nombre}`} exploreLabel="Explorar mapa">
+          <MapaSelector
+            puntos={puntosMapa}
+            posicion={null}
+            onElegir={elegirEnMapa}
+            onPulsacionLargaPunto={solicitarEliminarPunto}
+            soloLectura
+          />
+        </SafeMapContainer>
+        {error && <p className="text-xs text-texto-peligro">{error}</p>}
+        {puntos.length > 0 && (
+          <p className="text-xs text-texto-terciario">
+            Mantén pulsado un punto en el mapa para eliminarlo.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_360px]">
       <div className="flex flex-col gap-esp2">
-        <BuscadorDireccion onElegir={elegirBusqueda} />
         <SafeMapContainer
           title={`Elige el punto · ${campana.nombre}`}
-          coordinates={posicion ? { lat: posicion.latitud, lng: posicion.longitud } : null}
-          address={direccion || null}
+          exploreLabel={posicion ? "Ajustar en el mapa" : "Colocar en el mapa"}
+          onBeforeClose={confirmarDescartarSeleccion}
+          modalAction={
+            posicion
+              ? (cerrarModal) => (
+                  <Boton
+                    type="button"
+                    cargando={pendiente}
+                    onClick={() => anadirDesdeMapa(cerrarModal)}
+                    className="min-h-11 px-esp3 text-xs"
+                  >
+                    <Icono nombre="ubicacion" size={16} />
+                    Añadir punto
+                  </Boton>
+                )
+              : undefined
+          }
         >
-          <MapaSelector
-            puntos={puntos.map((p) => ({
-              id: p.id,
-              nombre: p.nombre,
-              latitud: p.latitud,
-              longitud: p.longitud,
-              detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
-            }))}
-            posicion={posicion}
-            onElegir={elegirEnMapa}
-          />
+          <div className="relative h-full max-md:[&>*:first-child]:!h-full">
+            <MapaSelector
+              puntos={puntosMapa}
+              posicion={posicion}
+              onElegir={elegirEnMapa}
+              onPulsacionLargaPunto={solicitarEliminarPunto}
+              centrarEn={centrarEn}
+            />
+            <BuscadorEnMapa onElegir={elegirBusqueda} />
+          </div>
         </SafeMapContainer>
         <p className="text-xs text-texto-terciario">
-          Haz clic en el mapa para colocar el punto; puedes arrastrarlo para ajustarlo.
+          Haz clic en el mapa para colocar el punto; puedes arrastrarlo para ajustarlo. Mantén pulsado un punto
+          existente para eliminarlo.
         </p>
       </div>
 
@@ -435,31 +576,20 @@ function NuevoPunto({
         )}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!posicion) {
-            setError("Primero marca la ubicación en el mapa.");
-            return;
-          }
-          if (articulos.length > 0 && !lineaId) {
-            setError("Elige a qué artículo del documento corresponde el punto.");
-            return;
-          }
-          const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
-          ejecutar(async () => {
-            await desenvolver(anadirPunto(documentoId, campana.id, {
-              lineaId: lineaId ? Number(lineaId) : null,
-              piezas: nPiezas,
-              direccion,
-              latitud: posicion.latitud,
-              longitud: posicion.longitud,
-              fecha_colocacion_prevista: colocacion,
-              fecha_retirada_prevista: retirada,
-              notas,
-            }));
-            limpiar();
-          });
+          guardarPunto();
         }}
       >
-        <h3 className="text-base font-semibold text-texto-primario">Nuevo punto</h3>
+        <div className="flex items-center justify-between gap-esp2">
+          <h3 className="text-base font-semibold text-texto-primario">Nuevo punto</h3>
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={() => void cerrarFormulario()}
+            className="inline-flex min-h-11 items-center rounded-md px-esp2 text-xs font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario disabled:opacity-50 md:min-h-8"
+          >
+            Cancelar
+          </button>
+        </div>
         <p className={cn("text-xs", posicion ? "text-texto-exito" : "text-texto-terciario")}>
           {posicion
             ? `Ubicación: ${posicion.latitud.toFixed(5)}, ${posicion.longitud.toFixed(5)}`
@@ -468,7 +598,15 @@ function NuevoPunto({
         {articulos.length > 0 ? (
           <div className="flex flex-col gap-esp2">
             <Etiqueta texto="Artículo *">
-              <select value={lineaId} onChange={(e) => setLineaId(e.target.value)} className={entrada}>
+              <select
+                ref={selectArticulo}
+                value={lineaId}
+                onChange={(e) => {
+                  setLineaId(e.target.value);
+                  setError(null);
+                }}
+                className={entrada}
+              >
                 <option value="">Elige un artículo…</option>
                 {articulos.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -527,6 +665,24 @@ function NuevoPunto({
           Añadir punto
         </Boton>
       </form>
+    </div>
+  );
+}
+
+function BuscadorEnMapa({ onElegir }: { onElegir: (s: Sugerencia) => void }) {
+  const { enModal } = useSafeMap();
+  return (
+    <div
+      className={cn(
+        "absolute left-14 right-esp3 top-esp3 z-[1000] md:max-w-md",
+        !enModal && "max-md:hidden",
+      )}
+    >
+      <BuscadorDireccion
+        onElegir={onElegir}
+        placeholder="Buscar dirección o lugar…"
+        inputClassName="shadow-elevado"
+      />
     </div>
   );
 }

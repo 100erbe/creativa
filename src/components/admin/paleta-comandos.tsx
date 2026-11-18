@@ -3,11 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
+import { createClient } from "@/lib/supabase/client";
+import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
+import { euros, fechaCorta } from "@/lib/formato";
 import { cn } from "@/lib/cn";
 
-type Comando = {
+type GrupoResultado =
+  | "Documentos"
+  | "Archivos sin asignar"
+  | "Clientes"
+  | "Campañas"
+  | "Gastos"
+  | "Acciones rápidas"
+  | "Riesgo y pipeline"
+  | "Navegación";
+
+type ElementoPaleta = {
   id: string;
-  grupo: "Acciones rápidas" | "Riesgo y pipeline" | "Navegación";
+  grupo: GrupoResultado;
   etiqueta: string;
   descripcion: string;
   href: string;
@@ -15,6 +29,23 @@ type Comando = {
   badge?: string;
   badgeTono?: "critico" | "marca";
   palabrasClave?: string;
+  externo?: boolean;
+};
+
+type Comando = ElementoPaleta & {
+  grupo: "Acciones rápidas" | "Riesgo y pipeline" | "Navegación";
+};
+
+const PREFIJOS_TIPO: Record<string, "factura" | "presupuesto" | "albaran" | "rectificativa"> = {
+  factura: "factura",
+  facturas: "factura",
+  presupuesto: "presupuesto",
+  presupuestos: "presupuesto",
+  albaran: "albaran",
+  albarán: "albaran",
+  albaranes: "albaran",
+  rectificativa: "rectificativa",
+  rectificativas: "rectificativa",
 };
 
 const COMANDOS: Comando[] = [
@@ -228,11 +259,222 @@ export function PaletaComandos() {
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [resultadosBd, setResultadosBd] = useState<ElementoPaleta[]>([]);
+  const [buscando, setBuscando] = useState(false);
   const [indiceActivo, setIndiceActivo] = useState(0);
   const entradaRef = useRef<HTMLInputElement>(null);
   const focoPrevioRef = useRef<HTMLElement | null>(null);
+  const peticionRef = useRef(0);
 
-  const filtrados = useMemo(() => {
+  const consultaLimpia = useMemo(() => consulta.replace(/[,()%*\\]/g, " ").trim(), [consulta]);
+
+  useEffect(() => {
+    if (!abierto || !consultaLimpia) {
+      peticionRef.current += 1;
+      setResultadosBd([]);
+      setBuscando(false);
+      return;
+    }
+
+    const idPeticion = ++peticionRef.current;
+    setBuscando(true);
+
+    const temporizador = setTimeout(async () => {
+      try {
+        const supabase = createClient();
+        const q = consultaLimpia;
+        const palabras = q.toLowerCase().split(/\s+/).filter(Boolean);
+        const tipoPrefijo = palabras.length > 0 ? PREFIJOS_TIPO[palabras[0]!] : undefined;
+        const qDoc = tipoPrefijo ? q.slice(palabras[0]!.length).trim() : q;
+
+        // 1. Clientes (sirve para mostrar clientes y localizar documentos por cliente_id).
+        const qClientesFiltro = qDoc || q;
+        const resClientes = await supabase
+          .from("clientes")
+          .select("id, codigo, razon_social, nombre_comercial, numero_documento")
+          .or(
+            ["razon_social", "nombre_comercial", "numero_documento", "codigo"]
+              .map((c) => `${c}.ilike.%${qClientesFiltro}%`)
+              .join(","),
+          )
+          .order("razon_social")
+          .limit(50);
+
+        if (peticionRef.current !== idPeticion) return;
+        const clientes = resClientes.data ?? [];
+        const clienteIds = clientes.map((c) => c.id);
+
+        // 2. Documentos (facturas, presupuestos, albaranes, rectificativas).
+        let consultaDocs = supabase
+          .from("documentos")
+          .select(
+            "id, tipo, estado, numero_completo, archivo_origen, descripcion, campana, total, fecha, cliente_razon_social, clientes(razon_social, nombre_comercial)",
+          )
+          .order("fecha", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(10);
+
+        if (tipoPrefijo) {
+          consultaDocs = consultaDocs.eq("tipo", tipoPrefijo);
+        }
+        if (qDoc) {
+          const condicionesDoc = [
+            `numero_completo.ilike.%${qDoc}%`,
+            `archivo_origen.ilike.%${qDoc}%`,
+            `pdf_url.ilike.%${qDoc}%`,
+            `descripcion.ilike.%${qDoc}%`,
+            `campana.ilike.%${qDoc}%`,
+            `cliente_razon_social.ilike.%${qDoc}%`,
+          ];
+          if (/^\d+$/.test(qDoc)) {
+            condicionesDoc.push(`numero.eq.${Number(qDoc)}`);
+          }
+          if (clienteIds.length > 0) {
+            condicionesDoc.push(`cliente_id.in.(${clienteIds.join(",")})`);
+          }
+          consultaDocs = consultaDocs.or(condicionesDoc.join(","));
+        }
+
+        const qPdfFiltro = qDoc || q;
+        const condicionesPdf = [`archivo.ilike.%${qPdfFiltro}%`];
+        if (/^\d+$/.test(qPdfFiltro)) {
+          condicionesPdf.push(`numero.eq.${Number(qPdfFiltro)}`);
+        }
+
+        const [resDocs, resPdfs, resCampanas, resGastos] = await Promise.all([
+          consultaDocs,
+          supabase
+            .from("pdfs_sin_asignar")
+            .select("id, archivo, drive_file_id, tipo, numero, total")
+            .or(condicionesPdf.join(","))
+            .order("archivo")
+            .limit(5),
+          supabase
+            .from("campanas")
+            .select("id, codigo, nombre, estado, clientes(razon_social)")
+            .or([`nombre.ilike.%${q}%`, `codigo.ilike.%${q}%`, `descripcion.ilike.%${q}%`].join(","))
+            .order("fecha_inicio", { ascending: false })
+            .limit(5),
+          supabase
+            .from("gastos")
+            .select("id, codigo, concepto, proveedor, numero_factura, total, fecha")
+            .or(
+              ["concepto", "proveedor", "numero_factura", "codigo", "ticket_path"]
+                .map((c) => `${c}.ilike.%${q}%`)
+                .join(","),
+            )
+            .order("fecha", { ascending: false })
+            .order("id", { ascending: false })
+            .limit(5),
+        ]);
+
+        if (peticionRef.current !== idPeticion) return;
+
+        const items: ElementoPaleta[] = [];
+
+        for (const d of resDocs.data ?? []) {
+          const cli = Array.isArray(d.clientes) ? d.clientes[0] : d.clientes;
+          const nombreCliente = d.cliente_razon_social ?? cli?.razon_social ?? cli?.nombre_comercial ?? null;
+          const tituloDoc = d.numero_completo ?? d.archivo_origen ?? "Borrador";
+          const etiqueta = nombreCliente ? `${tituloDoc} · ${nombreCliente}` : tituloDoc;
+          const partesDesc = [
+            ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado,
+            d.fecha ? fechaCorta(d.fecha) : null,
+            euros(Number(d.total)),
+            d.archivo_origen && d.archivo_origen !== tituloDoc ? d.archivo_origen : null,
+          ].filter(Boolean);
+          items.push({
+            id: `doc-${d.id}`,
+            grupo: "Documentos",
+            etiqueta,
+            descripcion: partesDesc.join(" · "),
+            href: `/admin/documentos/${d.id}`,
+            icono: "documentos",
+            badge: ETIQUETA_TIPO[d.tipo] ?? d.tipo,
+            badgeTono: d.estado === "anulado" ? "critico" : "marca",
+          });
+        }
+
+        for (const p of resPdfs.data ?? []) {
+          const partesDesc = [
+            "PDF sin asignar",
+            p.tipo ? `${p.tipo}${p.numero != null ? ` n.º ${p.numero}` : ""}` : null,
+            p.total != null ? euros(Number(p.total)) : null,
+          ].filter(Boolean);
+          items.push({
+            id: `pdf-${p.id}`,
+            grupo: "Archivos sin asignar",
+            etiqueta: p.archivo,
+            descripcion: partesDesc.join(" · "),
+            href: p.drive_file_id
+              ? `https://drive.google.com/file/d/${encodeURIComponent(p.drive_file_id)}/view`
+              : "/admin/documentos?revision=sin_pdf",
+            icono: "documentos",
+            externo: Boolean(p.drive_file_id),
+          });
+        }
+
+        for (const c of clientes.slice(0, 5)) {
+          const nombreComercial =
+            c.nombre_comercial && c.nombre_comercial !== c.razon_social ? c.nombre_comercial : null;
+          items.push({
+            id: `cli-${c.id}`,
+            grupo: "Clientes",
+            etiqueta: c.razon_social,
+            descripcion: [nombreComercial, c.codigo, c.numero_documento].filter(Boolean).join(" · ") || "Cliente",
+            href: `/admin/clientes/${c.id}`,
+            icono: "clientes",
+          });
+        }
+
+        for (const camp of resCampanas.data ?? []) {
+          const cli = Array.isArray(camp.clientes) ? camp.clientes[0] : camp.clientes;
+          items.push({
+            id: `camp-${camp.id}`,
+            grupo: "Campañas",
+            etiqueta: camp.nombre,
+            descripcion: [
+              camp.codigo,
+              cli?.razon_social,
+              ETIQUETA_ESTADO_CAMPANA[camp.estado] ?? camp.estado,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            href: `/admin/campanas/${camp.id}`,
+            icono: "campanas",
+          });
+        }
+
+        for (const g of resGastos.data ?? []) {
+          items.push({
+            id: `gasto-${g.id}`,
+            grupo: "Gastos",
+            etiqueta: g.concepto,
+            descripcion: [
+              g.numero_factura || g.codigo,
+              g.proveedor,
+              fechaCorta(g.fecha),
+              euros(Number(g.total)),
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            href: `/admin/gastos/${g.id}`,
+            icono: "gastos",
+          });
+        }
+
+        setResultadosBd(items);
+      } catch {
+        if (peticionRef.current === idPeticion) setResultadosBd([]);
+      } finally {
+        if (peticionRef.current === idPeticion) setBuscando(false);
+      }
+    }, 180);
+
+    return () => clearTimeout(temporizador);
+  }, [abierto, consultaLimpia]);
+
+  const comandosFiltrados = useMemo(() => {
     const q = consulta.trim().toLowerCase();
     if (!q) return COMANDOS;
     return COMANDOS.filter((c) =>
@@ -240,19 +482,38 @@ export function PaletaComandos() {
     );
   }, [consulta]);
 
+  const filtrados = useMemo<ElementoPaleta[]>(() => {
+    if (!consultaLimpia) return comandosFiltrados;
+    return [...resultadosBd, ...comandosFiltrados];
+  }, [consultaLimpia, resultadosBd, comandosFiltrados]);
+
   const grupos = useMemo(() => {
-    const orden: Comando["grupo"][] = ["Acciones rápidas", "Riesgo y pipeline", "Navegación"];
+    const orden: GrupoResultado[] = consultaLimpia
+      ? [
+          "Documentos",
+          "Archivos sin asignar",
+          "Clientes",
+          "Campañas",
+          "Gastos",
+          "Acciones rápidas",
+          "Riesgo y pipeline",
+          "Navegación",
+        ]
+      : ["Acciones rápidas", "Riesgo y pipeline", "Navegación"];
     return orden
       .map((nombre) => ({
         nombre,
         items: filtrados.filter((c) => c.grupo === nombre),
       }))
       .filter((g) => g.items.length > 0);
-  }, [filtrados]);
+  }, [consultaLimpia, filtrados]);
 
   function cerrar() {
+    peticionRef.current += 1;
     setAbierto(false);
     setConsulta("");
+    setResultadosBd([]);
+    setBuscando(false);
     setIndiceActivo(0);
     const previo = focoPrevioRef.current;
     focoPrevioRef.current = null;
@@ -261,9 +522,13 @@ export function PaletaComandos() {
     }
   }
 
-  function ejecutar(comando: Comando) {
+  function ejecutar(elemento: ElementoPaleta) {
     cerrar();
-    router.push(comando.href);
+    if (elemento.externo) {
+      window.open(elemento.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+    router.push(elemento.href);
   }
 
   useEffect(() => {
@@ -343,8 +608,8 @@ export function PaletaComandos() {
                 ejecutar(itemActivo);
               }
             }}
-            placeholder="Ir a clientes, facturas 90+, pipeline o crear…"
-            aria-label="Buscar comando o vista"
+            placeholder="Buscar por nº factura, archivo, cliente o comando…"
+            aria-label="Buscar documentos, archivos, clientes o comandos"
             aria-controls="paleta-resultados"
             aria-activedescendant={itemActivo ? `cmd-${itemActivo.id}` : undefined}
             className="h-8 min-w-0 flex-1 bg-transparent text-sm text-texto-primario outline-none placeholder:text-texto-terciario"
@@ -359,10 +624,17 @@ export function PaletaComandos() {
         </div>
 
         <div id="paleta-resultados" role="listbox" className="min-h-0 flex-1 overflow-y-auto p-esp2">
-          {grupos.length === 0 ? (
-            <p className="px-esp3 py-esp6 text-center text-sm text-texto-terciario">
-              No hay resultados para «{consulta}».
+          {buscando && (
+            <p className="px-esp3 py-esp2 text-xs text-texto-terciario" role="status">
+              Buscando en documentos y archivos…
             </p>
+          )}
+          {grupos.length === 0 ? (
+            !buscando && (
+              <p className="px-esp3 py-esp6 text-center text-sm text-texto-terciario">
+                No hay resultados para «{consulta}».
+              </p>
+            )
           ) : (
             grupos.map((grupo) => (
               <div key={grupo.nombre} className="mb-esp2 last:mb-0">
