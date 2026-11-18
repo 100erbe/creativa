@@ -32,6 +32,9 @@ export interface SafeMapContainerProps {
   exploreLabel?: string;
   /** Testo del pulsante indicazioni (default: "Cómo llegar") */
   directionsLabel?: string;
+  /** Control externo opcional de apertura del modal móvil. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   /** Acción opcional en la cabecera del modal móvil (recibe `cerrar` para cerrarlo sin confirmar descarte). */
   modalAction?: React.ReactNode | ((cerrar: () => void) => React.ReactNode);
   /** Comprobación antes de cerrar el modal con X, Escape o tocando fuera. Si devuelve false no se cierra. */
@@ -74,11 +77,20 @@ export function SafeMapContainer({
   address,
   exploreLabel = "Explorar mapa",
   directionsLabel = "Cómo llegar",
+  open: openProp,
+  onOpenChange,
   modalAction,
   onBeforeClose,
   className,
 }: SafeMapContainerProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp !== undefined ? openProp : internalOpen;
+  const setOpen = (next: boolean) => {
+    if (openProp === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  const setOpenRef = useRef(setOpen);
+  setOpenRef.current = setOpen;
   const [mounted, setMounted] = useState(false);
   const titleId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -102,6 +114,8 @@ export function SafeMapContainer({
       confirmandoCierreRef.current = false;
     }
   }
+  const solicitarCierreRef = useRef(solicitarCierre);
+  solicitarCierreRef.current = solicitarCierre;
 
   useEffect(() => {
     setMounted(true);
@@ -119,8 +133,8 @@ export function SafeMapContainer({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (document.querySelector('[role="alertdialog"]')) return;
-        void solicitarCierre();
+        if (document.querySelector('[role="alertdialog"], [data-punto-modal]')) return;
+        void solicitarCierreRef.current();
       }
     };
 
@@ -133,7 +147,7 @@ export function SafeMapContainer({
     const media = window.matchMedia("(min-width: 768px)");
     const onBreakpointChange = (e: MediaQueryListEvent) => {
       if (e.matches) {
-        setOpen(false);
+        setOpenRef.current(false);
       }
     };
 

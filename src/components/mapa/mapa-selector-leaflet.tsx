@@ -41,13 +41,37 @@ const CENTRO_DEFECTO: [number, number] = [36.7213, -4.4214];
 function Clics({
   onElegir,
   ultimaPulsacionLargaRef,
+  ultimoGestoRef,
 }: {
   onElegir: (p: Posicion) => void;
   ultimaPulsacionLargaRef: React.MutableRefObject<number>;
+  ultimoGestoRef: React.MutableRefObject<number>;
 }) {
+  const mapa = useMap();
+
+  useEffect(() => {
+    const contenedor = mapa.getContainer();
+    const marcarMultiTouch = (e: TouchEvent) => {
+      if (e.touches.length > 1) ultimoGestoRef.current = Date.now();
+    };
+    const marcarGesto = () => {
+      ultimoGestoRef.current = Date.now();
+    };
+    contenedor.addEventListener("touchstart", marcarMultiTouch, { passive: true });
+    contenedor.addEventListener("touchmove", marcarMultiTouch, { passive: true });
+    mapa.on("movestart moveend zoomstart zoomend", marcarGesto);
+    return () => {
+      contenedor.removeEventListener("touchstart", marcarMultiTouch);
+      contenedor.removeEventListener("touchmove", marcarMultiTouch);
+      mapa.off("movestart moveend zoomstart zoomend", marcarGesto);
+    };
+  }, [mapa, ultimoGestoRef]);
+
   useMapEvents({
     click(e) {
-      if (Date.now() - ultimaPulsacionLargaRef.current < 600) return;
+      const ahora = Date.now();
+      if (ahora - ultimaPulsacionLargaRef.current < 600) return;
+      if (ahora - ultimoGestoRef.current < 320) return;
       const destino = e.originalEvent.target as HTMLElement | null;
       if (destino?.closest(".leaflet-marker-icon")) return;
       onElegir({ latitud: e.latlng.lat, longitud: e.latlng.lng });
@@ -57,27 +81,38 @@ function Clics({
 }
 
 /**
- * Marcador de punto ya añadido. Soporta pulsación larga (táctil o ratón) y clic derecho
- * para abrir el diálogo de eliminación sin interferir con el clic corto ni con el arrastre del mapa.
+ * Marcador de punto ya añadido. Soporta clic corto (editar detalles), arrastre (mover ubicación)
+ * y pulsación larga / clic derecho (eliminar), sin interferir con el arrastre ni zoom del mapa.
  */
 function MarcadorExistente({
   punto,
+  onClic,
+  onMover,
   onPulsacionLarga,
   ultimaPulsacionLargaRef,
+  ultimoGestoRef,
 }: {
   punto: PuntoExistente;
+  onClic?: (p: PuntoExistente) => void;
+  onMover?: (p: PuntoExistente, pos: Posicion) => void;
   onPulsacionLarga?: (p: PuntoExistente) => void;
   ultimaPulsacionLargaRef: React.MutableRefObject<number>;
+  ultimoGestoRef: React.MutableRefObject<number>;
 }) {
   const mapa = useMap();
   const markerRef = useRef<L.Marker>(null);
   const [elemento, setElemento] = useState<HTMLElement | null>(null);
+  const onClicRef = useRef(onClic);
+  onClicRef.current = onClic;
+  const onMoverRef = useRef(onMover);
+  onMoverRef.current = onMover;
   const callbackRef = useRef(onPulsacionLarga);
   callbackRef.current = onPulsacionLarga;
   const puntoRef = useRef(punto);
   puntoRef.current = punto;
   const disparadoEnRef = useRef(0);
   const habilitado = Boolean(onPulsacionLarga);
+  const arrastrable = Boolean(onMover) && (!punto.estado || punto.estado === "pendiente");
 
   useEffect(() => {
     setElemento(markerRef.current?.getElement() ?? null);
@@ -180,61 +215,79 @@ function MarcadorExistente({
       ref={markerRef}
       position={[punto.latitud, punto.longitud]}
       icon={ICONO_EXISTENTE}
+      draggable={arrastrable}
       eventHandlers={{
         add(e) {
           setElemento((e.target as L.Marker).getElement() ?? null);
         },
+        click() {
+          if (Date.now() - disparadoEnRef.current < 600) return;
+          if (Date.now() - ultimoGestoRef.current < 320) return;
+          onClicRef.current?.(puntoRef.current);
+        },
+        dragstart() {
+          ultimoGestoRef.current = Date.now();
+        },
+        dragend(e) {
+          ultimoGestoRef.current = Date.now();
+          const ll = (e.target as L.Marker).getLatLng();
+          onMoverRef.current?.(puntoRef.current, { latitud: ll.lat, longitud: ll.lng });
+        },
       }}
     >
-      <Popup>
-        <strong>{punto.nombre}</strong>
-        {punto.detalle ? (
-          <>
-            <br />
-            {punto.detalle}
-          </>
-        ) : null}
-      </Popup>
+      {!onClic && (
+        <Popup>
+          <strong>{punto.nombre}</strong>
+          {punto.detalle ? (
+            <>
+              <br />
+              {punto.detalle}
+            </>
+          ) : null}
+        </Popup>
+      )}
     </Marker>
   );
 }
 
 /**
- * Encuadra el mapa para incluir todos los puntos ya seleccionados (y la posición provisional si existe).
- * Se ejecuta al montar, al cambiar los puntos y cuando el contenedor termina de dimensionarse (p. ej. al
- * abrir el modal móvil en SafeMapContainer), sin reencuadrar al hacer clic para colocar un nuevo punto.
+ * Encuadra el mapa para incluir todos los puntos ya seleccionados al abrir/cargar el mapa.
+ * Una vez que el usuario ha interactuado o movido la vista (o buscado una dirección), nunca reencuadra
+ * automáticamente al añadir o mover puntos para conservar exactamente su vista actual.
  */
 function Encuadrar({ puntos, posicion }: { puntos: PuntoExistente[]; posicion: Posicion | null }) {
   const mapa = useMap();
+  const puntosRef = useRef(puntos);
+  puntosRef.current = puntos;
   const posicionRef = useRef(posicion);
   posicionRef.current = posicion;
-  const puntosKey = puntos.map((p) => `${p.latitud},${p.longitud}`).join("|");
-  const ultimoRef = useRef({ key: "", w: 0, h: 0 });
+  const ultimoTamanoRef = useRef({ w: 0, h: 0 });
   const movidoManualRef = useRef(false);
 
   useEffect(() => {
     const marcar = () => {
       movidoManualRef.current = true;
     };
-    mapa.on("dragstart", marcar);
+    mapa.on("dragstart zoomstart", marcar);
     return () => {
-      mapa.off("dragstart", marcar);
+      mapa.off("dragstart zoomstart", marcar);
     };
   }, [mapa]);
 
   useEffect(() => {
-    const encuadrar = (forzar: boolean) => {
+    const encuadrar = () => {
+      if (movidoManualRef.current) return;
       const contenedor = mapa.getContainer();
       const w = contenedor.clientWidth;
       const h = contenedor.clientHeight;
       if (w === 0 || h === 0) return;
 
-      const prev = ultimoRef.current;
+      const prev = ultimoTamanoRef.current;
       const cambioTamano = Math.abs(w - prev.w) > 20 || Math.abs(h - prev.h) > 20;
-      if (!forzar && (movidoManualRef.current || !cambioTamano)) return;
+      if (!cambioTamano) return;
 
       mapa.invalidateSize({ animate: false });
-      const coords: [number, number][] = puntos.map((p) => [p.latitud, p.longitud]);
+      const coords: [number, number][] = puntosRef.current.map((p) => [p.latitud, p.longitud]);
       if (posicionRef.current) {
         coords.push([posicionRef.current.latitud, posicionRef.current.longitud]);
       }
@@ -248,23 +301,22 @@ function Encuadrar({ puntos, posicion }: { puntos: PuntoExistente[]; posicion: P
       } else if (coords.length === 1) {
         mapa.setView(coords[0]!, 15, { animate: false });
       }
-      ultimoRef.current = { key: puntosKey, w, h };
+      ultimoTamanoRef.current = { w, h };
     };
 
-    encuadrar(true);
-    const t = setTimeout(() => encuadrar(false), 120);
+    encuadrar();
+    const t = setTimeout(encuadrar, 120);
     const contenedor = mapa.getContainer();
     if (typeof ResizeObserver === "undefined") {
       return () => clearTimeout(t);
     }
-    const observer = new ResizeObserver(() => encuadrar(false));
+    const observer = new ResizeObserver(encuadrar);
     observer.observe(contenedor);
     return () => {
       clearTimeout(t);
       observer.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapa, puntosKey]);
+  }, [mapa]);
 
   return null;
 }
@@ -305,7 +357,10 @@ function AutoResize() {
 export function MapaSelectorLeaflet({
   puntos,
   posicion,
+  vistaBuscada,
   onElegir,
+  onClicPunto,
+  onMoverPunto,
   onPulsacionLargaPunto,
   centrarEn,
   soloLectura = false,
@@ -313,7 +368,13 @@ export function MapaSelectorLeaflet({
 }: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
+  /** Posición a enfocar desde el buscador sin colocar marcador. */
+  vistaBuscada?: Posicion | null;
   onElegir: (p: Posicion) => void;
+  /** Clic corto sobre un punto ya añadido. */
+  onClicPunto?: (punto: PuntoExistente) => void;
+  /** Al terminar de arrastrar un punto ya añadido a otra ubicación. */
+  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => void;
   /** Si se pasa, una pulsación larga (o clic derecho) sobre un punto existente llama a esta acción. */
   onPulsacionLargaPunto?: (punto: PuntoExistente) => void;
   /** Incrementar solo al elegir una dirección en el buscador para centrar el mapa en ella. */
@@ -323,6 +384,7 @@ export function MapaSelectorLeaflet({
   altura?: number | string;
 }) {
   const ultimaPulsacionLargaRef = useRef(0);
+  const ultimoGestoRef = useRef(0);
   const centro: [number, number] =
     puntos.length > 0
       ? [
@@ -336,20 +398,31 @@ export function MapaSelectorLeaflet({
       <MapContainer
         center={centro}
         zoom={puntos.length > 0 ? 13 : 12}
+        dragging
+        touchZoom
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%", cursor: soloLectura ? "grab" : "crosshair" }}
       >
         <AutoResize />
         <Encuadrar puntos={puntos} posicion={posicion} />
         <CapaBase />
-        {!soloLectura && <Clics onElegir={onElegir} ultimaPulsacionLargaRef={ultimaPulsacionLargaRef} />}
-        <Seguir posicion={posicion} centrarEn={centrarEn} />
+        {!soloLectura && (
+          <Clics
+            onElegir={onElegir}
+            ultimaPulsacionLargaRef={ultimaPulsacionLargaRef}
+            ultimoGestoRef={ultimoGestoRef}
+          />
+        )}
+        <Seguir posicion={vistaBuscada ?? posicion} centrarEn={centrarEn} />
         {puntos.map((p) => (
           <MarcadorExistente
             key={p.id}
             punto={p}
+            onClic={onClicPunto}
+            onMover={onMoverPunto}
             onPulsacionLarga={onPulsacionLargaPunto}
             ultimaPulsacionLargaRef={ultimaPulsacionLargaRef}
+            ultimoGestoRef={ultimoGestoRef}
           />
         ))}
         {posicion && (

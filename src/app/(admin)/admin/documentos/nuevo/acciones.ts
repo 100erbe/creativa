@@ -427,19 +427,116 @@ export const anadirPunto = accion(async (
     .eq("campana_id", campanaId);
   if (errorNombres) throw new Error(errorNombres.message);
 
-  const { error } = await supabase.from("puntos_campana").insert({
-    campana_id: campanaId,
-    nombre: siguienteNombrePunto((existentes ?? []).map((p) => p.nombre)),
-    tipo_soporte: tipoSoporte,
-    linea_id: datos.lineaId,
-    piezas: datos.piezas ?? null,
-    direccion: datos.direccion?.trim() || null,
-    latitud: Math.round(datos.latitud * 1e7) / 1e7,
-    longitud: Math.round(datos.longitud * 1e7) / 1e7,
-    fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
-    fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
-    notas: datos.notas?.trim() || null,
-  });
+  const { data: creado, error } = await supabase
+    .from("puntos_campana")
+    .insert({
+      campana_id: campanaId,
+      nombre: siguienteNombrePunto((existentes ?? []).map((p) => p.nombre)),
+      tipo_soporte: tipoSoporte,
+      linea_id: datos.lineaId,
+      piezas: datos.piezas ?? null,
+      direccion: datos.direccion?.trim() || null,
+      latitud: Math.round(datos.latitud * 1e7) / 1e7,
+      longitud: Math.round(datos.longitud * 1e7) / 1e7,
+      fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
+      fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
+      notas: datos.notas?.trim() || null,
+    })
+    .select(
+      "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
+    )
+    .single();
+  if (error || !creado) throw new Error(error?.message ?? "No se pudo guardar el punto.");
+  refrescar(documentoId);
+  revalidatePath(`/admin/campanas/${campanaId}`);
+  return {
+    ...creado,
+    piezas: creado.piezas == null ? null : Number(creado.piezas),
+    latitud: Number(creado.latitud),
+    longitud: Number(creado.longitud),
+  };
+});
+
+export const moverPunto = accion(async (
+  documentoId: number,
+  campanaId: number,
+  puntoId: number,
+  latitud: number,
+  longitud: number,
+  direccion?: string,
+) => {
+  await exigirAdmin();
+  if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
+    throw new Error("Ubicación no válida.");
+  }
+  const supabase = await createClient();
+  const cambios: { latitud: number; longitud: number; direccion?: string | null } = {
+    latitud: Math.round(latitud * 1e7) / 1e7,
+    longitud: Math.round(longitud * 1e7) / 1e7,
+  };
+  if (direccion !== undefined) cambios.direccion = direccion.trim() || null;
+  const { error } = await supabase
+    .from("puntos_campana")
+    .update(cambios)
+    .eq("id", puntoId)
+    .eq("campana_id", campanaId);
+  if (error) throw new Error(error.message);
+  refrescar(documentoId);
+  revalidatePath(`/admin/campanas/${campanaId}`);
+});
+
+export const actualizarPunto = accion(async (
+  documentoId: number,
+  campanaId: number,
+  puntoId: number,
+  datos: {
+    lineaId: number | null;
+    piezas?: number | null;
+    direccion?: string;
+    fecha_colocacion_prevista?: string;
+    fecha_retirada_prevista?: string;
+    notas?: string;
+  },
+) => {
+  await exigirAdmin();
+  if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
+    throw new Error("Las piezas del punto deben ser mayores que 0.");
+  }
+  if (
+    datos.fecha_colocacion_prevista &&
+    datos.fecha_retirada_prevista &&
+    datos.fecha_retirada_prevista < datos.fecha_colocacion_prevista
+  ) {
+    throw new Error("La fecha de retirada es anterior a la de colocación.");
+  }
+  const supabase = await createClient();
+
+  let tipoSoporte: TipoSoporte = "otro";
+  if (datos.lineaId != null) {
+    const { data: linea } = await supabase
+      .from("lineas_documento")
+      .select("productos(nombre)")
+      .eq("id", datos.lineaId)
+      .eq("documento_id", documentoId)
+      .maybeSingle();
+    if (!linea) throw new Error("El artículo elegido no pertenece a este documento.");
+    const producto = Array.isArray(linea.productos) ? linea.productos[0] : linea.productos;
+    tipoSoporte = soporteDe(producto?.nombre ?? "");
+  }
+
+  const { error } = await supabase
+    .from("puntos_campana")
+    .update({
+      tipo_soporte: tipoSoporte,
+      linea_id: datos.lineaId,
+      piezas: datos.piezas ?? null,
+      direccion: datos.direccion?.trim() || null,
+      fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
+      fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
+      notas: datos.notas?.trim() || null,
+    })
+    .eq("id", puntoId)
+    .eq("campana_id", campanaId);
   if (error) throw new Error(error.message);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);

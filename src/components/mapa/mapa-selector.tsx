@@ -24,7 +24,10 @@ export type { Posicion, PuntoExistente };
 export function MapaSelector(props: {
   puntos: PuntoExistente[];
   posicion: Posicion | null;
+  vistaBuscada?: Posicion | null;
   onElegir: (p: Posicion) => void;
+  onClicPunto?: (punto: PuntoExistente) => void;
+  onMoverPunto?: (punto: PuntoExistente, pos: Posicion) => void;
   onPulsacionLargaPunto?: (punto: PuntoExistente) => void;
   centrarEn?: number;
   soloLectura?: boolean;

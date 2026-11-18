@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
@@ -14,7 +15,7 @@ import { cn } from "@/lib/cn";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { fechaMedia } from "@/lib/formato";
 import type { Cabecera } from "./paso-lineas";
-import { anadirPunto, crearCampana, eliminarPunto, vincularCampana } from "./acciones";
+import { actualizarPunto, anadirPunto, crearCampana, eliminarPunto, moverPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 import { avisar, confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
@@ -225,6 +226,7 @@ function CampanaVinculada({
   puntos: Punto[];
 }) {
   const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
+  const [expandidoId, setExpandidoId] = useState<number | null>(null);
 
   return (
     <div className="flex flex-col gap-esp4">
@@ -253,10 +255,15 @@ function CampanaVinculada({
       </div>
       {error && <p className="text-sm text-texto-peligro">{error}</p>}
 
-      <NuevoPunto documentoId={documento.id} campana={campana} articulos={articulos} puntos={puntos} />
+      <MapaCampana documentoId={documento.id} campana={campana} articulos={articulos} puntos={puntos} />
 
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
-        <h3 className="text-base font-semibold text-texto-primario">Puntos de la campaña · {puntos.length}</h3>
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:px-esp6 md:py-esp5">
+        <div className="flex flex-wrap items-baseline justify-between gap-esp2">
+          <h3 className="text-base font-semibold text-texto-primario">Puntos de la campaña · {puntos.length}</h3>
+          {puntos.length > 0 && (
+            <span className="text-etiqueta text-texto-secundario">Pulsa un punto para editar sus detalles</span>
+          )}
+        </div>
         {articulos.length > 0 && (
           <div className="flex flex-col gap-1 rounded-md bg-fondo-sutil px-esp3 py-esp2">
             {articulos.map((a) => {
@@ -282,48 +289,390 @@ function CampanaVinculada({
         )}
         <div className="flex flex-col divide-y divide-borde-default">
           {puntos.map((p, i) => (
-            <div key={p.id} className="flex items-start gap-esp3 py-esp3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-completo bg-fondo-sutil text-xs font-medium text-texto-secundario">
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-texto-primario">
-                  {p.nombre}{" "}
-                  <span className="font-normal text-texto-terciario">
-                    ·{" "}
-                    {(() => {
-                      const a = articulos.find((x) => x.id === p.linea_id);
-                      return a ? etiquetaArticulo(a) : (ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte);
-                    })()}
-                    {p.piezas != null ? " · " + p.piezas + " pzs" : ""}
-                  </span>
-                </p>
-                {p.direccion && <p className="truncate text-xs text-texto-secundario">{p.direccion}</p>}
-                <p className="text-xs text-texto-terciario">
-                  {p.fecha_colocacion_prevista ? `Colocar ${fechaMedia(p.fecha_colocacion_prevista)}` : "Sin fecha"}
-                  {p.fecha_retirada_prevista ? ` · retirar ${fechaMedia(p.fecha_retirada_prevista)}` : ""}
-                  {p.notas ? ` · ${p.notas}` : ""}
-                </p>
-              </div>
-              {p.estado === "pendiente" ? (
-                <button
-                  aria-label={`Eliminar ${p.nombre}`}
-                  disabled={pendiente}
-                  onClick={async () => {
-                    if (!(await confirmar(`¿Eliminar el punto «${p.nombre}»?`))) return;
-                    ejecutar(() => desenvolver(eliminarPunto(documento.id, campana.id, p.id)));
-                  }}
-                  className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
-                >
-                  <Icono nombre="eliminar" size={16} />
-                </button>
-              ) : (
-                <span className="text-xs text-texto-terciario">{p.estado}</span>
-              )}
-            </div>
+            <FilaPuntoEditable
+              key={p.id}
+              indice={i + 1}
+              documentoId={documento.id}
+              campanaId={campana.id}
+              punto={p}
+              articulos={articulos}
+              puntos={puntos}
+              expandido={expandidoId === p.id}
+              onAlternar={() => setExpandidoId((actual) => (actual === p.id ? null : p.id))}
+              onCerrar={() => setExpandidoId(null)}
+            />
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function FormularioDetallesPunto({
+  punto,
+  articulos,
+  puntos,
+  pendiente,
+  error,
+  etiquetaGuardar,
+  etiquetaCerrar,
+  onLimpiarError,
+  onGuardar,
+  onCerrar,
+}: {
+  punto: Punto;
+  articulos: Articulo[];
+  puntos: Punto[];
+  pendiente: boolean;
+  error: string | null;
+  etiquetaGuardar: string;
+  etiquetaCerrar: string;
+  onLimpiarError: () => void;
+  onGuardar: (datos: {
+    lineaId: number | null;
+    piezas: number | null;
+    direccion: string;
+    fecha_colocacion_prevista: string;
+    fecha_retirada_prevista: string;
+    notas: string;
+  }) => void;
+  onCerrar: () => void;
+}) {
+  const [lineaId, setLineaId] = useState<string>(
+    punto.linea_id != null ? String(punto.linea_id) : articulos.length === 1 ? String(articulos[0]!.id) : "",
+  );
+  const [piezas, setPiezas] = useState(punto.piezas != null ? String(punto.piezas).replace(".", ",") : "");
+  const [direccion, setDireccion] = useState(punto.direccion ?? "");
+  const [colocacion, setColocacion] = useState(punto.fecha_colocacion_prevista ?? "");
+  const [retirada, setRetirada] = useState(punto.fecha_retirada_prevista ?? "");
+  const [notas, setNotas] = useState(punto.notas ?? "");
+
+  // Sincroniza si llega la dirección geocodificada justo tras abrir el modal.
+  useEffect(() => {
+    setDireccion((actual) => (actual === "" && punto.direccion ? punto.direccion : actual));
+  }, [punto.direccion]);
+
+  const articuloElegido = articulos.find((x) => String(x.id) === lineaId) ?? null;
+  const repartidasOtros = articuloElegido
+    ? puntos
+        .filter((otro) => otro.id !== punto.id && otro.linea_id === articuloElegido.id)
+        .reduce((t, otro) => t + (otro.piezas ?? 0), 0)
+    : 0;
+  const restantes = articuloElegido
+    ? articuloElegido.piezas - repartidasOtros - (Number(piezas.replace(",", ".")) || 0)
+    : 0;
+
+  function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    onLimpiarError();
+    const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
+    onGuardar({
+      lineaId: lineaId ? Number(lineaId) : null,
+      piezas: nPiezas,
+      direccion,
+      fecha_colocacion_prevista: colocacion,
+      fecha_retirada_prevista: retirada,
+      notas,
+    });
+  }
+
+  return (
+    <form onSubmit={enviar} className="flex flex-col gap-esp3">
+      {articulos.length > 0 ? (
+        <div className="grid grid-cols-1 gap-esp3 md:grid-cols-2">
+          <Etiqueta texto="Artículo">
+            <select
+              value={lineaId}
+              onChange={(e) => {
+                setLineaId(e.target.value);
+                onLimpiarError();
+              }}
+              className={entrada}
+            >
+              <option value="">Elige un artículo…</option>
+              {articulos.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {etiquetaArticulo(a)}
+                </option>
+              ))}
+            </select>
+          </Etiqueta>
+          <Etiqueta texto="Piezas de este punto">
+            <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
+            {articuloElegido && (
+              <span
+                className={restantes < 0 ? "text-xs text-texto-aviso" : "text-xs text-texto-terciario"}
+                role="status"
+              >
+                {restantes < 0
+                  ? `Con este punto te pasas ${formatoPiezas(-restantes)} del total (${formatoPiezas(articuloElegido.piezas)}). Puedes guardarlo igualmente.`
+                  : restantes === 0
+                    ? `Con este punto se reparte todo el artículo (${formatoPiezas(articuloElegido.piezas)}).`
+                    : `Quedan ${formatoPiezas(restantes)} de ${formatoPiezas(articuloElegido.piezas)}`}
+              </span>
+            )}
+          </Etiqueta>
+        </div>
+      ) : (
+        <p className="rounded-md bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario">
+          Este documento aún no tiene artículos. Añádelos en el paso 2 para poder asignarlos a los puntos.
+        </p>
+      )}
+      <Etiqueta texto="Dirección">
+        <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={entrada} />
+      </Etiqueta>
+      <div className="grid grid-cols-2 gap-esp2">
+        <Etiqueta texto="Colocar el">
+          <input type="date" value={colocacion} onChange={(e) => setColocacion(e.target.value)} className={entrada} />
+        </Etiqueta>
+        <Etiqueta texto="Retirar el">
+          <input
+            type="date"
+            value={retirada}
+            min={colocacion || undefined}
+            onChange={(e) => setRetirada(e.target.value)}
+            className={entrada}
+          />
+        </Etiqueta>
+      </div>
+      <Etiqueta texto="Cómo instalar">
+        <textarea
+          value={notas}
+          onChange={(e) => setNotas(e.target.value)}
+          rows={2}
+          placeholder="Ej. 2 carteles 70x100 con bridas, cara hacia la rotonda"
+          className={areaTexto}
+        />
+      </Etiqueta>
+      {error && <p className="text-xs text-texto-peligro">{error}</p>}
+      <div className="flex justify-end gap-esp2">
+        <Boton type="button" variante="secundario" disabled={pendiente} onClick={onCerrar}>
+          {etiquetaCerrar}
+        </Boton>
+        <Boton type="submit" cargando={pendiente}>
+          {etiquetaGuardar}
+        </Boton>
+      </div>
+    </form>
+  );
+}
+
+function ModalDetallesPunto({
+  punto,
+  documentoId,
+  campanaId,
+  articulos,
+  puntos,
+  onCerrar,
+}: {
+  punto: Punto;
+  documentoId: number;
+  campanaId: number;
+  articulos: Articulo[];
+  puntos: Punto[];
+  onCerrar: () => void;
+}) {
+  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+  const [montado, setMontado] = useState(false);
+
+  useEffect(() => {
+    setMontado(true);
+  }, []);
+
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (document.querySelector('[role="alertdialog"]')) return;
+        onCerrar();
+      }
+    };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [onCerrar]);
+
+  if (!montado) return null;
+
+  return createPortal(
+    <div
+      data-punto-modal=""
+      className="fixed inset-0 z-[10000] flex items-end justify-center p-esp4 sm:items-center"
+      role="presentation"
+    >
+      <button
+        type="button"
+        aria-label="Cerrar detalles del punto"
+        tabIndex={-1}
+        onClick={onCerrar}
+        className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-modal-punto"
+        className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[88dvh] w-full max-w-lg flex-col gap-esp4 overflow-y-auto rounded-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado md:p-esp6"
+      >
+        <div className="flex items-start justify-between gap-esp3">
+          <div>
+            <h3 id="titulo-modal-punto" className="text-titulo-panel text-texto-primario">
+              {punto.nombre}
+            </h3>
+            <p className="text-meta text-texto-secundario">
+              Puedes guardar los detalles ahora o cerrar y completarlos más tarde.
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={onCerrar}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          >
+            <Icono nombre="cerrar" size={18} />
+          </button>
+        </div>
+
+        <FormularioDetallesPunto
+          key={punto.id}
+          punto={punto}
+          articulos={articulos}
+          puntos={puntos}
+          pendiente={pendiente}
+          error={error}
+          etiquetaGuardar="Guardar detalles"
+          etiquetaCerrar="Cerrar"
+          onLimpiarError={() => setError(null)}
+          onCerrar={onCerrar}
+          onGuardar={(datos) => {
+            ejecutar(async () => {
+              await desenvolver(actualizarPunto(documentoId, campanaId, punto.id, datos));
+              onCerrar();
+            });
+          }}
+        />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function FilaPuntoEditable({
+  indice,
+  documentoId,
+  campanaId,
+  punto,
+  articulos,
+  puntos,
+  expandido,
+  onAlternar,
+  onCerrar,
+}: {
+  indice: number;
+  documentoId: number;
+  campanaId: number;
+  punto: Punto;
+  articulos: Articulo[];
+  puntos: Punto[];
+  expandido: boolean;
+  onAlternar: () => void;
+  onCerrar: () => void;
+}) {
+  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+
+  const articuloActual = articulos.find((x) => x.id === punto.linea_id);
+  const etiquetaResumen = articuloActual
+    ? etiquetaArticulo(articuloActual)
+    : (ETIQUETA_SOPORTE[punto.tipo_soporte] ?? punto.tipo_soporte);
+  const faltaArticulo = articulos.length > 0 && punto.linea_id == null;
+
+  return (
+    <div className="flex flex-col">
+      <div className="flex items-start gap-esp2 py-esp2">
+        <button
+          type="button"
+          aria-expanded={expandido}
+          onClick={() => {
+            setError(null);
+            onAlternar();
+          }}
+          className="flex min-h-11 min-w-0 flex-1 items-start gap-esp3 rounded-lg px-esp2 py-esp2 text-left transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+        >
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-completo bg-fondo-sutil text-xs font-medium text-texto-secundario">
+            {indice}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-esp2">
+              <p className="text-sm font-medium text-texto-primario">
+                {punto.nombre}{" "}
+                <span className="font-normal text-texto-terciario">
+                  · {etiquetaResumen}
+                  {punto.piezas != null ? ` · ${formatoPiezas(punto.piezas)} pzs` : ""}
+                </span>
+              </p>
+              {faltaArticulo && (
+                <span className="rounded-md bg-fondo-aviso-sutil px-esp2 py-0.5 text-etiqueta text-texto-aviso">
+                  Completar detalles
+                </span>
+              )}
+            </div>
+            {punto.direccion && <p className="truncate text-xs text-texto-secundario">{punto.direccion}</p>}
+            <p className="text-xs text-texto-terciario">
+              {punto.fecha_colocacion_prevista ? `Colocar ${fechaMedia(punto.fecha_colocacion_prevista)}` : "Sin fecha"}
+              {punto.fecha_retirada_prevista ? ` · retirar ${fechaMedia(punto.fecha_retirada_prevista)}` : ""}
+              {punto.notas ? ` · ${punto.notas}` : ""}
+            </p>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-esp1 pt-0.5 text-etiqueta text-texto-marca">
+            <span>{expandido ? "Cerrar" : "Editar"}</span>
+            <Icono
+              nombre="chevron"
+              size={16}
+              className={cn(
+                "transition-transform duration-rapida ease-salida",
+                expandido ? "-rotate-90" : "rotate-90",
+              )}
+            />
+          </span>
+        </button>
+
+        {punto.estado === "pendiente" ? (
+          <button
+            type="button"
+            aria-label={`Eliminar ${punto.nombre}`}
+            disabled={pendiente}
+            onClick={async () => {
+              if (!(await confirmar(`¿Eliminar el punto «${punto.nombre}»?`))) return;
+              ejecutar(() => desenvolver(eliminarPunto(documentoId, campanaId, punto.id)));
+            }}
+            className="mt-esp1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil hover:text-texto-peligro disabled:opacity-50"
+          >
+            <Icono nombre="eliminar" size={16} />
+          </button>
+        ) : (
+          <span className="mt-esp2 shrink-0 px-esp2 text-xs text-texto-terciario">{punto.estado}</span>
+        )}
+      </div>
+
+      {expandido && (
+        <div className="animate-estado-entrar mb-esp3 rounded-xl border border-borde-default bg-fondo-sutil p-esp4">
+          <FormularioDetallesPunto
+            key={`${punto.id}-${punto.linea_id ?? ""}-${punto.piezas ?? ""}-${punto.direccion ?? ""}-${punto.notas ?? ""}`}
+            punto={punto}
+            articulos={articulos}
+            puntos={puntos}
+            pendiente={pendiente}
+            error={error}
+            etiquetaGuardar="Guardar cambios"
+            etiquetaCerrar="Cancelar"
+            onLimpiarError={() => setError(null)}
+            onCerrar={onCerrar}
+            onGuardar={(datos) => {
+              ejecutar(async () => {
+                await desenvolver(actualizarPunto(documentoId, campanaId, punto.id, datos));
+                onCerrar();
+              });
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -335,7 +684,7 @@ function etiquetaArticulo(a: Articulo) {
 
 const formatoPiezas = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ","));
 
-function NuevoPunto({
+function MapaCampana({
   documentoId,
   campana,
   articulos,
@@ -347,29 +696,16 @@ function NuevoPunto({
   puntos: Punto[];
 }) {
   const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
-  const [abierto, setAbierto] = useState(false);
-  const [posicion, setPosicion] = useState<Posicion | null>(null);
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [vistaBuscada, setVistaBuscada] = useState<Posicion | null>(null);
   const [centrarEn, setCentrarEn] = useState(0);
-  const [lineaId, setLineaId] = useState<string>(articulos.length === 1 ? String(articulos[0]!.id) : "");
-  const [piezas, setPiezas] = useState("");
-  // Piezas del artículo elegido: ya repartidas en otros puntos + las de este.
-  const articuloElegido = articulos.find((x) => String(x.id) === lineaId) ?? null;
-  const yaRepartidas = articuloElegido
-    ? puntos.filter((p) => p.linea_id === articuloElegido.id).reduce((t, p) => t + (p.piezas ?? 0), 0)
-    : 0;
-  const restantes = articuloElegido ? articuloElegido.piezas - yaRepartidas - (Number(piezas.replace(",", ".")) || 0) : 0;
-  const [direccion, setDireccion] = useState("");
-  const [colocacion, setColocacion] = useState(campana.fecha_inicio ?? "");
-  const [retirada, setRetirada] = useState(campana.fecha_fin ?? "");
-  const [notas, setNotas] = useState("");
-  const formulario = useRef<HTMLFormElement>(null);
-  const selectArticulo = useRef<HTMLSelectElement>(null);
+  const [puntoModal, setPuntoModal] = useState<Punto | null>(null);
 
-  // Al elegir una sugerencia: se coloca el punto, se rellena la dirección y se centra el mapa.
+  // Al elegir una sugerencia en el buscador: solo mueve/centra el mapa, sin añadir ningún punto.
   function elegirBusqueda(sugerencia: Sugerencia) {
-    setPosicion({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
+    setVistaBuscada({ latitud: sugerencia.latitud, longitud: sugerencia.longitud });
     setCentrarEn((n) => n + 1);
-    setDireccion(sugerencia.direccion);
     setError(null);
   }
 
@@ -388,87 +724,70 @@ function NuevoPunto({
     }
   }
 
+  // Solo el tap/clic simple añade el punto y abre el modal pop-up para sus detalles.
   function elegirEnMapa(p: Posicion) {
-    if (!abierto) return;
-    setPosicion(p);
+    if (!seleccionando || pendiente) return;
     setError(null);
-    // En tablet/desktop estrecho el formulario queda bajo el mapa: lo acercamos (no dentro del modal móvil).
-    if (window.matchMedia("(min-width: 768px) and (max-width: 1279px)").matches) {
-      setTimeout(() => formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    }
-    void direccionDe(p).then((d) => {
-      if (d) setDireccion(d);
-    });
-  }
-
-  function limpiar() {
-    setPosicion(null);
-    setDireccion("");
-    setNotas("");
-    setPiezas("");
-  }
-
-  function guardarPunto(despues?: () => void) {
-    if (!posicion) {
-      setError("Primero marca la ubicación en el mapa.");
-      return;
-    }
-    if (articulos.length > 0 && !lineaId) {
-      setError("Elige a qué artículo del documento corresponde el punto.");
-      return;
-    }
-    const nPiezas = piezas.trim() === "" ? null : Number(piezas.replace(",", "."));
+    const lineaPorDefecto = articulos.length === 1 ? articulos[0]!.id : null;
+    const promesaDireccion = direccionDe(p);
     ejecutar(async () => {
-      await desenvolver(
+      const dirInicial = await Promise.race([
+        promesaDireccion,
+        new Promise<string>((r) => setTimeout(() => r(""), 650)),
+      ]);
+      const creado = await desenvolver(
         anadirPunto(documentoId, campana.id, {
-          lineaId: lineaId ? Number(lineaId) : null,
-          piezas: nPiezas,
-          direccion,
-          latitud: posicion.latitud,
-          longitud: posicion.longitud,
-          fecha_colocacion_prevista: colocacion,
-          fecha_retirada_prevista: retirada,
-          notas,
+          lineaId: lineaPorDefecto,
+          piezas: null,
+          direccion: dirInicial,
+          latitud: p.latitud,
+          longitud: p.longitud,
+          fecha_colocacion_prevista: campana.fecha_inicio ?? "",
+          fecha_retirada_prevista: campana.fecha_fin ?? "",
+          notas: "",
         }),
       );
-      limpiar();
-      despues?.();
-      setAbierto(false);
+      setPuntoModal(creado);
+      if (!dirInicial) {
+        void promesaDireccion.then((dirTardia) => {
+          if (!dirTardia) return;
+          setPuntoModal((actual) => (actual && actual.id === creado.id && !actual.direccion ? { ...actual, direccion: dirTardia } : actual));
+          void moverPunto(documentoId, campana.id, creado.id, creado.latitud, creado.longitud, dirTardia);
+        });
+      }
     });
   }
 
-  function anadirDesdeMapa(cerrarModal: () => void) {
-    if (!posicion) return;
-    if (articulos.length > 0 && !lineaId) {
-      setError("Elige a qué artículo del documento corresponde el punto.");
-      cerrarModal();
-      setTimeout(() => {
-        formulario.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        selectArticulo.current?.focus();
-      }, 150);
-      return;
+  function abrirNuevoPuntoExterno() {
+    setError(null);
+    setSeleccionando(true);
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setModalAbierto(true);
     }
-    guardarPunto(cerrarModal);
   }
 
-  async function confirmarDescartarSeleccion() {
-    if (!posicion) return true;
-    const descartar = await confirmar("¿Descartar el punto seleccionado en el mapa?", {
-      aceptar: "Descartar",
-      peligro: true,
+  function abrirDesdeMapa() {
+    setError(null);
+    setSeleccionando(true);
+  }
+
+  function clicEnPuntoExistente(punto: PuntoExistente) {
+    const encontrado = puntos.find((x) => x.id === punto.id);
+    if (encontrado) setPuntoModal(encontrado);
+  }
+
+  function moverPuntoEnMapa(punto: PuntoExistente, nuevaPos: Posicion) {
+    setError(null);
+    const promesaDir = direccionDe(nuevaPos);
+    ejecutar(async () => {
+      const dir = await Promise.race([
+        promesaDir,
+        new Promise<string>((r) => setTimeout(() => r(""), 650)),
+      ]);
+      await desenvolver(
+        moverPunto(documentoId, campana.id, punto.id, nuevaPos.latitud, nuevaPos.longitud, dir || undefined),
+      );
     });
-    if (!descartar) return false;
-    setPosicion(null);
-    setDireccion("");
-    setError(null);
-    return true;
-  }
-
-  async function cerrarFormulario() {
-    if (!(await confirmarDescartarSeleccion())) return;
-    limpiar();
-    setError(null);
-    setAbierto(false);
   }
 
   async function solicitarEliminarPunto(punto: PuntoExistente) {
@@ -489,201 +808,159 @@ function NuevoPunto({
     estado: p.estado,
   }));
 
-  if (!abierto) {
-    return (
-      <div className="flex flex-col gap-esp3">
-        <div className="flex flex-wrap items-center justify-between gap-esp3">
-          <p className="text-sm text-texto-secundario">
-            {puntos.length > 0
+  return (
+    <div className="flex flex-col gap-esp3">
+      <div className="flex flex-wrap items-center justify-between gap-esp3">
+        <p className="text-sm text-texto-secundario">
+          {seleccionando
+            ? "Toca el mapa para añadir un punto o busca una dirección para centrarlo."
+            : puntos.length > 0
               ? `${puntos.length} ${puntos.length === 1 ? "punto marcado" : "puntos marcados"} en el mapa.`
               : "Pulsa «Nuevo punto» para marcar una ubicación en el mapa."}
-          </p>
-          <Boton
-            type="button"
-            onClick={() => {
-              setError(null);
-              setAbierto(true);
-            }}
-          >
+        </p>
+        {seleccionando ? (
+          <Boton type="button" variante="secundario" disabled={pendiente} onClick={() => setSeleccionando(false)}>
+            Listo
+          </Boton>
+        ) : (
+          <Boton type="button" onClick={abrirNuevoPuntoExterno}>
             <Icono nombre="mas" size={16} />
             Nuevo punto
           </Boton>
-        </div>
-        <SafeMapContainer title={`Puntos de la campaña · ${campana.nombre}`} exploreLabel="Explorar mapa">
+        )}
+      </div>
+
+      <SafeMapContainer
+        title={seleccionando ? `Nuevo punto · ${campana.nombre}` : `Puntos de la campaña · ${campana.nombre}`}
+        exploreLabel={seleccionando ? "Añadir en el mapa" : "Explorar mapa"}
+        open={modalAbierto}
+        onOpenChange={(siguiente) => {
+          setModalAbierto(siguiente);
+          if (!siguiente) {
+            setSeleccionando(false);
+          }
+        }}
+        modalAction={
+          seleccionando ? (
+            <Boton type="button" variante="secundario" tamano="s" onClick={() => setSeleccionando(false)}>
+              Listo
+            </Boton>
+          ) : (
+            <Boton type="button" tamano="s" onClick={abrirDesdeMapa}>
+              <Icono nombre="mas" size={16} />
+              Nuevo punto
+            </Boton>
+          )
+        }
+      >
+        <div className="relative h-full max-md:[&>*:first-child]:!h-full">
           <MapaSelector
             puntos={puntosMapa}
             posicion={null}
+            vistaBuscada={vistaBuscada}
             onElegir={elegirEnMapa}
+            onClicPunto={clicEnPuntoExistente}
+            onMoverPunto={moverPuntoEnMapa}
             onPulsacionLargaPunto={solicitarEliminarPunto}
-            soloLectura
+            centrarEn={centrarEn}
+            soloLectura={!seleccionando}
           />
-        </SafeMapContainer>
-        {error && <p className="text-xs text-texto-peligro">{error}</p>}
-        {puntos.length > 0 && (
-          <p className="text-xs text-texto-terciario">
-            Mantén pulsado un punto en el mapa para eliminarlo.
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_360px]">
-      <div className="flex flex-col gap-esp2">
-        <SafeMapContainer
-          title={`Elige el punto · ${campana.nombre}`}
-          exploreLabel={posicion ? "Ajustar en el mapa" : "Colocar en el mapa"}
-          onBeforeClose={confirmarDescartarSeleccion}
-          modalAction={
-            posicion
-              ? (cerrarModal) => (
-                  <Boton
-                    type="button"
-                    cargando={pendiente}
-                    onClick={() => anadirDesdeMapa(cerrarModal)}
-                    className="min-h-11 px-esp3 text-xs"
-                  >
-                    <Icono nombre="ubicacion" size={16} />
-                    Añadir punto
-                  </Boton>
-                )
-              : undefined
-          }
-        >
-          <div className="relative h-full max-md:[&>*:first-child]:!h-full">
-            <MapaSelector
-              puntos={puntosMapa}
-              posicion={posicion}
-              onElegir={elegirEnMapa}
-              onPulsacionLargaPunto={solicitarEliminarPunto}
-              centrarEn={centrarEn}
-            />
-            <BuscadorEnMapa onElegir={elegirBusqueda} />
-          </div>
-        </SafeMapContainer>
-        <p className="text-xs text-texto-terciario">
-          Haz clic en el mapa para colocar el punto; puedes arrastrarlo para ajustarlo. Mantén pulsado un punto
-          existente para eliminarlo.
-        </p>
-      </div>
-
-      <form
-        ref={formulario}
-        className={cn(
-          "flex scroll-mt-esp3 flex-col gap-esp3 rounded-xl border bg-fondo-superficie px-esp5 py-esp4",
-          posicion ? "border-borde-foco" : "border-borde-default",
-        )}
-        onSubmit={(e) => {
-          e.preventDefault();
-          guardarPunto();
-        }}
-      >
-        <div className="flex items-center justify-between gap-esp2">
-          <h3 className="text-base font-semibold text-texto-primario">Nuevo punto</h3>
-          <button
-            type="button"
-            disabled={pendiente}
-            onClick={() => void cerrarFormulario()}
-            className="inline-flex min-h-11 items-center rounded-md px-esp2 text-xs font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario disabled:opacity-50 md:min-h-8"
-          >
-            Cancelar
-          </button>
-        </div>
-        <p className={cn("text-xs", posicion ? "text-texto-exito" : "text-texto-terciario")}>
-          {posicion
-            ? `Ubicación: ${posicion.latitud.toFixed(5)}, ${posicion.longitud.toFixed(5)}`
-            : "Sin ubicación: márcala en el mapa o busca la dirección."}
-        </p>
-        {articulos.length > 0 ? (
-          <div className="flex flex-col gap-esp2">
-            <Etiqueta texto="Artículo *">
-              <select
-                ref={selectArticulo}
-                value={lineaId}
-                onChange={(e) => {
-                  setLineaId(e.target.value);
-                  setError(null);
-                }}
-                className={entrada}
-              >
-                <option value="">Elige un artículo…</option>
-                {articulos.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {etiquetaArticulo(a)}
-                  </option>
-                ))}
-              </select>
-            </Etiqueta>
-            <Etiqueta texto="Piezas de este punto">
-              <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
-              {articuloElegido && (
-                <span className={restantes < 0 ? "text-xs text-texto-aviso" : "text-xs text-texto-terciario"} role="status">
-                  {restantes < 0
-                    ? `Con este punto te pasas ${formatoPiezas(-restantes)} del total (${formatoPiezas(articuloElegido.piezas)}). Puedes guardarlo igualmente.`
-                    : restantes === 0
-                      ? `Con este punto se reparte todo el artículo (${formatoPiezas(articuloElegido.piezas)}).`
-                      : `Quedan ${formatoPiezas(restantes)} de ${formatoPiezas(articuloElegido.piezas)}`}
-                </span>
-              )}
-            </Etiqueta>
-          </div>
-        ) : (
-          <p className="rounded-md bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario">
-            Este documento aún no tiene artículos. Añádelos en el paso 2 para poder asignarlos a los puntos.
-          </p>
-        )}
-        <Etiqueta texto="Dirección">
-          <input value={direccion} onChange={(e) => setDireccion(e.target.value)} className={entrada} />
-        </Etiqueta>
-        <div className="grid grid-cols-2 gap-esp2">
-          <Etiqueta texto="Colocar el">
-            <input type="date" value={colocacion} onChange={(e) => setColocacion(e.target.value)} className={entrada} />
-          </Etiqueta>
-          <Etiqueta texto="Retirar el">
-            <input
-              type="date"
-              value={retirada}
-              min={colocacion || undefined}
-              onChange={(e) => setRetirada(e.target.value)}
-              className={entrada}
-            />
-          </Etiqueta>
-        </div>
-        <Etiqueta texto="Cómo instalar">
-          <textarea
-            value={notas}
-            onChange={(e) => setNotas(e.target.value)}
-            rows={2}
-            placeholder="Ej. 2 carteles 70x100 con bridas, cara hacia la rotonda"
-            className={areaTexto}
+          <ControlesEnMapa
+            seleccionando={seleccionando}
+            hayPuntos={puntos.length > 0}
+            pendiente={pendiente}
+            onNuevoPunto={abrirDesdeMapa}
+            onListo={() => setSeleccionando(false)}
+            onElegirBusqueda={elegirBusqueda}
           />
-        </Etiqueta>
-        {error && <p className="text-xs text-texto-peligro">{error}</p>}
-        <Boton type="submit" className="min-h-11" cargando={pendiente} disabled={!posicion}>
-          <Icono nombre="ubicacion" size={16} />
-          Añadir punto
-        </Boton>
-      </form>
+        </div>
+      </SafeMapContainer>
+
+      {error && <p className="text-xs text-texto-peligro">{error}</p>}
+
+      {puntoModal && (
+        <ModalDetallesPunto
+          punto={puntoModal}
+          documentoId={documentoId}
+          campanaId={campana.id}
+          articulos={articulos}
+          puntos={puntos}
+          onCerrar={() => setPuntoModal(null)}
+        />
+      )}
     </div>
   );
 }
 
-function BuscadorEnMapa({ onElegir }: { onElegir: (s: Sugerencia) => void }) {
+function ControlesEnMapa({
+  seleccionando,
+  hayPuntos,
+  pendiente,
+  onNuevoPunto,
+  onListo,
+  onElegirBusqueda,
+}: {
+  seleccionando: boolean;
+  hayPuntos: boolean;
+  pendiente: boolean;
+  onNuevoPunto: () => void;
+  onListo: () => void;
+  onElegirBusqueda: (s: Sugerencia) => void;
+}) {
   const { enModal } = useSafeMap();
+  const ocultarEnMovilPreview = !enModal;
+
   return (
-    <div
-      className={cn(
-        "absolute left-14 right-esp3 top-esp3 z-[1000] md:max-w-md",
-        !enModal && "max-md:hidden",
+    <>
+      <div
+        className={cn(
+          "pointer-events-none absolute left-14 right-esp3 top-esp3 z-[1000] flex items-start justify-between gap-esp2",
+          ocultarEnMovilPreview && "max-md:hidden",
+        )}
+      >
+        <div className="pointer-events-auto min-w-0 flex-1 md:max-w-md">
+          {seleccionando && (
+            <BuscadorDireccion
+              onElegir={onElegirBusqueda}
+              placeholder="Buscar dirección o lugar…"
+              inputClassName="shadow-elevado"
+            />
+          )}
+        </div>
+        {/* En el modal móvil el CTA vive en la cabecera del SafeMapContainer; en escritorio va arriba a la derecha dentro del mapa. */}
+        {!enModal && (
+          <div className="pointer-events-auto hidden shrink-0 md:block">
+            {seleccionando ? (
+              <Boton type="button" variante="secundario" tamano="s" onClick={onListo} className="shadow-elevado">
+                Listo
+              </Boton>
+            ) : (
+              <Boton type="button" tamano="s" onClick={onNuevoPunto} className="shadow-elevado">
+                <Icono nombre="mas" size={16} />
+                Nuevo punto
+              </Boton>
+            )}
+          </div>
+        )}
+      </div>
+
+      {(seleccionando || hayPuntos) && (
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-x-esp3 bottom-esp3 z-[1000] flex justify-center",
+            ocultarEnMovilPreview && "max-md:hidden",
+          )}
+        >
+          <p className="rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp1 text-center text-meta font-medium text-texto-secundario shadow-elevado">
+            {pendiente
+              ? "Guardando punto en la campaña…"
+              : seleccionando
+                ? "Toca el mapa para añadir un punto. Arrástralo para moverlo o tócalo para editar sus detalles."
+                : "Arrastra un punto para moverlo o tócalo para editar sus detalles. Mantén pulsado para eliminarlo."}
+          </p>
+        </div>
       )}
-    >
-      <BuscadorDireccion
-        onElegir={onElegir}
-        placeholder="Buscar dirección o lugar…"
-        inputClassName="shadow-elevado"
-      />
-    </div>
+    </>
   );
 }
 
