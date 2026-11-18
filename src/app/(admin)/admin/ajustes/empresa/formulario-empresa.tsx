@@ -46,7 +46,7 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
 
   return (
     <form
-      className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5"
+      className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);

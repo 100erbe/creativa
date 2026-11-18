@@ -4,7 +4,7 @@ export function Esqueleto({ className }: { className?: string }) {
   return (
     <div
       aria-hidden="true"
-      className={cn("animate-pulse duration-pulso rounded-md bg-fondo-hover/70", className)}
+      className={cn("animate-pulse duration-pulso rounded-md bg-fondo-hover", className)}
     />
   );
 }
@@ -27,7 +27,7 @@ export function EsqueletoKpis({ cantidad = 4 }: { cantidad?: number }) {
       {Array.from({ length: cantidad }).map((_, i) => (
         <div
           key={i}
-          className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:p-esp5"
+          className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie p-esp5"
         >
           <Esqueleto className="h-3.5 w-24 bg-fondo-sutil" />
           <Esqueleto className="h-8 w-32" />
@@ -41,16 +41,16 @@ export function EsqueletoKpis({ cantidad = 4 }: { cantidad?: number }) {
 export function EsqueletoTabla({ filas = 6 }: { filas?: number }) {
   return (
     <div className="flex flex-col gap-esp4">
-      <div className="flex flex-wrap items-center gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
+      <div className="flex flex-wrap items-center gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <Esqueleto className="h-9 w-20 rounded-completo" />
         <Esqueleto className="h-9 w-28 rounded-completo bg-fondo-sutil" />
         <Esqueleto className="h-9 w-24 rounded-completo bg-fondo-sutil" />
         <Esqueleto className="ml-auto h-9 w-full sm:w-56" />
       </div>
-      <div className="divide-y divide-borde-default rounded-lg border border-borde-default bg-fondo-superficie px-esp4 shadow-xs md:px-esp6">
+      <div className="divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
         {Array.from({ length: filas }).map((_, i) => (
           <div key={i} className="flex items-center gap-esp3 py-esp3 md:gap-esp4">
-            <Esqueleto className="h-9 w-9 shrink-0 rounded-md" />
+            <Esqueleto className="h-10 w-10 shrink-0 rounded-lg" />
             <div className="min-w-0 flex-1 space-y-1.5">
               <Esqueleto className="h-4 w-48 max-w-[70%]" />
               <Esqueleto className="h-3 w-36 max-w-[50%] bg-fondo-sutil" />
@@ -71,7 +71,7 @@ export function EsqueletoPipeline({ columnas = 4 }: { columnas?: number }) {
       {Array.from({ length: columnas }).map((_, col) => (
         <div
           key={col}
-          className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-sutil/60 p-esp3"
+          className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-sutil p-esp3"
         >
           <div className="flex items-center justify-between px-esp1">
             <Esqueleto className="h-4 w-28" />
@@ -80,7 +80,7 @@ export function EsqueletoPipeline({ columnas = 4 }: { columnas?: number }) {
           {Array.from({ length: 3 }).map((__, card) => (
             <div
               key={card}
-              className="flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie p-esp3"
+              className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie p-esp3"
             >
               <Esqueleto className="h-4 w-3/4" />
               <Esqueleto className="h-3 w-1/2 bg-fondo-sutil" />

@@ -9,7 +9,7 @@ export default async function PaginaRecuperar({ searchParams }: { searchParams: 
       <div className="flex w-full max-w-sm flex-col gap-esp6">
         <div className="flex flex-col items-center gap-esp3">
           <Logo alto={48} />
-          <h1 className="text-lg font-semibold text-texto-primario">¿Has olvidado tu contraseña?</h1>
+          <h1 className="text-titulo-panel text-texto-primario">¿Has olvidado tu contraseña?</h1>
           <p className="text-center text-sm text-texto-secundario">
             Escribe tu correo y te enviaremos un enlace para elegir una nueva.
           </p>

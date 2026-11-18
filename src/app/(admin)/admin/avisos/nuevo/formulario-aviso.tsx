@@ -67,7 +67,7 @@ export function FormularioAviso({ personas }: { personas: Persona[] }) {
 
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+    <form onSubmit={enviar} className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
       <label className={etiqueta}>
         Título *
         <input value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={80} required placeholder="Ej. Cambio de zona mañana" className={CAMPO} />
@@ -80,7 +80,7 @@ export function FormularioAviso({ personas }: { personas: Persona[] }) {
           maxLength={600}
           required
           rows={4}
-          className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
+          className="rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
         />
         <span className="self-end font-normal text-texto-terciario">{cuerpo.length}/600</span>
       </label>
@@ -106,7 +106,7 @@ export function FormularioAviso({ personas }: { personas: Persona[] }) {
             Ninguno
           </button>
         </div>
-        <div className="flex flex-col divide-y divide-fondo-hover rounded-md border border-borde-default">
+        <div className="flex flex-col divide-y divide-borde-default rounded-md border border-borde-default">
           {personas.map((p) => (
             <label key={p.id} className="flex items-center gap-esp3 px-esp3 py-esp2">
               <input type="checkbox" checked={elegidas.has(p.id)} onChange={() => alternar(p.id)} className="h-5 w-5 shrink-0" />

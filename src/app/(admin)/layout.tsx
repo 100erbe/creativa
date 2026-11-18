@@ -46,7 +46,7 @@ export default async function LayoutAdmin({
       </a>
       <BarraLateral
         nombre={`${usuario.nombre} ${usuario.apellidos ?? ""}`.trim()}
-        rolEtiqueta="Administración"
+        rolEtiqueta="Administrador"
         iniciales={iniciales}
         noLeidos={noLeidos}
         vencidas90={vencidas90}

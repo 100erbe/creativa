@@ -74,7 +74,7 @@ export function Catalogo({ productos }: { productos: ProductoAjuste[] }) {
       {grupos.map(([categoria, lista]) => (
         <section key={categoria} className="flex flex-col gap-esp2">
           <h2 className="text-xs font-medium uppercase tracking-wide text-texto-terciario">{categoria}</h2>
-          <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie">
+          <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie">
             {lista.map((p) => (
               <Producto key={`${p.id}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.nombre}`} producto={p} />
             ))}

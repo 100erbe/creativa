@@ -44,7 +44,7 @@ export function Bandeja({ avisos }: { avisos: NotificacionBandeja[] }) {
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+    <ul className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
       {avisos.map((a) => {
         const contenido = (
           <>

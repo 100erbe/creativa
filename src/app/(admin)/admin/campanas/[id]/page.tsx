@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BotonAvisos } from "@/components/ui/boton-avisos";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { lanzarSiError } from "@/lib/supabase/consulta";
@@ -156,11 +157,11 @@ export default async function PaginaCampana({
         </Link>
 
         {/* Blocco 1: Header unificata con barra metriche compatta e condivisione cliente */}
-        <section className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+        <section className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
           <div className="flex flex-wrap items-start justify-between gap-esp3 p-esp4 md:p-esp5">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-esp2">
-                <h1 className="text-xl font-semibold tracking-tight text-texto-primario md:text-2xl">
+                <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">
                   {campana.nombre}
                 </h1>
                 <Insignia tono={TONO_POR_ESTADO[campana.estado] ?? "neutro"}>
@@ -187,6 +188,7 @@ export default async function PaginaCampana({
               )}
             </div>
 
+            <BotonAvisos />
             <EditarCampana
               campanaId={campanaId}
               eliminable={!campana.documento_id && (documentosVinculados ?? 0) === 0}
@@ -203,7 +205,7 @@ export default async function PaginaCampana({
 
           <div className="grid grid-cols-2 divide-y divide-borde-default border-t border-borde-default bg-fondo-sutil/50 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
             <div className="px-esp4 py-esp3">
-              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Instalación</p>
+              <p className="text-etiqueta uppercase text-texto-secundario">Instalación</p>
               <div className="mt-0.5 flex flex-wrap items-baseline gap-x-esp2">
                 <span className="tabular-nums text-base font-semibold text-texto-primario">
                   {hechos}/{lista.length}
@@ -220,7 +222,7 @@ export default async function PaginaCampana({
             </div>
 
             <div className="px-esp4 py-esp3">
-              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Pendientes</p>
+              <p className="text-etiqueta uppercase text-texto-secundario">Pendientes</p>
               <div className="mt-0.5 flex items-baseline gap-esp2">
                 <span className="tabular-nums text-base font-semibold text-texto-primario">{pendientes}</span>
                 <span className="text-xs text-texto-terciario">{pendientes === 0 ? "Al día" : "por instalar"}</span>
@@ -228,7 +230,7 @@ export default async function PaginaCampana({
             </div>
 
             <div className="px-esp4 py-esp3">
-              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Incidencias</p>
+              <p className="text-etiqueta uppercase text-texto-secundario">Incidencias</p>
               <div className="mt-0.5 flex items-baseline gap-esp2">
                 <span
                   className={`tabular-nums text-base font-semibold ${
@@ -244,7 +246,7 @@ export default async function PaginaCampana({
             </div>
 
             <div className="px-esp4 py-esp3">
-              <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Fotos y soportes</p>
+              <p className="text-etiqueta uppercase text-texto-secundario">Fotos y soportes</p>
               <div className="mt-0.5 flex flex-wrap items-baseline gap-x-esp2">
                 <span className="tabular-nums text-base font-semibold text-texto-primario">{totalFotos}</span>
                 <span className="text-xs text-texto-secundario">{totalFotos === 1 ? "foto" : "fotos"}</span>
@@ -258,7 +260,7 @@ export default async function PaginaCampana({
           </div>
 
           <div className="flex flex-col gap-esp2 border-t border-borde-default bg-fondo-superficie px-esp4 py-esp3 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp5">
-            <span className="shrink-0 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
+            <span className="shrink-0 text-etiqueta uppercase text-texto-secundario">
               Enlace cliente
             </span>
             <div className="min-w-0 flex-1">
@@ -301,7 +303,7 @@ export default async function PaginaCampana({
       <section className="flex flex-col gap-esp3">
         <div className="flex flex-wrap items-center justify-between gap-esp3">
           <div className="flex items-center gap-esp2">
-            <h2 className="text-base font-semibold text-texto-primario">Puntos</h2>
+            <h2 className="text-titulo-panel text-texto-primario">Puntos</h2>
             <span className="tabular-nums rounded-completo border border-borde-default bg-fondo-superficie px-2 py-0.5 text-xs font-medium text-texto-secundario">
               {lista.length}
             </span>
@@ -310,7 +312,7 @@ export default async function PaginaCampana({
         </div>
 
         {lista.length > 0 ? (
-          <div className="divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+          <div className="divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
             {lista.map((p, idx) => {
               const asignados = (asignaciones ?? [])
                 .filter((a) => a.punto_id === p.id)
@@ -463,7 +465,7 @@ export default async function PaginaCampana({
             })}
           </div>
         ) : (
-          <p className="rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
+          <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
             Esta campaña aún no tiene puntos. Añade el primero desde el botón superior.
           </p>
         )}
@@ -483,8 +485,8 @@ function ResumenArticulos({
 }) {
   if (articulos.length === 0) return null;
   return (
-    <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
-      <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">Artículos repartidos</p>
+    <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
+      <p className="text-etiqueta uppercase text-texto-secundario">Artículos repartidos</p>
       <div className="flex flex-col gap-esp3">
         {articulos.map((a) => {
           const restan = a.piezas - a.repartidas;

@@ -22,7 +22,7 @@ export function FormasPago({ formas }: { formas: Forma[] }) {
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
   return (
     <div className="flex flex-col gap-esp2">
-      <div className="flex flex-col divide-y divide-fondo-hover">
+      <div className="flex flex-col divide-y divide-borde-default">
         {formas.map((f) =>
           editando === f.id ? (
             <FormularioForma key={f.id} forma={f} onCerrar={() => setEditando(null)} />
@@ -130,7 +130,7 @@ export function Cuentas({ cuentas }: { cuentas: Cuenta[] }) {
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
   return (
     <div className="flex flex-col gap-esp2">
-      <div className="flex flex-col divide-y divide-fondo-hover">
+      <div className="flex flex-col divide-y divide-borde-default">
         {cuentas.map((c) =>
           editando === c.id ? (
             <FormularioCuenta key={c.id} cuenta={c} onCerrar={() => setEditando(null)} />

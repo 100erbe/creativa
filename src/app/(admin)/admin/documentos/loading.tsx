@@ -11,7 +11,7 @@ export default function CargandoDocumentos() {
     >
       <span className="sr-only">Cargando documentos y cobros…</span>
       <EsqueletoCabecera />
-      <Esqueleto className="h-14 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-14 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
       <EsqueletoTabla filas={8} />
     </div>
   );

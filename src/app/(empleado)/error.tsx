@@ -10,7 +10,7 @@ export default function ErrorEmpleado({ error, reset }: { error: Error & { diges
 
   return (
     <div className="flex flex-col items-center gap-esp4 px-esp4 py-esp8 text-center">
-      <h1 className="text-lg font-semibold text-texto-primario">No se han podido cargar tus puntos</h1>
+      <h1 className="text-titulo-panel text-texto-primario">No se han podido cargar tus puntos</h1>
       <p className="text-sm text-texto-secundario">
         Comprueba que tienes cobertura y vuelve a intentarlo. Lo que ya hayas subido está guardado.
       </p>

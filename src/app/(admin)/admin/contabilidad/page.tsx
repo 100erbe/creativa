@@ -4,6 +4,7 @@ import { lanzarSiError } from "@/lib/supabase/consulta";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_TIPO } from "@/lib/documentos";
@@ -113,32 +114,32 @@ export default async function PaginaContabilidad({
 
   return (
     <div className="flex flex-col gap-esp6">
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-texto-primario">Contabilidad</h1>
-          <p className="text-sm text-texto-secundario">Libro registro de facturas emitidas e IVA repercutido.</p>
-        </div>
-        <form action="/admin/contabilidad" className="flex items-center gap-esp2">
-          <label className="text-sm text-texto-secundario" htmlFor="ejercicio">
-            Ejercicio
-          </label>
-          <select
-            id="ejercicio"
-            name="ejercicio"
-            defaultValue={ejercicio}
-            className="h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-sm text-texto-primario"
-          >
-            {(ejercicios.length ? ejercicios : [ejercicio]).map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-          <Boton type="submit" variante="secundario">
-            Ver
-          </Boton>
-        </form>
-      </div>
+      <CabeceraPagina
+        titulo="Contabilidad"
+        subtitulo="Libro registro de facturas emitidas e IVA repercutido."
+        acciones={
+          <form action="/admin/contabilidad" className="flex items-center gap-esp2">
+            <label className="text-etiqueta text-texto-secundario" htmlFor="ejercicio">
+              Ejercicio
+            </label>
+            <select
+              id="ejercicio"
+              name="ejercicio"
+              defaultValue={ejercicio}
+              className="h-11 rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 text-sm text-texto-primario md:h-[42px]"
+            >
+              {(ejercicios.length ? ejercicios : [ejercicio]).map((e) => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
+            </select>
+            <Boton type="submit" variante="secundario">
+              Ver
+            </Boton>
+          </form>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-esp3 md:gap-esp4 xl:grid-cols-4">
         <TarjetaKpi etiqueta={`Base imponible ${ejercicio}`} valor={euros(baseAnio)} detalle={`${delAnio.length} documentos`} />
@@ -165,7 +166,7 @@ export default async function PaginaContabilidad({
       )}
 
       <div className="flex flex-col gap-esp3">
-        <h2 className="text-base font-semibold text-texto-primario">IVA repercutido por trimestre</h2>
+        <h2 className="text-titulo-panel text-texto-primario">IVA repercutido por trimestre</h2>
         <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
           {TRIMESTRES.map((t) => {
             const filas = ivaAnio.filter((r) => r.trimestre === t.n);
@@ -175,7 +176,7 @@ export default async function PaginaContabilidad({
             return (
               <div
                 key={t.n}
-                className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 shadow-xs"
+                className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
               >
                 <div className="flex items-baseline gap-esp2">
                   <h3 className="text-sm font-semibold text-texto-primario">T{t.n}</h3>
@@ -224,7 +225,7 @@ export default async function PaginaContabilidad({
 
       <div className="flex flex-col gap-esp3">
         <div className="flex items-center gap-esp3">
-          <h2 className="flex-1 text-base font-semibold text-texto-primario">IVA soportado y saldo por trimestre</h2>
+          <h2 className="flex-1 text-titulo-panel text-texto-primario">IVA soportado y saldo por trimestre</h2>
           <Link href="/admin/gastos" className="text-sm font-medium text-texto-marca">
             Ver gastos →
           </Link>
@@ -243,7 +244,7 @@ export default async function PaginaContabilidad({
             return (
               <div
                 key={t.n}
-                className="tabular-nums flex flex-col gap-esp1 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm shadow-xs"
+                className="tabular-nums flex flex-col gap-esp1 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm"
               >
                 <h3 className="font-semibold text-texto-primario">T{t.n}</h3>
                 <span className="flex text-texto-secundario">
@@ -275,7 +276,7 @@ export default async function PaginaContabilidad({
 
       <div className="flex flex-col gap-esp3">
         <div className="flex flex-wrap items-center gap-esp3">
-          <h2 className="flex-1 text-base font-semibold text-texto-primario">Libro registro</h2>
+          <h2 className="flex-1 text-titulo-panel text-texto-primario">Libro registro</h2>
           <a href={exportar} download>
             <Boton variante="secundario">
               <Icono nombre="descargar" size={16} />
@@ -292,8 +293,8 @@ export default async function PaginaContabilidad({
                 href={enlace(actual, { trimestre: t.n ? String(t.n) : "", pagina: "" })}
                 className={
                   trimestre === t.n
-                    ? "inline-flex min-h-10 items-center rounded-completo bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
-                    : "inline-flex min-h-10 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8"
+                    ? "inline-flex min-h-10 items-center rounded-md bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
+                    : "inline-flex min-h-10 items-center rounded-md border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8"
                 }
               >
                 {t.etiqueta}
@@ -307,7 +308,7 @@ export default async function PaginaContabilidad({
               name="q"
               defaultValue={filtros.q ?? ""}
               placeholder="Número, cliente o NIF…"
-              className="h-9 w-[220px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+              className="h-9 w-[220px] rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
             />
             <Boton type="submit" variante="secundario">
               Buscar
@@ -315,10 +316,10 @@ export default async function PaginaContabilidad({
           </form>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+        <div className="overflow-x-auto rounded-xl border border-borde-default bg-fondo-superficie">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
-              <tr className="border-b border-borde-default bg-fondo-sutil/70 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
+              <tr className="border-b border-borde-default bg-fondo-sutil/70 text-etiqueta uppercase text-texto-secundario">
                 <th className="px-esp4 py-esp3 font-semibold">Fecha</th>
                 <th className="px-esp3 py-esp3 font-semibold">Número</th>
                 <th className="px-esp3 py-esp3 font-semibold">Destinatario</th>

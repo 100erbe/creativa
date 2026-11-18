@@ -134,7 +134,7 @@ export function ReclamarImpagadas(p: Props) {
             <div className="flex items-start gap-esp3">
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-texto-terciario">{p.razonSocial}</p>
-                <h2 id="titulo-reclamar" className="text-lg font-semibold text-texto-primario">
+                <h2 id="titulo-reclamar" className="text-titulo-panel text-texto-primario">
                   Reclamar facturas impagadas
                 </h2>
                 <p className="tabular-nums text-sm text-texto-secundario">
@@ -208,7 +208,7 @@ export function ReclamarImpagadas(p: Props) {
                     value={cuerpo}
                     onChange={(e) => setCuerpo(e.target.value)}
                     rows={12}
-                    className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20"
+                    className="rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20"
                   />
                   <p className="text-xs text-texto-terciario">Podrás cambiarlo también en Gmail antes de enviarlo.</p>
                 </div>

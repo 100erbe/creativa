@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros } from "@/lib/formato";
 import {
@@ -137,10 +138,10 @@ export default async function PaginaClientes({
 
   return (
     <div className="flex flex-col gap-esp5">
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">Clientes</h1>
-          <p className="tabular-nums text-sm text-texto-secundario">
+      <CabeceraPagina
+        titulo="Clientes"
+        subtitulo={
+          <span className="tabular-nums">
             {total} cliente{total === 1 ? "" : "s"}
             {inactivos ? " (incluye inactivos)" : ""}
             {filas.length > 0 && (
@@ -155,18 +156,18 @@ export default async function PaginaClientes({
                 )}
               </>
             )}
-          </p>
-        </div>
-        <Link href="/admin/clientes/nuevo" className="shrink-0">
-          <Boton>
+          </span>
+        }
+        acciones={
+          <Link href="/admin/clientes/nuevo" className={clasesBoton("primario", "m", "shrink-0")}>
             <Icono nombre="mas" size={16} />
             Nuevo cliente
-          </Boton>
-        </Link>
-      </div>
+          </Link>
+        }
+      />
 
       {/* Barra de búsqueda y filtros compacta */}
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <form action="/admin/clientes" className="flex flex-wrap items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {conDeuda && <input type="hidden" name="con_deuda" value="1" />}
@@ -182,7 +183,7 @@ export default async function PaginaClientes({
               defaultValue={q}
               placeholder="Nombre, NIF, código o ciudad…"
               aria-label="Buscar clientes"
-              className="min-h-11 h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
+              className="min-h-11 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
             />
           </div>
           <Boton type="submit" variante="secundario">
@@ -195,7 +196,7 @@ export default async function PaginaClientes({
           <Link
             href={enlace(actual, { con_deuda: conDeuda ? "" : "1", pagina: "" })}
             aria-pressed={conDeuda}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-completo border px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:ml-auto md:min-h-8 ${
+            className={`inline-flex min-h-10 items-center gap-1.5 rounded-md border px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:ml-auto md:min-h-8 ${
               conDeuda
                 ? "border-borde-critico bg-fondo-critico text-texto-inverso"
                 : "border-borde-critico-sutil bg-fondo-critico-sutil text-texto-critico hover:border-borde-critico"
@@ -207,7 +208,7 @@ export default async function PaginaClientes({
         </form>
 
         <div className="flex flex-col gap-esp1 border-t border-borde-default pt-esp3">
-          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Segmento</p>
+          <p className="text-etiqueta uppercase text-texto-secundario">Segmento</p>
           <div className="flex flex-wrap items-center gap-esp2" role="group" aria-label="Filtrar por tipo de cliente">
             {[{ valor: "", etiqueta: "Todos" }, ...TIPOS_CLIENTE].map((t) => {
               const activo = (tipo ?? "") === t.valor;
@@ -216,10 +217,10 @@ export default async function PaginaClientes({
                   key={t.valor}
                   href={enlace(actual, { tipo: t.valor, pagina: "" })}
                   aria-current={activo ? "true" : undefined}
-                  className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
+                  className={`inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
                     activo
-                      ? "bg-fondo-marca text-texto-sobre-marca"
-                      : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
+                      ? "bg-fondo-marca-sutil text-texto-marca"
+                      : "bg-fondo-sutil text-texto-secundario hover:bg-fondo-hover hover:text-texto-primario"
                   }`}
                 >
                   {t.etiqueta}
@@ -237,7 +238,7 @@ export default async function PaginaClientes({
                 key={c.clave}
                 href={enlace(actual, { [c.clave]: "", pagina: "" })}
                 aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-xs text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-xs text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
               >
                 <span className="max-w-[60vw] truncate">{c.texto}</span>
                 <span aria-hidden="true" className="text-sm leading-none text-texto-terciario">
@@ -256,8 +257,8 @@ export default async function PaginaClientes({
       </div>
 
       {/* Data Grid estilo Attio con anchura garantizada para el nombre en tablet/desktop */}
-      <div className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
-        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp5 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6">
+      <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp5 py-esp2 text-etiqueta uppercase text-texto-secundario md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6">
           <span>Cliente</span>
           <span className="hidden xl:block">Segmento</span>
           <span className="hidden xl:block">Ubicación</span>
@@ -287,7 +288,7 @@ export default async function PaginaClientes({
                 <div className="flex min-w-0 items-center gap-esp3">
                   <div
                     aria-hidden="true"
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-xs font-semibold md:h-9 md:w-9 ${
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-semibold md:h-9 md:w-9 ${
                       esCritico90
                         ? "bg-fondo-critico text-texto-inverso"
                         : "border border-borde-marca bg-fondo-marca-sutil text-texto-marca"

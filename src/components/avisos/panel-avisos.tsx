@@ -88,13 +88,13 @@ export function PanelAvisos() {
     });
 
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 shadow-xs">
+    <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
       <div className="flex items-center gap-esp3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-fondo-marca-sutil">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fondo-marca-sutil">
           <Icono nombre="avisos" size={20} className="text-icono-marca" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold text-texto-primario">Avisos en este dispositivo</h2>
+          <h2 className="text-titulo-panel text-texto-primario">Avisos en este dispositivo</h2>
           <p className="text-xs text-texto-terciario">
             {estado === "activo" ? "Activados" : estado === "cargando" ? "Comprobando…" : "Desactivados"}
           </p>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Icono } from "@/components/ui/iconos";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { FormularioAviso } from "./formulario-aviso";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +20,18 @@ export default async function PaginaNuevoAviso() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-esp5">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href="/admin/avisos"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          Avisos
-        </Link>
-        <h1 className="text-2xl font-semibold text-texto-primario">Nuevo aviso</h1>
-      </div>
+      <CabeceraPagina
+        antes={
+          <Link
+            href="/admin/avisos"
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            Avisos
+          </Link>
+        }
+        titulo="Nuevo aviso"
+      />
       <FormularioAviso
         personas={(personas.data ?? []).map((p) => ({
           id: p.id,

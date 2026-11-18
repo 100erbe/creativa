@@ -134,7 +134,7 @@ export function SafeMapContainer({
       <div
         data-safe-map-container=""
         className={cn(
-          "relative mx-2 h-48 overflow-hidden rounded-xl border border-border bg-fondo-sutil shadow-xs md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
+          "relative mx-2 h-48 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
           className,
         )}
       >
@@ -218,7 +218,7 @@ export function SafeMapContainer({
                     type="button"
                     aria-label="Cerrar mapa"
                     onClick={() => setOpen(false)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-xs font-medium text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
                   >
                     <Icono nombre="cerrar" size={18} />
                   </button>

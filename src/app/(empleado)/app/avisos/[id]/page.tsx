@@ -47,13 +47,13 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
 
       <div className="flex flex-col gap-esp2">
         <div className="flex items-start gap-esp3">
-          <h1 className="min-w-0 flex-1 text-xl font-semibold text-texto-primario">{a.titulo}</h1>
+          <h1 className="min-w-0 flex-1 text-2xl font-bold text-texto-primario">{a.titulo}</h1>
           {a.urgente && <Insignia tono="peligro">Urgente</Insignia>}
         </div>
         <p className="text-xs text-texto-terciario">{fechaHora.format(new Date(a.creado_en))}</p>
       </div>
 
-      <p className="whitespace-pre-line rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp4 text-base text-texto-primario">
+      <p className="whitespace-pre-line rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 text-base text-texto-primario">
         {a.cuerpo}
       </p>
 

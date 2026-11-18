@@ -413,7 +413,7 @@ export function PanelPunto({
           <Icono nombre="atras" size={22} />
         </Link>
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-texto-primario">{punto.nombre}</h1>
+          <h1 className="text-titulo-panel text-texto-primario">{punto.nombre}</h1>
           <p className="text-sm text-texto-terciario">
             {ETIQUETA_SOPORTE[punto.tipo_soporte] ?? punto.tipo_soporte} · {campana?.nombre}
           </p>
@@ -445,7 +445,7 @@ export function PanelPunto({
           href={`https://www.google.com/maps/search/?api=1&query=${punto.latitud},${punto.longitud}`}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3 text-sm text-texto-primario"
+          className="flex items-center gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3 text-sm text-texto-primario"
         >
           <Icono nombre="ubicacion" size={18} className="text-icono-marca" />
           {punto.direccion}
@@ -462,8 +462,8 @@ export function PanelPunto({
 
       {/* Qué hay que hacer y cuándo: lo que el administrador dejó escrito al crear el punto. */}
       {(punto.notas || punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista || campana?.descripcion) && (
-        <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-texto-terciario">Trabajo a realizar</h2>
+        <div className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
+          <h2 className="text-etiqueta uppercase text-texto-secundario">Trabajo a realizar</h2>
           {punto.notas && <p className="whitespace-pre-line text-sm text-texto-primario">{punto.notas}</p>}
           {(punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista) && (
             <p className="text-xs text-texto-secundario">
@@ -487,7 +487,7 @@ export function PanelPunto({
       {/* Fotos */}
       <div className="flex flex-col gap-esp3">
         <div className="flex items-center">
-          <h2 className="flex-1 text-sm font-medium text-texto-secundario">Fotos · {fotos.length}</h2>
+          <h2 className="flex-1 text-etiqueta text-texto-secundario">Fotos · {fotos.length}</h2>
         </div>
         <div className="grid grid-cols-3 gap-esp2">
           {fotos.map((f) => {
@@ -537,7 +537,7 @@ export function PanelPunto({
         </div>
 
         {panelAbierto && (
-          <div className="animate-estado-entrar flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
+          <div className="animate-estado-entrar flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
             <label className="flex items-start gap-esp3">
               <input
                 type="checkbox"
@@ -656,13 +656,13 @@ export function PanelPunto({
       )}
 
       {mostrarIncidencia && (
-        <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs">
+        <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
           <textarea
             value={notaIncidencia}
             onChange={(e) => setNotaIncidencia(e.target.value)}
             placeholder="¿Qué ha pasado?"
             rows={3}
-            className="rounded-md border border-borde-campo px-esp3 py-esp2 text-sm outline-none focus:border-borde-foco"
+            className="rounded-lg border border-borde-campo px-esp3 py-esp2 text-sm outline-none focus:border-borde-foco"
           />
           <Boton variante="peligro" onClick={enviarIncidencia} cargando={pendiente} disabled={!notaIncidencia}>
             Enviar incidencia

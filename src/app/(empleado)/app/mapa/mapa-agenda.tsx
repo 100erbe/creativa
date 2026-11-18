@@ -46,7 +46,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
   return (
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
       <div className="flex items-center justify-between gap-esp2">
-        <h1 className="text-xl font-semibold tracking-tight text-texto-primario">Mapa de puntos</h1>
+        <h1 className="text-2xl font-bold text-texto-primario">Mapa de puntos</h1>
         <Link href="/app/agenda" className="text-xs font-medium text-texto-marca">
           Ver agenda →
         </Link>
@@ -65,7 +65,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
               type="button"
               onClick={() => setFiltro(f.clave)}
               aria-pressed={activo}
-              className={`tabular-nums inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors ${
+              className={`tabular-nums inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors ${
                 activo
                   ? f.clave === "incidencias" && conteos.incidencias > 0
                     ? "bg-fondo-critico text-texto-inverso"
@@ -107,7 +107,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
           return (
             <div
               key={p.punto_id}
-              className={`flex items-center gap-esp2 rounded-lg border bg-fondo-superficie pr-esp2 shadow-xs ${
+              className={`flex items-center gap-esp2 rounded-xl border bg-fondo-superficie pr-esp2 ${
                 incidencia ? "border-borde-critico-sutil border-l-4 border-l-borde-critico" : "border-borde-default"
               }`}
             >
@@ -141,7 +141,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={`Cómo llegar a ${p.punto}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default text-icono-marca hover:bg-fondo-sutil"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-borde-default text-icono-marca hover:bg-fondo-sutil"
               >
                 <Icono nombre="ubicacion" size={20} />
               </a>
@@ -149,7 +149,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
           );
         })}
         {visibles.length === 0 && (
-          <p className="rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp5 text-center text-sm text-texto-terciario">
+          <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp5 text-center text-sm text-texto-terciario">
             No hay puntos en esta selección.
           </p>
         )}

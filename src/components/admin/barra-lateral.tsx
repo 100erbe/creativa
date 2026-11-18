@@ -1,27 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Icono } from "@/components/ui/iconos";
+import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
+import { Monograma } from "@/components/ui/monograma";
+import { Campana } from "@/components/avisos/campana";
 import { abrirPaletaComandos } from "@/components/admin/paleta-comandos";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
 
+// Barra lateral del sistema "Documentos" ("Navigation / Sidebar" de Figma): 232 px, superficie blanca,
+// padding 24/16/16/16. Logo · búsqueda ⌘K · Resumen · GESTIÓN · FINANZAS · (espacio) · Ajustes, Ayuda ·
+// menú de cuenta. Los avisos no están aquí: van en la cabecera de cada página (y en la cabecera móvil).
+
 type EnlaceNav = {
   href: string;
   etiqueta: string;
-  icono: Parameters<typeof Icono>[0]["nombre"];
-  badgeKey?: "vencidas90" | "noLeidos";
+  icono: NombreIcono;
+  badgeKey?: "vencidas90";
 };
 
-const SECCIONES: { titulo: string; enlaces: EnlaceNav[] }[] = [
+const SECCIONES: { titulo?: string; enlaces: EnlaceNav[] }[] = [
+  { enlaces: [{ href: "/admin/panel", etiqueta: "Resumen", icono: "panel" }] },
   {
-    titulo: "Operaciones",
+    titulo: "Gestión",
     enlaces: [
-      { href: "/admin/panel", etiqueta: "Panel", icono: "panel" },
       { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
       { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
       { href: "/admin/catalogo", etiqueta: "Catálogo", icono: "catalogo" },
@@ -30,39 +36,30 @@ const SECCIONES: { titulo: string; enlaces: EnlaceNav[] }[] = [
   {
     titulo: "Finanzas",
     enlaces: [
-      { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos", badgeKey: "vencidas90" },
+      { href: "/admin/documentos", etiqueta: "Documentos", icono: "documentos" },
+      { href: "/admin/cobros", etiqueta: "Cobros", icono: "cobros", badgeKey: "vencidas90" },
       { href: "/admin/gastos", etiqueta: "Gastos", icono: "gastos" },
       { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
     ],
   },
-  {
-    titulo: "Sistema",
-    enlaces: [
-      { href: "/admin/avisos", etiqueta: "Avisos", icono: "avisos", badgeKey: "noLeidos" },
-      { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
-    ],
-  },
 ];
 
-const ACCESOS_MOVIL: { href: string; etiqueta: string; icono: Parameters<typeof Icono>[0]["nombre"] }[] = [
-  { href: "/admin/panel", etiqueta: "Panel", icono: "panel" },
-  { href: "/admin/clientes", etiqueta: "Clientes", icono: "clientes" },
+const INFERIOR: EnlaceNav[] = [
+  { href: "/admin/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
+  { href: "/admin/ayuda", etiqueta: "Ayuda", icono: "ayuda" },
+];
+
+const ACCESOS_MOVIL: EnlaceNav[] = [
+  { href: "/admin/panel", etiqueta: "Resumen", icono: "panel" },
   { href: "/admin/documentos", etiqueta: "Docs", icono: "documentos" },
+  { href: "/admin/cobros", etiqueta: "Cobros", icono: "cobros", badgeKey: "vencidas90" },
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
 ];
 
-function Marca({ alto = 32 }: { alto?: number }) {
-  return (
-    <div className="flex items-center pl-esp1">
-      <Logo alto={alto} />
-    </div>
-  );
-}
-
 /**
  * Shell de navegación administrativa:
- * - Escritorio (md+): barra lateral fija estilo Linear/Attio con secciones y acceso rápido ⌘K.
- * - Móvil (< md): cabecera compacta con búsqueda y avisos + barra inferior de navegación rápida + cajón completo.
+ * - Escritorio (md+): barra lateral fija con secciones, búsqueda ⌘K y menú de cuenta.
+ * - Móvil (< md): cabecera compacta (menú, logo, búsqueda, avisos) + barra inferior + cajón completo.
  */
 export function BarraLateral({
   nombre,
@@ -101,6 +98,8 @@ export function BarraLateral({
     router.refresh();
   }
 
+  const conteoDe = (e: EnlaceNav) => (e.badgeKey === "vencidas90" ? vencidas90 : 0);
+
   const botonPaleta = (
     <button
       type="button"
@@ -109,131 +108,100 @@ export function BarraLateral({
         abrirPaletaComandos();
       }}
       aria-label="Abrir búsqueda rápida y comandos (Ctrl+K)"
-      className="flex min-h-10 w-full items-center gap-esp2 rounded-md border border-borde-default bg-fondo-sutil/70 px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-campo hover:bg-fondo-sutil hover:text-texto-primario active:scale-press md:min-h-8 md:h-8"
+      className="flex min-h-11 w-full items-center gap-esp2 rounded-lg border border-borde-default bg-fondo-sutil pl-esp3 pr-esp2 text-etiqueta text-texto-secundario transition-[background-color,border-color,transform] duration-rapida ease-suave hover:border-borde-fuerte hover:bg-fondo-hover active:scale-press md:min-h-10"
     >
-      <Icono nombre="buscar" size={14} className="text-icono-secundario" />
-      <span className="flex-1 text-left">Buscar o ir a…</span>
-      <kbd className="rounded border border-borde-default bg-fondo-superficie px-1.5 py-0.5 text-micro font-medium text-texto-terciario">
-        ⌘K
-      </kbd>
+      <Icono nombre="buscar" size={20} className="text-icono-default" />
+      <span className="flex-1 text-left">Buscar…</span>
+      <kbd className="font-sans text-etiqueta text-texto-secundario">⌘K</kbd>
     </button>
   );
 
-  const navegacion = (
-    <nav aria-label="Navegación principal" className="flex flex-1 flex-col gap-esp4 overflow-y-auto">
-      {SECCIONES.map((seccion) => (
-        <div key={seccion.titulo} className="flex flex-col gap-0.5">
-          <p className="px-esp3 pb-1 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
-            {seccion.titulo}
-          </p>
-          {seccion.enlaces.map((enlace) => {
-            const activo = pathname.startsWith(enlace.href);
-            const conteo =
-              enlace.badgeKey === "vencidas90" ? vencidas90 : enlace.badgeKey === "noLeidos" ? noLeidos : 0;
+  const itemNav = (enlace: EnlaceNav) => {
+    const activo = pathname.startsWith(enlace.href);
+    const conteo = conteoDe(enlace);
+    return (
+      <Link
+        key={enlace.href}
+        href={enlace.href}
+        aria-current={activo ? "page" : undefined}
+        className={cn(
+          "flex min-h-11 items-center gap-esp3 rounded-lg px-esp3 text-cuerpo transition-colors duration-rapida ease-suave md:min-h-[42px]",
+          activo ? "bg-fondo-marca-sutil text-texto-marca" : "text-texto-primario hover:bg-fondo-sutil",
+        )}
+      >
+        <Icono nombre={enlace.icono} size={20} className={activo ? "text-icono-marca" : "text-icono-default"} />
+        <span className="min-w-0 flex-1 truncate">{enlace.etiqueta}</span>
+        {conteo > 0 && (
+          <span
+            className="tabular-nums rounded-completo bg-fondo-critico px-1.5 py-0.5 text-micro font-semibold leading-none text-texto-inverso"
+            title={`${conteo} facturas vencidas 90+ días`}
+          >
+            {conteo > 99 ? "99+" : conteo}
+          </span>
+        )}
+      </Link>
+    );
+  };
 
-            return (
-              <Link
-                key={enlace.href}
-                href={enlace.href}
-                aria-current={activo ? "page" : undefined}
-                className={cn(
-                  "flex min-h-11 items-center gap-esp3 rounded-md px-esp3 py-esp2 text-sm transition-colors duration-rapida ease-suave md:min-h-8",
-                  activo
-                    ? "bg-fondo-marca-sutil font-medium text-texto-marca"
-                    : "text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario",
-                )}
-              >
-                <Icono
-                  nombre={enlace.icono}
-                  size={18}
-                  className={activo ? "text-icono-marca" : "text-icono-secundario"}
-                />
-                <span className="min-w-0 flex-1 truncate">{enlace.etiqueta}</span>
-                {conteo > 0 && (
-                  <span
-                    className={cn(
-                      "tabular-nums rounded-completo px-1.5 py-0.5 text-micro font-semibold leading-none",
-                      enlace.badgeKey === "vencidas90"
-                        ? "bg-fondo-critico text-texto-inverso"
-                        : "bg-fondo-peligro text-texto-inverso",
-                    )}
-                    title={
-                      enlace.badgeKey === "vencidas90"
-                        ? `${conteo} facturas vencidas 90+ días`
-                        : `${conteo} avisos sin leer`
-                    }
-                  >
-                    {conteo > 99 ? "99+" : conteo}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+  const navegacion = (
+    <nav aria-label="Navegación principal" className="flex flex-col gap-esp4">
+      {SECCIONES.map((seccion, i) => (
+        <div key={seccion.titulo ?? i} className="flex flex-col gap-esp1">
+          {seccion.titulo && (
+            <p className="text-etiqueta uppercase text-texto-secundario">{seccion.titulo}</p>
+          )}
+          {seccion.enlaces.map(itemNav)}
         </div>
       ))}
     </nav>
   );
 
-  const usuario = (
-    <div className="mt-auto flex items-center gap-esp2 rounded-md border border-borde-sutil bg-fondo-sutil/70 px-esp2 py-esp2">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fondo-inverso text-xs font-medium text-texto-inverso">
-        {iniciales}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-texto-primario">{nombre}</p>
-        <p className="truncate text-micro text-texto-terciario">{rolEtiqueta}</p>
-      </div>
-      <Link
-        href="/cuenta/contrasena"
-        aria-label="Cambiar mi contraseña"
-        title="Cambiar mi contraseña"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover hover:text-texto-primario active:scale-press"
-      >
-        <Icono nombre="candado" size={16} />
-      </Link>
-      <button
-        type="button"
-        onClick={salir}
-        aria-label="Cerrar sesión"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover hover:text-texto-primario active:scale-press"
-      >
-        <Icono nombre="salir" size={16} />
-      </button>
-    </div>
+  const inferior = (
+    <nav aria-label="Ajustes y ayuda" className="flex flex-col gap-esp2">
+      {INFERIOR.map(itemNav)}
+    </nav>
   );
+
+  const cuenta = <MenuCuenta nombre={nombre} rolEtiqueta={rolEtiqueta} iniciales={iniciales} onSalir={salir} />;
 
   return (
     <>
       {/* Escritorio */}
-      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-esp4 border-r border-borde-default bg-fondo-superficie px-esp3 py-esp4 md:flex print:hidden">
-        <Marca />
+      <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col gap-esp2 overflow-y-auto bg-fondo-superficie pb-esp4 pl-esp4 pr-esp4 pt-esp6 md:flex print:hidden">
+        <div className="pb-esp4 pl-esp3">
+          <Logo alto={40} />
+        </div>
         {botonPaleta}
-        {navegacion}
-        {usuario}
+        <div className="pt-esp4">{navegacion}</div>
+        <div className="flex-1" />
+        {inferior}
+        <div className="h-px bg-borde-default" />
+        {cuenta}
       </aside>
 
       {/* Móvil: cabecera superior */}
-      <header className="sticky top-0 z-30 flex items-center gap-esp2 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm md:hidden print:hidden">
+      <header className="sticky top-0 z-30 flex items-center gap-esp1 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm md:hidden print:hidden">
         <button
           type="button"
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
           aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="menu" size={22} />
         </button>
         <div className="flex-1">
-          <Marca alto={28} />
+          <Logo alto={28} />
         </div>
         <button
           type="button"
           onClick={abrirPaletaComandos}
           aria-label="Búsqueda rápida"
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="buscar" size={20} />
         </button>
+        <Campana href="/admin/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
       </header>
 
       {/* Móvil: barra inferior de navegación rápida */}
@@ -244,7 +212,7 @@ export function BarraLateral({
         >
           {ACCESOS_MOVIL.map((item) => {
             const activo = pathname.startsWith(item.href);
-            const esDocsConAlerta = item.href === "/admin/documentos" && vencidas90 > 0;
+            const conteo = conteoDe(item);
             return (
               <Link
                 key={item.href}
@@ -256,13 +224,13 @@ export function BarraLateral({
                 )}
               >
                 <span className="relative">
-                  <Icono nombre={item.icono} size={20} className={activo ? "text-icono-marca" : "text-icono-secundario"} />
-                  {esDocsConAlerta && (
+                  <Icono nombre={item.icono} size={20} className={activo ? "text-icono-marca" : "text-icono-default"} />
+                  {conteo > 0 && (
                     <span
-                      aria-label={`${vencidas90} vencidas 90+ días`}
+                      aria-label={`${conteo} vencidas 90+ días`}
                       className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-critico px-1 text-micro font-bold leading-none text-texto-inverso"
                     >
-                      {vencidas90 > 9 ? "9+" : vencidas90}
+                      {conteo > 9 ? "9+" : conteo}
                     </span>
                   )}
                 </span>
@@ -277,12 +245,7 @@ export function BarraLateral({
             aria-expanded={abierto}
             className="relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 px-1 text-micro font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
           >
-            <span className="relative">
-              <Icono nombre="menu" size={20} className="text-icono-secundario" />
-              {noLeidos > 0 && (
-                <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-fondo-peligro" />
-              )}
-            </span>
+            <Icono nombre="menu" size={20} className="text-icono-default" />
             <span>Menú</span>
           </button>
         </nav>
@@ -297,24 +260,107 @@ export function BarraLateral({
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp4 border-r border-borde-default bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
-            <div className="flex items-center">
-              <Marca />
+          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+            <div className="flex items-center pb-esp2">
+              <div className="pl-esp1">
+                <Logo alto={32} />
+              </div>
               <button
                 type="button"
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
             </div>
             {botonPaleta}
-            {navegacion}
-            {usuario}
+            <div className="pt-esp2">{navegacion}</div>
+            <div className="flex-1" />
+            {inferior}
+            <div className="h-px bg-borde-default" />
+            {cuenta}
           </aside>
         </div>
       )}
     </>
+  );
+}
+
+/** Menú de cuenta ("Account menu" de Figma): avatar, nombre y rol; el chevron abre Contraseña y Cerrar sesión. */
+function MenuCuenta({
+  nombre,
+  rolEtiqueta,
+  iniciales,
+  onSalir,
+}: {
+  nombre: string;
+  rolEtiqueta: string;
+  iniciales: string;
+  onSalir: () => void;
+}) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  useEffect(() => setAbierto(false), [pathname]);
+  useEffect(() => {
+    if (!abierto) return;
+    const fuera = (e: PointerEvent) => ref.current && !ref.current.contains(e.target as Node) && setAbierto(false);
+    const tecla = (e: KeyboardEvent) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("pointerdown", fuera);
+    document.addEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("pointerdown", fuera);
+      document.removeEventListener("keydown", tecla);
+    };
+  }, [abierto]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        aria-expanded={abierto}
+        aria-haspopup="menu"
+        aria-label={`Cuenta de ${nombre}`}
+        className="flex min-h-[60px] w-full items-center gap-esp3 rounded-lg py-esp3 text-left transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
+      >
+        <Monograma texto={iniciales} variante="avatar" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-etiqueta text-texto-primario">{nombre}</span>
+          <span className="block truncate text-etiqueta text-texto-secundario">{rolEtiqueta}</span>
+        </span>
+        <Icono
+          nombre="chevron"
+          size={20}
+          className={cn("text-icono-default transition-transform duration-rapida ease-salida", abierto && "-rotate-90")}
+        />
+      </button>
+      {abierto && (
+        <div
+          role="menu"
+          className="animate-estado-entrar absolute bottom-full left-0 right-0 z-40 mb-esp2 flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-elevado p-esp1 shadow-elevado"
+        >
+          <Link
+            role="menuitem"
+            href="/cuenta/contrasena"
+            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
+          >
+            <Icono nombre="candado" size={18} className="text-icono-default" />
+            Cambiar contraseña
+          </Link>
+          <button
+            role="menuitem"
+            type="button"
+            onClick={onSalir}
+            className="flex min-h-11 items-center gap-esp3 rounded-md px-esp3 text-left text-cuerpo text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil md:min-h-10"
+          >
+            <Icono nombre="salir" size={18} className="text-icono-default" />
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

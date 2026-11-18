@@ -21,7 +21,7 @@ export default async function PaginaContrasena() {
       <div className="flex w-full max-w-sm flex-col gap-esp6">
         <div className="flex flex-col items-center gap-esp3">
           <Logo alto={48} />
-          <h1 className="text-lg font-semibold text-texto-primario">
+          <h1 className="text-titulo-panel text-texto-primario">
             {recuperacion ? "Elige una contraseña nueva" : "Cambiar mi contraseña"}
           </h1>
           <p className="text-center text-sm text-texto-secundario">{usuario.email}</p>

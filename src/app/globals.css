@@ -4,42 +4,46 @@
 
 @layer base {
   :root {
-    --bg-lienzo: #FAFAF9;
+    /* Espejo de src/design/tokens.ts (sistema "Documentos" de Figma). */
+    --bg-lienzo: #F3F4F8;
     --bg-superficie: #FFFFFF;
     --bg-elevado: #FFFFFF;
-    --bg-sutil: #F5F5F4;
-    --bg-hover: #E7E5E4;
-    --bg-marca: #C2410C;
-    --bg-marca-sutil: #FFF4ED;
-    --bg-exito-sutil: #F0FDF4;
-    --bg-aviso-sutil: #FFFBEB;
-    --bg-peligro-sutil: #FEF2F2;
-    --bg-critico-sutil: #FFF1F2;
-    --bg-critico: #9F1239;
-    --bg-info-sutil: #EFF6FF;
+    --bg-sutil: #F7F8FC;
+    --bg-hover: #F0F2F6;
+    --bg-marca: #5A4BE7;
+    --bg-marca-sutil: #F0EDFF;
+    --bg-exito-sutil: #E9F7F0;
+    --bg-aviso-sutil: #FFF8EA;
+    --bg-peligro-sutil: #FDEEF2;
+    --bg-critico-sutil: #FDEEF2;
+    --bg-critico: #8E2440;
+    --bg-info-sutil: #EDF3FF;
+    --bg-inverso: #282A3D;
 
-    --text-primario: #1C1917;
-    --text-secundario: #57534E;
-    --text-terciario: #66605B;
-    --text-marca: #C2410C;
-    --text-exito: #15803D;
-    --text-aviso: #B45309;
-    --text-peligro: #B91C1C;
-    --text-critico: #881337;
-    --text-info: #1D4ED8;
+    --text-primario: #202435;
+    --text-secundario: #676C7C;
+    --text-terciario: #676C7C;
+    --text-marca: #5A4BE7;
+    --text-exito: #167B65;
+    --text-aviso: #915B13;
+    --text-peligro: #B5485F;
+    --text-critico: #8E2440;
+    --text-info: #3568C8;
 
-    --border-default: #E7E5E4;
-    --border-sutil: #F5F5F4;
-    --border-fuerte: #D6D3D1;
-    --border-campo: #78716C;
-    --border-foco: #EA580C;
-    --border-critico: #BE123C;
-    --border-critico-sutil: #FECDD3;
+    --border-default: #ECEEF4;
+    --border-sutil: #F3F4F8;
+    --border-fuerte: #DDE0E8;
+    --border-campo: #73788A;
+    --border-foco: #5A4BE7;
+    --border-critico: #8E2440;
+    --border-critico-sutil: #EBB8C6;
 
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
     --radius-xl: 16px;
+    --radius-2xl: 20px;
+    --radius-3xl: 24px;
 
     --motion-duration-fast: 150ms;
     --motion-duration-base: 200ms;
@@ -102,7 +106,7 @@
    Selector con tres clases para ganar a leaflet.css, que se carga después. */
 .leaflet-container .leaflet-control-container .leaflet-control-attribution {
   background: rgb(255 255 255 / 0.35);
-  color: rgb(68 64 60 / 0.55);
+  color: rgb(32 36 53 / 0.55);
   font-size: 9px;
   line-height: 1.4;
   padding: 0 4px;
@@ -115,7 +119,7 @@
 }
 .leaflet-container .leaflet-control-container .leaflet-control-attribution:hover {
   background: rgb(255 255 255 / 0.85);
-  color: rgb(68 64 60 / 0.9);
+  color: rgb(32 36 53 / 0.9);
 }
 .leaflet-container .leaflet-control-container .leaflet-control-attribution svg {
   opacity: 0.5;

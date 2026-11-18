@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Boton } from "@/components/ui/boton";
+import { CabeceraPaginaBase } from "@/components/ui/cabecera-pagina-base";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
@@ -97,10 +98,13 @@ export function VistaCatalogo({
   categorias,
   productos,
   nuevoInicial = false,
+  noLeidos = 0,
 }: {
   categorias: CategoriaAdmin[];
   productos: ProductoAdmin[];
   nuevoInicial?: boolean;
+  /** Avisos sin leer, para el botón «Avisos» de la cabecera. */
+  noLeidos?: number;
 }) {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaFiltroId, setCategoriaFiltroId] = useState<number | null>(null);
@@ -163,17 +167,12 @@ export function VistaCatalogo({
   return (
     <div className="flex flex-col gap-esp5">
       {/* Cabecera */}
-      <div className="flex flex-wrap items-start gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">
-            Catálogo de productos y servicios
-          </h1>
-          <p className="text-sm text-texto-secundario">
-            Artículos, servicios, formatos y tarifas base que aparecen al crear presupuestos, albaranes y facturas.
-            Los documentos ya creados conservan sus propios precios.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-esp2">
+      <CabeceraPaginaBase
+        titulo="Catálogo de productos y servicios"
+        subtitulo="Artículos, servicios, formatos y tarifas base que aparecen al crear presupuestos, albaranes y facturas. Los documentos ya creados conservan sus propios precios."
+        noLeidos={noLeidos}
+        acciones={
+          <>
           <Boton
             variante="secundario"
             onClick={() => setModalCategoria({ abierto: true })}
@@ -188,8 +187,9 @@ export function VistaCatalogo({
             <Icono nombre="mas" size={16} />
             Nuevo producto o servicio
           </Boton>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-esp3 md:gap-esp4">
@@ -211,7 +211,7 @@ export function VistaCatalogo({
       </div>
 
       {/* Buscador y filtros */}
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <div className="flex flex-wrap items-center gap-esp3">
           <div className="relative min-w-[220px] flex-1 md:max-w-md">
             <Icono
@@ -247,8 +247,8 @@ export function VistaCatalogo({
             className={cn(
               "inline-flex min-h-9 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8",
               categoriaFiltroId === null
-                ? "bg-fondo-marca text-texto-sobre-marca"
-                : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                ? "bg-fondo-marca-sutil text-texto-marca"
+                : "bg-fondo-sutil text-texto-secundario hover:bg-fondo-hover hover:text-texto-primario",
             )}
           >
             Todas
@@ -265,8 +265,8 @@ export function VistaCatalogo({
                 className={cn(
                   "inline-flex min-h-9 items-center gap-1.5 rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8",
                   activo
-                    ? "bg-fondo-marca text-texto-sobre-marca"
-                    : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                    ? "bg-fondo-marca-sutil text-texto-marca"
+                    : "bg-fondo-sutil text-texto-secundario hover:bg-fondo-hover hover:text-texto-primario",
                 )}
               >
                 <span>{c.nombre}</span>
@@ -303,7 +303,7 @@ export function VistaCatalogo({
             </button>
           </div>
 
-          <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+          <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
             {items.map((p) => (
               <FilaProducto
                 key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.admiteMedidaLibre}-${p.formatos.length}`}
@@ -318,7 +318,7 @@ export function VistaCatalogo({
       ))}
 
       {grupos.length === 0 && (
-        <div className="flex flex-col items-center gap-esp3 rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp5 py-esp6 text-center">
+        <div className="flex flex-col items-center gap-esp3 rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp5 py-esp6 text-center">
           <p className="text-sm text-texto-secundario">
             {busqueda || categoriaFiltroId != null
               ? "No hay productos o servicios con este filtro."
@@ -883,7 +883,7 @@ function ModalProducto({
       >
         <div className="flex items-start gap-esp3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-texto-primario">
+            <h2 className="text-titulo-panel text-texto-primario">
               {p ? `Editar «${p.nombre}»` : "Nuevo producto o servicio"}
             </h2>
             <p className="text-xs text-texto-terciario">
@@ -894,7 +894,7 @@ function ModalProducto({
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </button>
@@ -1079,7 +1079,7 @@ function ModalProducto({
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
               rows={2}
-              className="w-full rounded-md border border-borde-campo bg-fondo-superficie p-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20"
+              className="w-full rounded-lg border border-borde-campo bg-fondo-superficie p-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20"
             />
           </label>
         </div>
@@ -1165,14 +1165,14 @@ function ModalCategoria({
         }}
       >
         <div className="flex items-start gap-esp3">
-          <h2 className="flex-1 text-lg font-semibold text-texto-primario">
+          <h2 className="flex-1 text-titulo-panel text-texto-primario">
             {c ? "Editar categoría" : "Nueva categoría"}
           </h2>
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </button>

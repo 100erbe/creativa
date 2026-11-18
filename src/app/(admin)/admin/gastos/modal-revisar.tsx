@@ -72,13 +72,13 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
             <p className="text-xs text-texto-terciario">
               {gasto.codigo} · {ETIQUETA_TIPO_GASTO[gasto.tipo]}
             </p>
-            <h2 className="text-lg font-semibold text-texto-primario">{gasto.concepto}</h2>
+            <h2 className="text-titulo-panel text-texto-primario">{gasto.concepto}</h2>
           </div>
           <Insignia tono={TONO_ESTADO_GASTO[gasto.estado]}>{ETIQUETA_ESTADO_GASTO[gasto.estado]}</Insignia>
           <Link
             href={cerrarHref}
             aria-label="Cerrar"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           >
             <Icono nombre="cerrar" size={20} />
           </Link>
@@ -139,7 +139,7 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                   placeholder="Motivo del rechazo (lo verá el empleado)"
-                  className="h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm outline-none focus:border-borde-foco"
+                  className="h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm outline-none focus:border-borde-foco"
                 />
                 <div className="flex gap-esp2">
                   <Boton variante="peligro" tamano="s" cargando={pendiente} disabled={!motivo.trim()} onClick={() => decidir("rechazado", motivo)}>

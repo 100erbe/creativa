@@ -74,7 +74,7 @@ export function CabeceraEmpleado({
           onClick={() => setAbierto(true)}
           aria-label="Abrir menú"
           aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="menu" size={22} />
         </button>
@@ -151,7 +151,7 @@ export function CabeceraEmpleado({
                 type="button"
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar menú"
-                className="ml-auto flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
@@ -214,7 +214,7 @@ export function CabeceraEmpleado({
               <Link
                 href="/cuenta/contrasena"
                 aria-label="Cambiar mi contraseña"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
               >
                 <Icono nombre="candado" size={18} />
               </Link>
@@ -222,7 +222,7 @@ export function CabeceraEmpleado({
                 type="button"
                 onClick={salir}
                 aria-label="Cerrar sesión"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press"
               >
                 <Icono nombre="salir" size={18} />
               </button>

@@ -18,8 +18,8 @@ export default function CargandoPunto() {
         </div>
         <Esqueleto className="h-6 w-20 rounded-completo" />
       </div>
-      <Esqueleto className="h-[220px] w-full rounded-lg border border-borde-default bg-fondo-superficie" />
-      <Esqueleto className="h-24 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-[220px] w-full rounded-xl border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-24 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
       <div className="grid grid-cols-3 gap-esp2">
         <Esqueleto className="aspect-square w-full rounded-md" />
         <Esqueleto className="aspect-square w-full rounded-md bg-fondo-sutil" />

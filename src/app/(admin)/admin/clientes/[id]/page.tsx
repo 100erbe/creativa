@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BotonAvisos } from "@/components/ui/boton-avisos";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
@@ -140,7 +141,7 @@ export default async function PaginaCliente({
           Clientes
         </Link>
 
-        <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:p-esp5 xl:flex-row xl:items-center">
+        <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 items-start gap-esp3 sm:items-center">
             <div
               aria-hidden="true"
@@ -154,7 +155,7 @@ export default async function PaginaCliente({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-esp2">
-                <h1 className="break-words text-xl font-semibold tracking-tight text-texto-primario md:text-2xl">
+                <h1 className="break-words text-2xl font-bold text-texto-primario md:text-titulo-pagina">
                   {cliente.razon_social}
                 </h1>
                 {!cliente.activo ? (
@@ -179,6 +180,7 @@ export default async function PaginaCliente({
           </div>
 
           <div className="flex flex-wrap items-center gap-esp2 xl:max-w-[55%] xl:justify-end">
+            <BotonAvisos />
             <Link href={`/admin/clientes/${clienteId}/editar`}>
               <Boton variante="secundario">Editar</Boton>
             </Link>
@@ -234,7 +236,7 @@ export default async function PaginaCliente({
           aria-label="Alerta de facturas insolutas con más de 90 días"
           className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-critico text-texto-inverso">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
             <Icono nombre="alerta" size={18} />
           </div>
           <div className="min-w-0 flex-1">
@@ -288,9 +290,9 @@ export default async function PaginaCliente({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
             <div className="flex items-center justify-between gap-esp2">
-              <h2 className="text-base font-semibold text-texto-primario">Documentos recientes</h2>
+              <h2 className="text-titulo-panel text-texto-primario">Documentos recientes</h2>
               <Link
                 href={`/admin/documentos?cliente=${clienteId}`}
                 className="text-sm font-medium text-texto-marca hover:underline"
@@ -305,7 +307,7 @@ export default async function PaginaCliente({
                   href={`/admin/documentos/${d.id}`}
                   className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
                 >
-                  <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
+                  <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-sutil sm:flex">
                     <Icono nombre="documentos" size={18} className="text-icono-default" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -331,8 +333,8 @@ export default async function PaginaCliente({
           </div>
 
           {(campanas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-              <h2 className="text-base font-semibold text-texto-primario">Campañas</h2>
+            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+              <h2 className="text-titulo-panel text-texto-primario">Campañas</h2>
               <div className="flex flex-col divide-y divide-borde-default">
                 {(campanas ?? []).map((c) => (
                   <Link
@@ -356,8 +358,8 @@ export default async function PaginaCliente({
           )}
 
           {(tarifas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-              <h2 className="text-base font-semibold text-texto-primario">Tarifas especiales</h2>
+            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+              <h2 className="text-titulo-panel text-texto-primario">Tarifas especiales</h2>
               <div className="flex flex-col divide-y divide-borde-default">
                 {(tarifas ?? []).map((t) => {
                   const producto = Array.isArray(t.productos) ? t.productos[0] : t.productos;
@@ -389,8 +391,8 @@ export default async function PaginaCliente({
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Ficha fiscal y comercial</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <h2 className="text-titulo-panel text-texto-primario">Ficha fiscal y comercial</h2>
             <dl className="grid grid-cols-1 gap-esp3 sm:grid-cols-2 xl:grid-cols-1">
               <Dato
                 etiqueta="Documento"
@@ -424,20 +426,20 @@ export default async function PaginaCliente({
             </dl>
             {cliente.notas && (
               <div className="rounded-md border border-borde-default bg-fondo-sutil/70 px-esp3 py-esp2 text-xs text-texto-secundario">
-                <p className="mb-0.5 text-micro font-semibold uppercase tracking-wider text-texto-terciario">Notas</p>
+                <p className="mb-0.5 text-etiqueta uppercase text-texto-secundario">Notas</p>
                 <p className="whitespace-pre-line">{cliente.notas}</p>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Contactos</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <h2 className="text-titulo-panel text-texto-primario">Contactos</h2>
             <Contactos clienteId={clienteId} contactos={contactos ?? []} />
           </div>
 
           {(reclamaciones ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-              <h2 className="text-base font-semibold text-texto-primario">Reclamaciones de impagados</h2>
+            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+              <h2 className="text-titulo-panel text-texto-primario">Reclamaciones de impagados</h2>
               <ul className="flex flex-col divide-y divide-borde-default">
                 {(reclamaciones ?? []).map((r) => (
                   <li key={r.id} className="flex flex-col gap-0.5 py-esp2 text-sm">
@@ -457,8 +459,8 @@ export default async function PaginaCliente({
             </div>
           )}
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-            <h2 className="text-base font-semibold text-texto-primario">Estado de la cuenta</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <h2 className="text-titulo-panel text-texto-primario">Estado de la cuenta</h2>
             <BotonActivo clienteId={clienteId} activo={cliente.activo} />
             <BotonEliminarCliente
               clienteId={clienteId}
@@ -496,7 +498,7 @@ function Dato({
   }`;
   return (
     <div className="min-w-0">
-      <dt className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">{etiqueta}</dt>
+      <dt className="text-etiqueta uppercase text-texto-secundario">{etiqueta}</dt>
       <dd>
         {href ? (
           <a

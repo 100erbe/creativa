@@ -151,7 +151,7 @@ export default async function PaginaAgenda({
       <div className="flex flex-wrap items-start justify-between gap-esp3">
         <div className="min-w-0 flex-1">
           <p className="text-xs capitalize text-texto-secundario">{fechaLarga(new Date())}</p>
-          <h1 className="text-xl font-semibold tracking-tight text-texto-primario">
+          <h1 className="text-2xl font-bold text-texto-primario">
             {saludo()}, {usuario?.nombre}
           </h1>
         </div>
@@ -160,7 +160,7 @@ export default async function PaginaAgenda({
         <div
           role="group"
           aria-label="Modo de visualización"
-          className="inline-flex rounded-md border border-borde-default bg-fondo-superficie p-0.5 shadow-xs"
+          className="inline-flex rounded-md border border-borde-default bg-fondo-superficie p-0.5"
         >
           <Link
             href={urlAgenda(filtro, "lista")}
@@ -193,14 +193,14 @@ export default async function PaginaAgenda({
       <div className="grid grid-cols-3 gap-esp2 sm:gap-esp3">
         <Link
           href={urlAgenda("hoy", "lista")}
-          className="flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp3 shadow-xs transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <span className="text-micro font-medium text-texto-secundario">Para hoy</span>
           <span className="tabular-nums text-xl font-semibold text-texto-primario">{deHoyAll.length}</span>
         </Link>
         <Link
           href={urlAgenda("", "lista")}
-          className="flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp3 shadow-xs transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <span className="text-micro font-medium text-texto-secundario">Pendientes</span>
           <span className="tabular-nums text-xl font-semibold text-texto-primario">{pendientes.length}</span>
@@ -209,10 +209,10 @@ export default async function PaginaAgenda({
           href={urlAgenda("atrasados", "lista")}
           className={
             criticasAll.length > 0
-              ? "flex flex-col gap-0.5 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp3 shadow-xs transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil active:scale-press"
+              ? "flex flex-col gap-0.5 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil active:scale-press"
               : atrasadasAll.length > 0
-                ? "flex flex-col gap-0.5 rounded-lg border border-borde-peligro-sutil border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/60 px-esp3 py-esp3 shadow-xs transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil active:scale-press"
-                : "flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp3 shadow-xs transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                ? "flex flex-col gap-0.5 rounded-lg border border-borde-peligro-sutil border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/60 px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil active:scale-press"
+                : "flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
           }
         >
           <span
@@ -254,7 +254,7 @@ export default async function PaginaAgenda({
                 key={f.valor}
                 href={urlAgenda(f.valor, "lista")}
                 aria-current={activo ? "true" : undefined}
-                className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press ${
+                className={`inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press ${
                   activo
                     ? f.valor === "atrasados" && criticasAll.length > 0
                       ? "bg-fondo-critico text-texto-inverso"
@@ -284,7 +284,7 @@ export default async function PaginaAgenda({
               <div className="flex items-center justify-between gap-esp2 px-esp1">
                 <div className="flex items-center gap-esp2">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${col.punto}`} aria-hidden="true" />
-                  <h2 className="text-xs font-semibold uppercase tracking-wide text-texto-primario">{col.titulo}</h2>
+                  <h2 className="text-etiqueta uppercase text-texto-secundario">{col.titulo}</h2>
                 </div>
                 <span className="tabular-nums rounded-completo bg-fondo-superficie px-2 py-0.5 text-micro font-medium text-texto-secundario">
                   {col.items.length}
@@ -323,14 +323,14 @@ export default async function PaginaAgenda({
           ))}
 
           {filtradas.length === 0 && (
-            <p className="rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
+            <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
               {filtro ? "No hay puntos que coincidan con este filtro." : "No tienes puntos pendientes."}
             </p>
           )}
 
           {!filtro && hechas.length > 0 && (
             <section className="flex flex-col gap-esp3">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-texto-secundario">
+              <h2 className="text-etiqueta uppercase text-texto-secundario">
                 Hechos recientemente
               </h2>
               <div className="flex flex-col gap-esp2">
@@ -357,10 +357,10 @@ function TarjetaPunto({ p, apagada }: { p: FilaEnriquecida; apagada?: boolean })
         : "border-borde-default bg-fondo-superficie";
 
   return (
-    <div className={`flex items-center gap-esp2 rounded-lg border pr-esp2 shadow-xs transition-colors duration-rapida ease-suave hover:border-borde-campo ${claseBorde}`}>
+    <div className={`flex items-center gap-esp2 rounded-lg border pr-esp2 transition-colors duration-rapida ease-suave hover:border-borde-campo ${claseBorde}`}>
       <Link href={`/app/punto/${p.punto_id}`} className="flex min-w-0 flex-1 items-center gap-esp3 px-esp3 py-esp3">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
             p.esCritico
               ? "bg-fondo-critico text-texto-inverso"
               : retirada
@@ -408,7 +408,7 @@ function TarjetaPunto({ p, apagada }: { p: FilaEnriquecida; apagada?: boolean })
           rel="noreferrer"
           aria-label={`Cómo llegar a ${p.punto}`}
           title="Abrir en Google Maps"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default bg-fondo-superficie text-icono-marca transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-marca transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="ubicacion" size={18} />
         </a>

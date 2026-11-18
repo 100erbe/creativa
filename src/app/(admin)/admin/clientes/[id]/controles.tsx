@@ -54,7 +54,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
   }
 
   const entrada =
-    "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
+    "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
   return (
     <div className="flex flex-col gap-esp3">

@@ -10,7 +10,7 @@ export default async function PaginaAvisos() {
   return (
     <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
       <div>
-        <h1 className="text-xl font-semibold text-texto-primario">Avisos</h1>
+        <h1 className="text-2xl font-bold text-texto-primario">Avisos</h1>
         <p className="text-sm text-texto-secundario">Cambios en tu trabajo y comunicaciones de tu administración.</p>
       </div>
       <Bandeja avisos={avisos} />

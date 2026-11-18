@@ -26,7 +26,7 @@ export type PuntoEditable = {
 
 
 const area =
-  "rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+  "rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
 
 /**
  * Alta o edición de un punto de la campaña, desde la propia ficha de la campaña
@@ -106,7 +106,7 @@ export function FormularioPunto() {
   }
 
   return (
-    <div className="rounded-lg border border-borde-foco bg-fondo-superficie p-esp4">
+    <div className="rounded-xl border border-borde-foco bg-fondo-superficie p-esp4">
       <form onSubmit={guardar} className="flex flex-col gap-esp3">
         <h3 className="text-base font-semibold text-texto-primario">{punto ? `Editar ${/^\d+$/.test(punto.nombre.trim()) ? `Punto ${punto.nombre.trim()}` : punto.nombre}` : "Nuevo punto"}</h3>
         <p className={cn("text-xs", posicion ? "text-texto-exito" : "text-texto-terciario")}>

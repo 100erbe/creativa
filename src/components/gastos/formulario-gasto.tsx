@@ -41,7 +41,7 @@ export type DatosGasto = {
 type Opcion = { id: number | string; etiqueta: string };
 
 const entrada =
-  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
+  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
 function Campo({
   etiqueta,
@@ -65,8 +65,8 @@ function Campo({
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
-      <h2 className="text-base font-semibold text-texto-primario">{titulo}</h2>
+    <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+      <h2 className="text-titulo-panel text-texto-primario">{titulo}</h2>
       <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2">{children}</div>
     </div>
   );
@@ -296,7 +296,7 @@ export function FormularioGasto({
             name="notas"
             rows={2}
             defaultValue={inicial?.notas ?? ""}
-            className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
         </Campo>
         {esAdmin && (

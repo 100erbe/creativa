@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icono } from "@/components/ui/iconos";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 
 const SECCIONES = [
   {
@@ -40,25 +41,22 @@ const SECCIONES = [
   },
 ] as const;
 
-export default function PaginaAjustes() {
+export default async function PaginaAjustes() {
   return (
     <div className="flex flex-col gap-esp6">
-      <div>
-        <h1 className="text-2xl font-semibold text-texto-primario">Ajustes</h1>
-        <p className="text-sm text-texto-secundario">Lo que antes solo se podía cambiar desde la base de datos.</p>
-      </div>
+      <CabeceraPagina titulo="Ajustes" subtitulo="Lo que antes solo se podía cambiar desde la base de datos." />
       <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2">
         {SECCIONES.map((s) => (
           <Link
             key={s.href}
             href={s.href}
-            className="group flex items-start gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 shadow-xs transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo hover:bg-fondo-sutil/70 active:scale-press"
+            className="group flex items-start gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5 transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo hover:bg-fondo-sutil/70 active:scale-press"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-fondo-marca-sutil">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-fondo-marca-sutil">
               <Icono nombre={s.icono} size={20} className="text-icono-marca" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-base font-semibold text-texto-primario">{s.titulo}</h2>
+              <h2 className="text-titulo-panel text-texto-primario">{s.titulo}</h2>
               <p className="text-sm text-texto-secundario">{s.texto}</p>
             </div>
           </Link>

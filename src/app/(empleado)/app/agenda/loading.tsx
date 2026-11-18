@@ -18,7 +18,7 @@ export default function CargandoAgenda() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="flex flex-col gap-1.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp3"
+            className="flex flex-col gap-1.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp3"
           >
             <Esqueleto className="h-3 w-14 bg-fondo-sutil" />
             <Esqueleto className="h-6 w-8" />
@@ -29,7 +29,7 @@ export default function CargandoAgenda() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3"
+            className="flex items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3"
           >
             <Esqueleto className="h-10 w-10 shrink-0 rounded-md" />
             <div className="min-w-0 flex-1 space-y-1.5">

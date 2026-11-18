@@ -6,7 +6,7 @@ export default function NoEncontrado() {
     <main className="flex min-h-dvh flex-col items-center justify-center gap-esp5 bg-fondo-lienzo px-esp4 text-center">
       <Logo alto={44} />
       <div className="flex flex-col gap-esp2">
-        <h1 className="text-xl font-semibold text-texto-primario">No hemos encontrado esta página</h1>
+        <h1 className="text-2xl font-bold text-texto-primario">No hemos encontrado esta página</h1>
         <p className="max-w-sm text-sm text-texto-secundario">
           El enlace puede haber caducado o la dirección no es correcta. Si te lo envió Creativa, pídenos uno nuevo.
         </p>

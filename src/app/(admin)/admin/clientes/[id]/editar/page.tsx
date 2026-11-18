@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Icono } from "@/components/ui/iconos";
 import { FormularioCliente } from "../../formulario-cliente";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { cargarOpciones } from "../../opciones";
 
 export const dynamic = "force-dynamic";
@@ -25,19 +26,23 @@ export default async function PaginaEditarCliente({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-esp5">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href={`/admin/clientes/${clienteId}`}
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          {cliente.razon_social}
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">Editar cliente</h1>
-        <p className="text-sm text-texto-secundario">
-          Los cambios no afectan a los documentos ya emitidos: guardan los datos del cliente tal como estaban.
-        </p>
-      </div>
+      <CabeceraPagina
+        antes={
+          <Link
+            href={`/admin/clientes/${clienteId}`}
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            {cliente.razon_social}
+          </Link>
+        }
+        titulo="Editar cliente"
+        subtitulo={
+          <>
+            Los cambios no afectan a los documentos ya emitidos: guardan los datos del cliente tal como estaban.
+          </>
+        }
+      />
       <FormularioCliente inicial={cliente} {...opciones} />
     </div>
   );

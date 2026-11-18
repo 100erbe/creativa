@@ -50,7 +50,7 @@ const ETIQUETA_SOPORTE = Object.fromEntries(SOPORTES.map((s) => [s.valor, s.etiq
 
 const entrada = CAMPO;
 const areaTexto =
-  "rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
+  "rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
 
 export function PasoCampana({
   documento,
@@ -72,7 +72,7 @@ export function PasoCampana({
       <div className="flex flex-wrap items-center gap-esp3">
         <div className="flex-1">
           <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
-          <h1 className="text-2xl font-semibold text-texto-primario">{etiquetaTipo} en borrador</h1>
+          <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">{etiquetaTipo} en borrador</h1>
         </div>
         <Link href="/admin/documentos">
           <Boton variante="secundario">Guardar y salir</Boton>
@@ -82,7 +82,7 @@ export function PasoCampana({
       <PasosDocumento actual={3} documentoId={documento.id} />
 
       <div>
-        <h2 className="text-lg font-semibold text-texto-primario">¿Dónde y cómo se hace la campaña?</h2>
+        <h2 className="text-titulo-panel text-texto-primario">¿Dónde y cómo se hace la campaña?</h2>
         <p className="text-sm text-texto-secundario">
           Marca en el mapa cada punto donde se instalará la publicidad, con el tipo de soporte y las fechas.
           Los instaladores lo verán en su agenda. Si este documento no lleva instalación, puedes saltar este paso.
@@ -123,7 +123,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
   return (
     <div className="grid grid-cols-1 gap-esp4 lg:grid-cols-[1fr_320px]">
       <form
-        className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5"
+        className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5"
         onSubmit={(e) => {
           e.preventDefault();
           ejecutar(async () => {
@@ -169,7 +169,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
         </Boton>
       </form>
 
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
         <h3 className="text-base font-semibold text-texto-primario">O usar una existente</h3>
         {campanas.length === 0 ? (
           <p className="text-sm text-texto-terciario">Este cliente aún no tiene campañas.</p>
@@ -228,8 +228,8 @@ function CampanaVinculada({
 
   return (
     <div className="flex flex-col gap-esp4">
-      <div className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-fondo-marca-sutil text-texto-marca">
+      <div className="flex flex-wrap items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fondo-marca-sutil text-texto-marca">
           <Icono nombre="campanas" size={18} />
         </div>
         <div className="flex-1">
@@ -255,7 +255,7 @@ function CampanaVinculada({
 
       <NuevoPunto documentoId={documento.id} campana={campana} articulos={articulos} puntos={puntos} />
 
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
         <h3 className="text-base font-semibold text-texto-primario">Puntos de la campaña · {puntos.length}</h3>
         {articulos.length > 0 && (
           <div className="flex flex-col gap-1 rounded-md bg-fondo-sutil px-esp3 py-esp2">
@@ -280,7 +280,7 @@ function CampanaVinculada({
         {puntos.length === 0 && (
           <p className="text-sm text-texto-terciario">Aún no hay puntos. Haz clic en el mapa para añadir el primero.</p>
         )}
-        <div className="flex flex-col divide-y divide-fondo-hover">
+        <div className="flex flex-col divide-y divide-borde-default">
           {puntos.map((p, i) => (
             <div key={p.id} className="flex items-start gap-esp3 py-esp3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-completo bg-fondo-sutil text-xs font-medium text-texto-secundario">
@@ -430,7 +430,7 @@ function NuevoPunto({
       <form
         ref={formulario}
         className={cn(
-          "flex scroll-mt-esp3 flex-col gap-esp3 rounded-lg border bg-fondo-superficie px-esp5 py-esp4",
+          "flex scroll-mt-esp3 flex-col gap-esp3 rounded-xl border bg-fondo-superficie px-esp5 py-esp4",
           posicion ? "border-borde-foco" : "border-borde-default",
         )}
         onSubmit={(e) => {

@@ -1,61 +1,74 @@
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-/** Ancho medio de un carácter de la cifra, en "em" (Inter seminegrita, con separadores de miles). */
-const ANCHO_CARACTER = 0.6;
+// Tarjeta KPI estática (misma anatomía que la dinámica de "KPI / *" en Figma, sin pestañas ni gráfico):
+// métrica 14/22 · cifra 28/38 negrita · significado 12/18 secundario · nota opcional.
+// Superficie blanca, borde 1px, radio 16, padding 20, sin sombra.
+
+/** Ancho medio de un carácter de la cifra, en "em" (Manrope negrita, con separadores de miles). */
+const ANCHO_CARACTER = 0.62;
 
 type TonoKpi = "default" | "peligro" | "critico" | "aviso" | "exito";
 
-const TONO_TARJETA: Record<TonoKpi, string> = {
-  default: "border-borde-default bg-fondo-superficie",
-  peligro: "border-borde-peligro-sutil border-l-4 border-l-borde-peligro bg-fondo-superficie",
-  critico: "border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/40",
-  aviso: "border-borde-aviso border-l-4 border-l-texto-aviso bg-fondo-superficie",
-  exito: "border-borde-exito bg-fondo-superficie",
+const COLOR_NOTA: Record<TonoKpi, string> = {
+  default: "text-texto-secundario",
+  peligro: "text-texto-peligro",
+  critico: "text-texto-critico",
+  aviso: "text-texto-aviso",
+  exito: "text-texto-exito",
 };
+
+/**
+ * Cifra que se adapta al ancho real de la tarjeta: 100cqw es el ancho del contenedor y se reparte
+ * entre los caracteres del valor. Va de 14 px (tarjeta estrecha o cifra muy larga) a 28 px.
+ */
+export function CifraKpi({ valor, className }: { valor: string; className?: string }) {
+  return (
+    <div className="[container-type:inline-size]">
+      <p
+        className={cn("tabular-nums whitespace-nowrap font-bold leading-[1.357]", className)}
+        style={{ fontSize: `clamp(0.875rem, calc(100cqw / ${(valor.length * ANCHO_CARACTER).toFixed(2)}), 1.75rem)` }}
+      >
+        {valor}
+      </p>
+    </div>
+  );
+}
 
 export function TarjetaKpi({
   etiqueta,
   valor,
+  significado,
   detalle,
-  colorDetalle = "text-texto-secundario",
+  colorDetalle,
   tono = "default",
   href,
 }: {
   etiqueta: string;
   valor: string;
+  /** Qué mide la cifra (12/18 secundario bajo el valor). */
+  significado?: string;
+  /** Nota final (cuenta, estado…). */
   detalle?: string;
+  /** Clase de color de la nota; por defecto la del tono. */
   colorDetalle?: string;
   tono?: TonoKpi;
   /** Si se da, la tarjeta lleva al listado que explica la cifra. */
   href?: string;
 }) {
   const clases = cn(
-    "flex min-w-0 flex-1 flex-col gap-esp2 rounded-lg border px-esp4 py-esp4 shadow-xs md:px-esp5 md:py-esp5",
-    TONO_TARJETA[tono],
+    "flex min-w-0 flex-1 flex-col gap-esp1 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5",
     href &&
-      "transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo hover:bg-fondo-sutil/70 active:scale-press",
+      "transition-[background-color,border-color,transform] duration-rapida ease-salida hover:border-borde-fuerte hover:bg-fondo-sutil active:scale-press",
   );
   const contenido = (
     <>
-      <p className="text-xs font-medium text-texto-secundario md:text-sm">{etiqueta}</p>
-      {/*
-        La cifra se adapta al ancho real de la tarjeta: 100cqw es el ancho del contenedor y se
-        reparte entre los caracteres del valor. Va de 14 px (tarjeta estrecha o cifra muy larga)
-        a 28 px (tarjeta ancha), así "67.203,75 €" nunca se corta ni se sale.
-      */}
-      <div className="[container-type:inline-size]">
-        <p
-          className={cn(
-            "tabular-nums whitespace-nowrap font-semibold leading-9 tracking-[-0.5px]",
-            tono === "critico" ? "text-texto-critico" : "text-texto-primario",
-          )}
-          style={{ fontSize: `clamp(0.875rem, calc(100cqw / ${(valor.length * ANCHO_CARACTER).toFixed(2)}), 1.75rem)` }}
-        >
-          {valor}
-        </p>
-      </div>
-      {detalle && <p className={cn("tabular-nums text-xs", colorDetalle)}>{detalle}</p>}
+      <p className="text-cuerpo text-texto-primario">{etiqueta}</p>
+      <CifraKpi valor={valor} className={tono === "critico" ? "text-texto-critico" : "text-texto-primario"} />
+      {significado && <p className="text-etiqueta text-texto-secundario">{significado}</p>}
+      {detalle && (
+        <p className={cn("tabular-nums mt-auto pt-esp2 text-etiqueta", colorDetalle ?? COLOR_NOTA[tono])}>{detalle}</p>
+      )}
     </>
   );
   return href ? (

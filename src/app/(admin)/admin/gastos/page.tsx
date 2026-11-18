@@ -4,7 +4,8 @@ import { lanzarSiError } from "@/lib/supabase/consulta";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ModalRevisarGasto, type GastoRevision } from "./modal-revisar";
@@ -141,46 +142,44 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
 
   const chip = (activo: boolean) =>
     activo
-      ? "inline-flex min-h-10 items-center rounded-completo bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
-      : "inline-flex min-h-10 items-center rounded-completo border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8";
+      ? "inline-flex min-h-10 items-center rounded-md bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
+      : "inline-flex min-h-10 items-center rounded-md border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8";
 
   return (
     <div className="flex flex-col gap-esp6">
       {revision && <ModalRevisarGasto gasto={revision} cerrarHref={enlace(actual, {})} />}
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-texto-primario">Gastos</h1>
-          <p className="text-sm text-texto-secundario">
-            Gastos deducibles (con IVA soportado) y gastos menores de caja, con aprobación y reembolso.
-          </p>
-        </div>
-        <form action="/admin/gastos" className="flex items-center gap-esp2">
-          <label className="text-sm text-texto-secundario" htmlFor="ejercicio">
-            Ejercicio
-          </label>
-          <select
-            id="ejercicio"
-            name="ejercicio"
-            defaultValue={ejercicio}
-            className="h-9 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-sm text-texto-primario"
-          >
-            {(ejercicios.length ? ejercicios : [ejercicio]).map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-          <Boton type="submit" variante="secundario">
-            Ver
-          </Boton>
-        </form>
-        <Link href="/admin/gastos/nuevo">
-          <Boton>
-            <Icono nombre="mas" size={16} />
-            Nuevo gasto
-          </Boton>
-        </Link>
-      </div>
+      <CabeceraPagina
+        titulo="Gastos"
+        subtitulo="Gastos deducibles (con IVA soportado) y gastos menores de caja, con aprobación y reembolso."
+        acciones={
+          <>
+            <form action="/admin/gastos" className="flex items-center gap-esp2">
+              <label className="text-etiqueta text-texto-secundario" htmlFor="ejercicio">
+                Ejercicio
+              </label>
+              <select
+                id="ejercicio"
+                name="ejercicio"
+                defaultValue={ejercicio}
+                className="h-11 rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 text-sm text-texto-primario md:h-[42px]"
+              >
+                {(ejercicios.length ? ejercicios : [ejercicio]).map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+              <Boton type="submit" variante="secundario">
+                Ver
+              </Boton>
+            </form>
+            <Link href="/admin/gastos/nuevo" className={clasesBoton("primario")}>
+              <Icono nombre="mas" size={16} />
+              Nuevo gasto
+            </Link>
+          </>
+        }
+      />
 
       {primeraPendiente && (
         <div className="flex flex-wrap items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3">
@@ -221,7 +220,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
+      <div className="flex flex-wrap items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <div className="flex flex-wrap gap-esp2">
           {[
             { v: "", e: "Todos" },
@@ -256,7 +255,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
             name="q"
             defaultValue={filtros.q ?? ""}
             placeholder="Concepto, proveedor, código…"
-            className="h-9 w-[220px] rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            className="h-9 w-[220px] rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario">
             Buscar
@@ -264,8 +263,8 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </form>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
-        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario lg:flex">
+      <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+        <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-etiqueta uppercase text-texto-secundario lg:flex">
           <span className="flex-1">Concepto y responsable</span>
           <span className="w-[100px]">Fecha</span>
           <span className="w-[110px]">Pago</span>
@@ -281,7 +280,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
               href={g.estado === "pendiente" ? enlace(actual, { revisar: String(g.id) }) : `/admin/gastos/${g.id}`}
               className="grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1 px-esp4 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 md:px-esp6 lg:flex lg:gap-esp4"
             >
-              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil lg:flex">
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-sutil lg:flex">
                 <Icono nombre="gastos" size={18} className="text-icono-default" />
               </div>
               <div className="min-w-0 lg:flex-1">

@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { colorMarca } from "@/design/tokens";
 import { Dialogos } from "@/components/ui/dialogos";
 
-const inter = Inter({
+// Tipografía del sistema "Documentos" de Figma (pesos 400, 500, 600 y 700).
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -30,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={inter.variable}>
+    <html lang="es" className={manrope.variable}>
       <body>
         {children}
         <Dialogos />

@@ -92,7 +92,7 @@ export function PasoCliente({
     <div className="flex max-w-2xl flex-col gap-esp5">
       <div>
         <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
-        <h1 className="text-2xl font-semibold text-texto-primario">
+        <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">
           {documento
             ? `Tipo y cliente ${femenino ? "de la" : "del"} ${etiquetaTipo.toLowerCase()}`
             : `${femenino ? "Nueva" : "Nuevo"} ${etiquetaTipo.toLowerCase()}`}
@@ -326,7 +326,7 @@ function SelectorCliente({
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-texto-secundario hover:bg-fondo-sutil md:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-texto-secundario hover:bg-fondo-sutil md:hidden"
         >
           <Icono nombre="atras" size={20} />
         </button>
@@ -357,7 +357,7 @@ function SelectorCliente({
             aria-expanded="true"
             aria-controls="lista-clientes"
             aria-label="Buscar cliente"
-            className="h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none placeholder:text-texto-terciario focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-9 md:text-sm"
+            className="h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none placeholder:text-texto-terciario focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-9 md:text-sm"
           />
         </div>
       </div>
@@ -408,7 +408,7 @@ function SelectorCliente({
 }
 
 const entrada =
-  "h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
+  "h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco";
 
 function FormularioClienteRapido({
   razonInicial,
@@ -422,7 +422,7 @@ function FormularioClienteRapido({
 
   return (
     <form
-      className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
+      className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
       onSubmit={(e) => {
         e.preventDefault();
         const fd = new FormData(e.currentTarget);
@@ -438,7 +438,7 @@ function FormularioClienteRapido({
       }}
     >
       <div>
-        <h2 className="text-base font-semibold text-texto-primario">Nuevo cliente</h2>
+        <h2 className="text-titulo-panel text-texto-primario">Nuevo cliente</h2>
         <p className="text-xs text-texto-terciario">
           Lo básico para el documento. El resto (forma de pago, contactos…) se completa luego en su ficha.
         </p>

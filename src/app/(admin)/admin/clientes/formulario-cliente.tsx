@@ -38,7 +38,7 @@ export type DatosCliente = {
 type Opcion = { id: number; etiqueta: string };
 
 const entrada =
-  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
+  "min-h-11 h-11 md:min-h-9 md:h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20";
 
 function Campo({
   etiqueta,
@@ -70,9 +70,9 @@ function Seccion({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp4 shadow-xs md:px-esp6 md:py-esp5">
+    <section className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:px-esp6 md:py-esp5">
       <div>
-        <h2 className="text-base font-semibold text-texto-primario">{titulo}</h2>
+        <h2 className="text-titulo-panel text-texto-primario">{titulo}</h2>
         {subtitulo && <p className="text-xs text-texto-terciario">{subtitulo}</p>}
       </div>
       <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2">{children}</div>
@@ -257,7 +257,7 @@ export function FormularioCliente({
             name="notas"
             rows={3}
             defaultValue={inicial?.notas ?? ""}
-            className="w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:text-sm"
+            className="w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:text-sm"
           />
         </Campo>
       </Seccion>

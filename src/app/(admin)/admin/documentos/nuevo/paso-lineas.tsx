@@ -189,7 +189,7 @@ export function PasoLineas({
       <div className="flex flex-wrap items-center gap-esp3">
         <div className="flex-1">
           <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
-          <h1 className="text-2xl font-semibold text-texto-primario">
+          <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">
             {etiquetaTipo} en borrador
           </h1>
         </div>
@@ -203,8 +203,8 @@ export function PasoLineas({
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
           {/* Cliente (compacto) */}
-          <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-fondo-marca-sutil text-sm font-medium text-texto-marca">
+          <div className="flex items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fondo-marca-sutil text-sm font-medium text-texto-marca">
               {documento.cliente.slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1">
@@ -225,7 +225,7 @@ export function PasoLineas({
 
           {/* En pantallas estrechas el resumen queda abajo: lista compacta sobre el formulario. */}
           {lineas.length > 0 && (
-            <div className="rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp3 xl:hidden">
+            <div className="rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3 xl:hidden">
               <ListaCompacta lineas={lineas} />
             </div>
           )}
@@ -244,8 +244,8 @@ export function PasoLineas({
 
         {/* Resumen */}
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[340px]">
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 xl:sticky xl:top-esp5">
-            <h2 className="text-base font-semibold text-texto-primario">Resumen</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5 xl:sticky xl:top-esp5">
+            <h2 className="text-titulo-panel text-texto-primario">Resumen</h2>
             {lineas.length > 0 && (
               <div className="hidden xl:block">
                 <ListaCompacta lineas={lineas} />
@@ -622,9 +622,9 @@ function FormularioArticulo({
   }
 
   return (
-    <div className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+    <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
       <div>
-        <h2 className="text-base font-semibold text-texto-primario">Añadir artículo</h2>
+        <h2 className="text-titulo-panel text-texto-primario">Añadir artículo</h2>
         <p className="text-sm text-texto-secundario">
           Busca por nombre, código o alias (70C, sábana, mupi…) o elige una categoría para añadir en 1 clic.
         </p>
@@ -728,8 +728,8 @@ function FormularioArticulo({
                 className={cn(
                   "inline-flex min-h-8 items-center rounded-completo px-esp3 text-xs font-medium transition-colors",
                   categoriaFiltro === "__todas__"
-                    ? "bg-fondo-marca text-texto-sobre-marca"
-                    : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                    ? "bg-fondo-marca-sutil text-texto-marca"
+                    : "bg-fondo-sutil text-texto-secundario hover:bg-fondo-hover hover:text-texto-primario",
                 )}
               >
                 Todos ({catalogo.length})
@@ -745,8 +745,8 @@ function FormularioArticulo({
                     className={cn(
                       "inline-flex min-h-8 items-center gap-1 rounded-completo px-esp3 text-xs font-medium transition-colors",
                       activo
-                        ? "bg-fondo-marca text-texto-sobre-marca"
-                        : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",
+                        ? "bg-fondo-marca-sutil text-texto-marca"
+                        : "bg-fondo-sutil text-texto-secundario hover:bg-fondo-hover hover:text-texto-primario",
                     )}
                   >
                     <span>{c.nombre}</span>
@@ -772,13 +772,13 @@ function FormularioArticulo({
             </div>
 
             {mostrarResultados && (
-              <div className="flex max-h-96 flex-col divide-y divide-fondo-hover overflow-y-auto rounded-lg border border-borde-default bg-fondo-superficie shadow-sm">
+              <div className="flex max-h-96 flex-col divide-y divide-borde-default overflow-y-auto rounded-xl border border-borde-default bg-fondo-superficie shadow-sm">
                 {resultados.map(([categoria, productos]) => (
                   <div key={categoria} className="flex flex-col">
-                    <span className="sticky top-0 z-10 border-b border-fondo-hover bg-fondo-sutil/95 px-esp3 py-1.5 text-micro font-semibold uppercase tracking-wider text-texto-terciario backdrop-blur-sm">
+                    <span className="sticky top-0 z-10 border-b border-fondo-hover bg-fondo-sutil/95 px-esp3 py-1.5 text-etiqueta uppercase text-texto-secundario backdrop-blur-sm">
                       {categoria}
                     </span>
-                    <div className="flex flex-col divide-y divide-fondo-hover">
+                    <div className="flex flex-col divide-y divide-borde-default">
                       {productos.map((p) => {
                         const alcDef = alcancesDe(p)[0]!;
                         const base = calcularPrecioBaseLocal(p, null, alcDef);
@@ -811,7 +811,7 @@ function FormularioArticulo({
                                       key={f.id}
                                       type="button"
                                       onClick={() => elegirProducto(p, { formatoId: f.id })}
-                                      className="inline-flex min-h-8 items-center gap-1 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 py-1 text-xs text-texto-primario transition-colors hover:border-borde-foco hover:bg-fondo-marca-sutil hover:text-texto-marca"
+                                      className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 py-1 text-xs text-texto-primario transition-colors hover:border-borde-foco hover:bg-fondo-marca-sutil hover:text-texto-marca"
                                     >
                                       <span className="font-medium">{f.nombre}</span>
                                       {precioFmt.definido && (
@@ -1108,9 +1108,9 @@ function FormularioArticulo({
 
 function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Linea[] }) {
   return (
-    <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
+    <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
       <div>
-        <h2 className="text-base font-semibold text-texto-primario">Artículos · {lineas.length}</h2>
+        <h2 className="text-titulo-panel text-texto-primario">Artículos · {lineas.length}</h2>
         {lineas.length > 0 && (
           <p className="text-xs text-texto-terciario">Toca cantidad, precio o descuento para cambiarlos.</p>
         )}
@@ -1123,7 +1123,7 @@ function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Lin
         <span className="text-right">IMPORTE</span>
         <span />
       </div>
-      <div className="flex flex-col divide-y divide-fondo-hover md:min-w-[620px]">
+      <div className="flex flex-col divide-y divide-borde-default md:min-w-[620px]">
         {lineas.map((l) => (
           <FilaLinea key={`${l.id}-${l.piezas}-${l.precio_unitario}-${l.descuento_pct}-${l.descripcion}-${l.artista ?? ""}`} documentoId={documentoId} linea={l} />
         ))}
@@ -1165,7 +1165,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
   }
 
   const celda =
-    "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-right text-base text-texto-primario outline-none focus:border-borde-foco md:h-8 md:border-transparent md:bg-transparent md:text-sm md:hover:border-borde-default md:focus:bg-fondo-superficie";
+    "h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 text-right text-base text-texto-primario outline-none focus:border-borde-foco md:h-8 md:border-transparent md:bg-transparent md:text-sm md:hover:border-borde-default md:focus:bg-fondo-superficie";
   const etiquetaMovil = "text-micro text-texto-terciario md:hidden";
   const alPulsarEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
@@ -1196,7 +1196,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
             onKeyDown={alPulsarEnter}
             placeholder="+ Artista / referencia"
             aria-label="Artista"
-            className="mt-1 h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-left text-base text-texto-secundario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:mt-0 md:h-7 md:border-transparent md:bg-transparent md:text-xs md:hover:border-borde-default md:focus:bg-fondo-superficie"
+            className="mt-1 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 text-left text-base text-texto-secundario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:mt-0 md:h-7 md:border-transparent md:bg-transparent md:text-xs md:hover:border-borde-default md:focus:bg-fondo-superficie"
           />
           {linea.cantidad !== linea.piezas && (
             <p className="px-esp2 text-xs text-texto-terciario">
@@ -1388,14 +1388,14 @@ function FormularioLineaLibre({
 
   return (
     <form
-      className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5"
+      className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5"
       onSubmit={(e) => {
         e.preventDefault();
         anadir();
       }}
     >
       <div>
-        <h2 className="text-base font-semibold text-texto-primario">Añadir concepto libre</h2>
+        <h2 className="text-titulo-panel text-texto-primario">Añadir concepto libre</h2>
         <p className="text-sm text-texto-secundario">
           Para lo que no está en el catálogo (un desplazamiento, un trabajo suelto…). Puedes guardarlo también en tu
           catálogo para próximos documentos.

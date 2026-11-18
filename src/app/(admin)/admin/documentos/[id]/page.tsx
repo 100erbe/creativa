@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BotonAvisos } from "@/components/ui/boton-avisos";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
@@ -225,7 +226,7 @@ export default async function PaginaDocumento({
         )}
         <div className="flex flex-wrap items-center gap-esp3">
           <div className="flex-1">
-            <h1 className="text-2xl font-semibold text-texto-primario">{titulo}</h1>
+            <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">{titulo}</h1>
             <p className="text-sm text-texto-secundario">
               {etiquetaTipo}
               {doc.version > 1 ? ` · versión ${doc.version}` : ""} · {fechaMedia(doc.fecha)}
@@ -255,6 +256,7 @@ export default async function PaginaDocumento({
           <Insignia tono={TONO_POR_ESTADO[doc.estado] ?? "neutro"}>
             {ETIQUETA_ESTADO_DOC[doc.estado] ?? doc.estado}
           </Insignia>
+          <BotonAvisos />
         </div>
 
         {(origen || (derivados ?? []).length > 0) && (
@@ -349,7 +351,7 @@ export default async function PaginaDocumento({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-1 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 shadow-xs">
+          <div className="flex flex-col gap-1 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
             <p className="text-xs text-texto-terciario">Cliente</p>
             <p className="text-sm font-medium text-texto-primario">{razonSocial}</p>
             {nif && <p className="text-xs text-texto-secundario">{nif}</p>}
@@ -357,7 +359,7 @@ export default async function PaginaDocumento({
           </div>
 
           {(campanaVinculada || esBorrador) && (
-            <div className="flex items-center gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 shadow-xs">
+            <div className="flex items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
               <div className="flex-1">
                 <p className="text-xs text-texto-terciario">Campaña</p>
                 {campanaVinculada ? (
@@ -390,8 +392,8 @@ export default async function PaginaDocumento({
             </div>
           )}
 
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
-            <h2 className="text-base font-semibold text-texto-primario">Líneas</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <h2 className="text-titulo-panel text-texto-primario">Líneas</h2>
             <div className="flex flex-col divide-y divide-borde-default">
               <div className="hidden grid-cols-[1fr_90px_90px_60px_100px] gap-esp3 pb-esp2 text-xs text-texto-terciario md:grid">
                 <span>Descripción</span>
@@ -430,7 +432,7 @@ export default async function PaginaDocumento({
           </div>
 
           {(doc.notas_cliente || doc.texto_forma_pago || doc.motivo_exencion) && (
-            <div className="flex flex-col gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp4 text-xs text-texto-secundario shadow-xs">
+            <div className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4 text-xs text-texto-secundario">
               {doc.texto_forma_pago && <p>Forma de pago: {doc.texto_forma_pago}</p>}
               {doc.iban_cobro && <p>IBAN: {doc.iban_cobro}</p>}
               {doc.motivo_exencion && <p>{doc.motivo_exencion}</p>}
@@ -441,8 +443,8 @@ export default async function PaginaDocumento({
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
           <ProveedorCondiciones>
-          <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
-            <h2 className="text-base font-semibold text-texto-primario">Resumen</h2>
+          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <h2 className="text-titulo-panel text-texto-primario">Resumen</h2>
             <Fila etiqueta="Suma de líneas" valor={euros(Number(doc.suma_lineas))} />
             {Number(doc.importe_descuento) !== 0 && (
               <Fila
@@ -520,8 +522,8 @@ export default async function PaginaDocumento({
           </div>
 
           {esBorrador && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
-              <h2 className="text-base font-semibold text-texto-primario">Condiciones</h2>
+            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+              <h2 className="text-titulo-panel text-texto-primario">Condiciones</h2>
               <CondicionesDocumento
                 documentoId={doc.id}
                 tipo={doc.tipo}
@@ -541,8 +543,8 @@ export default async function PaginaDocumento({
             </div>
           )}
 
-          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
-            <h2 className="text-base font-semibold text-texto-primario">Acciones</h2>
+          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <h2 className="text-titulo-panel text-texto-primario">Acciones</h2>
             <AccionesDocumento
               documentoId={doc.id}
               tipo={doc.tipo}
@@ -564,8 +566,8 @@ export default async function PaginaDocumento({
           </div>
 
           {cobrable && estadoCobro && (
-            <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp6 py-esp5 shadow-xs">
-              <h2 className="text-base font-semibold text-texto-primario">Cobros</h2>
+            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+              <h2 className="text-titulo-panel text-texto-primario">Cobros</h2>
               <Cobros
                 key={`${cobros?.length ?? 0}-${estadoCobro.pendiente}`}
                 documentoId={doc.id}

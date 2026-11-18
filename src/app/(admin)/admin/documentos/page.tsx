@@ -2,7 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
+import { PestanasEnlace } from "@/components/ui/pestanas";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import {
@@ -60,7 +62,7 @@ const COBROS = [
 ] as const;
 
 const PILDORA =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-completo px-esp3 text-sm transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 md:text-xs";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-md px-esp3 text-sm font-semibold transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 md:text-xs";
 
 type Filtros = {
   tipo?: string;
@@ -317,53 +319,46 @@ export default async function PaginaDocumentos({
 
   return (
     <div className="flex flex-col gap-esp5">
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">Documentos</h1>
-          <p className="tabular-nums text-sm text-texto-secundario">
+      <CabeceraPagina
+        titulo="Documentos"
+        subtitulo={
+          <span className="tabular-nums">
             Presupuestos, albaranes y facturas · {total} resultado{total === 1 ? "" : "s"}
-          </p>
-        </div>
-
-        {/* Selector Lista / Pipeline */}
-        <div
-          role="group"
-          aria-label="Modo de visualización"
-          className="inline-flex rounded-md border border-borde-default bg-fondo-superficie p-0.5 shadow-xs"
-        >
-          <Link
-            href={enlace(actual, { vista: "", pagina: "" })}
-            aria-current={vista === "lista" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
-              vista === "lista"
-                ? "bg-fondo-marca-sutil text-texto-marca"
-                : "text-texto-secundario hover:text-texto-primario"
-            }`}
-          >
-            <Icono nombre="lista" size={14} />
-            Lista
-          </Link>
-          <Link
-            href={enlace(actual, { vista: "pipeline", pagina: "" })}
-            aria-current={vista === "pipeline" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
-              vista === "pipeline"
-                ? "bg-fondo-marca-sutil text-texto-marca"
-                : "text-texto-secundario hover:text-texto-primario"
-            }`}
-          >
-            <Icono nombre="kanban" size={14} />
-            Pipeline
-          </Link>
-        </div>
-
-        <Link href="/admin/documentos/nuevo" className="shrink-0" aria-label="Nuevo documento">
-          <Boton>
-            <Icono nombre="mas" size={16} />
-            <span className="hidden sm:inline">Nuevo documento</span>
-          </Boton>
-        </Link>
-      </div>
+          </span>
+        }
+        acciones={
+          <>
+            <PestanasEnlace
+              etiqueta="Modo de visualización"
+              className="w-[200px]"
+              opciones={[
+                {
+                  href: enlace(actual, { vista: "", pagina: "" }),
+                  etiqueta: (
+                    <>
+                      <Icono nombre="lista" size={14} /> Lista
+                    </>
+                  ),
+                  activa: vista === "lista",
+                },
+                {
+                  href: enlace(actual, { vista: "pipeline", pagina: "" }),
+                  etiqueta: (
+                    <>
+                      <Icono nombre="kanban" size={14} /> Pipeline
+                    </>
+                  ),
+                  activa: vista === "pipeline",
+                },
+              ]}
+            />
+            <Link href="/admin/documentos/nuevo" className={clasesBoton("primario", "m", "shrink-0")} aria-label="Nuevo documento">
+              <Icono nombre="mas" size={16} />
+              <span className="hidden sm:inline">Nuevo documento</span>
+            </Link>
+          </>
+        }
+      />
 
       {/* Banner resumen de facturas insolutas 90+ días */}
       {totalCriticas90Global > 0 && (
@@ -372,7 +367,7 @@ export default async function PaginaDocumentos({
           aria-label="Alerta de facturas insolutas con más de 90 días"
           className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-critico text-texto-inverso">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
             <Icono nombre="alerta" size={18} />
           </div>
           <div className="min-w-0 flex-1">
@@ -425,7 +420,7 @@ export default async function PaginaDocumentos({
 
       {borradoresVacios > 0 && <LimpiarBorradores cantidad={borradoresVacios} />}
 
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp3 shadow-xs md:p-esp4">
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <form action="/admin/documentos" className="flex items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {estado && <input type="hidden" name="estado" value={estado} />}
@@ -445,7 +440,7 @@ export default async function PaginaDocumentos({
               defaultValue={q}
               placeholder="Buscar por número o cliente…"
               aria-label="Buscar documentos por número o cliente"
-              className="min-h-11 h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
+              className="min-h-11 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
             />
           </div>
           <Boton type="submit" variante="secundario">
@@ -455,35 +450,27 @@ export default async function PaginaDocumentos({
 
         {/* Nivel 1: tipo de documento */}
         <div className="flex flex-col gap-esp1">
-          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Tipo de documento</p>
-          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Tipo de documento">
-            {[{ valor: "", etiqueta: "Todos" }, ...TIPOS].map((t) => {
-              const activo = tipo === t.valor;
-              return (
-                <Link
-                  key={t.valor}
-                  href={enlace(actual, {
-                    tipo: t.valor,
-                    cobro: t.valor === "" || t.valor === "factura" ? cobro : "",
-                    pagina: "",
-                  })}
-                  aria-current={activo ? "true" : undefined}
-                  className={`${PILDORA} ${
-                    activo
-                      ? "bg-fondo-marca font-medium text-texto-sobre-marca"
-                      : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
-                  }`}
-                >
-                  {t.etiqueta}
-                </Link>
-              );
-            })}
+          <p className="text-etiqueta uppercase text-texto-secundario">Tipo de documento</p>
+          <div className="overflow-x-auto">
+            <PestanasEnlace
+              etiqueta="Tipo de documento"
+              className="min-w-[560px] max-w-[720px]"
+              opciones={[{ valor: "", etiqueta: "Todos" }, ...TIPOS].map((t) => ({
+                href: enlace(actual, {
+                  tipo: t.valor,
+                  cobro: t.valor === "" || t.valor === "factura" ? cobro : "",
+                  pagina: "",
+                }),
+                etiqueta: t.etiqueta,
+                activa: tipo === t.valor,
+              }))}
+            />
           </div>
         </div>
 
         {/* Nivel 2: cobros y estado */}
         <div className="flex flex-col gap-esp1">
-          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Cobro y estado</p>
+          <p className="text-etiqueta uppercase text-texto-secundario">Cobro y estado</p>
           <div className="flex flex-wrap gap-esp2" role="group" aria-label="Cobro y estado">
             {COBROS.map((c) => {
               const activo = cobro === c.valor;
@@ -539,7 +526,7 @@ export default async function PaginaDocumentos({
 
         {/* Nivel 3: pendientes de revisión (importación) */}
         <div className="flex flex-col gap-esp1">
-          <p className="text-micro font-semibold uppercase tracking-wide text-texto-terciario">Revisión</p>
+          <p className="text-etiqueta uppercase text-texto-secundario">Revisión</p>
           <div className="flex flex-wrap gap-esp2" role="group" aria-label="Revisión">
             {REVISION.map((r) => {
               const activo = revision === r.valor;
@@ -574,7 +561,7 @@ export default async function PaginaDocumentos({
                 key={c.clave}
                 href={enlace(actual, { [c.clave]: "", pagina: "" })}
                 aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-completo border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
               >
                 <span className="max-w-[60vw] truncate">{c.texto}</span>
                 <span aria-hidden="true" className="text-base leading-none text-texto-terciario">
@@ -593,7 +580,7 @@ export default async function PaginaDocumentos({
       </div>
 
       {(pdfsSinAsignar ?? []).length > 0 && (
-        <details className="rounded-lg border border-borde-aviso bg-fondo-superficie px-esp4 py-esp3 shadow-xs">
+        <details className="rounded-xl border border-borde-aviso bg-fondo-superficie px-esp4 py-esp3">
           <summary className="cursor-pointer text-sm font-semibold text-texto-primario">
             PDF de la importación sin documento asignado ({(pdfsSinAsignar ?? []).length})
           </summary>
@@ -669,8 +656,8 @@ export default async function PaginaDocumentos({
                       href={`/admin/documentos/${d.id}`}
                       className={
                         es90
-                          ? "flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/70 p-esp3 shadow-xs transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:bg-fondo-critico-sutil"
-                          : "flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie p-esp3 shadow-xs transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo"
+                          ? "flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/70 p-esp3 transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:bg-fondo-critico-sutil"
+                          : "flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie p-esp3 transition-[background-color,border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] hover:border-borde-campo"
                       }
                     >
                       <div className="flex items-start justify-between gap-esp2">
@@ -723,8 +710,8 @@ export default async function PaginaDocumentos({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
-          <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-micro font-semibold uppercase tracking-wider text-texto-terciario lg:flex">
+        <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+          <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-etiqueta uppercase text-texto-secundario lg:flex">
             <span className="flex-1">Documento y cliente</span>
             <span className="w-[100px]">Tipo</span>
             <span className="w-[100px]">Fecha</span>
@@ -748,7 +735,7 @@ export default async function PaginaDocumentos({
                   }`}
                 >
                   <div
-                    className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-md lg:flex ${
+                    className={`hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg lg:flex ${
                       es90 ? "bg-fondo-critico text-texto-inverso" : "bg-fondo-sutil text-icono-default"
                     }`}
                   >

@@ -1,5 +1,5 @@
 // Comprueba WCAG 2.2 AA sobre los tokens: `npm run contraste`. Sale con código 1 si algún par falla.
-import { fondo, texto, borde, icono, documento } from "../src/design/tokens";
+import { fondo, texto, borde, icono, documento, estadoDocumento, grafico } from "../src/design/tokens";
 
 const lum = (h: string) => {
   const [r = 0, g = 0, b = 0] = [1, 3, 5]
@@ -42,6 +42,18 @@ for (const b of ["lienzo", "superficie"]) {
   pares.push(["icono-secundario", icono.secundario, `fondo-${b}`, v(f, b), 3]);
   pares.push(["icono-default", icono.default, `fondo-${b}`, v(f, b), 3]);
 }
+// Sistema "Documentos": iconos sobre los fondos de la navegación y de las tarjetas (3:1).
+for (const b of ["sutil", "hover", "marca-sutil", "aviso-sutil"]) {
+  pares.push(["icono-default", icono.default, `fondo-${b}`, v(f, b), 3]);
+}
+pares.push(["icono-marca", icono.marca, "fondo-marca-sutil", v(f, "marca-sutil"), 3]);
+// Insignia redonda de estado del documento: icono sobre su fondo (3:1) y la etiqueta del tooltip (4,5:1).
+for (const [estado, { fondo: fe, icono: ie }] of Object.entries(estadoDocumento)) {
+  pares.push([`estadoDocumento.${estado}.icono`, ie, `estadoDocumento.${estado}.fondo`, fe, 3]);
+}
+pares.push(["texto-inverso (tooltip)", v(t, "inverso"), "grafico.tooltip", grafico.tooltip, 4.5]);
+// Las líneas de los gráficos son componentes gráficos: 3:1 sobre la tarjeta.
+for (const [k, c] of Object.entries(grafico.linea)) pares.push([`grafico.linea.${k}`, c, "fondo-superficie", v(f, "superficie"), 3]);
 
 let fallos = 0;
 for (const [a, ah, b, bh, min] of pares) {

@@ -18,7 +18,7 @@ export default function CargandoMisGastos() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="flex flex-col gap-1.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp3"
+            className="flex flex-col gap-1.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp3"
           >
             <Esqueleto className="h-3 w-16 bg-fondo-sutil" />
             <Esqueleto className="h-5 w-20" />
@@ -27,7 +27,7 @@ export default function CargandoMisGastos() {
       </div>
       <div className="flex flex-col gap-esp3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Esqueleto key={i} className="h-20 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+          <Esqueleto key={i} className="h-20 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
         ))}
       </div>
     </div>

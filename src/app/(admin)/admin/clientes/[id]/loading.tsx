@@ -29,12 +29,12 @@ export default function CargandoCliente() {
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <Esqueleto className="h-72 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
-          <Esqueleto className="h-44 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+          <Esqueleto className="h-72 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
+          <Esqueleto className="h-44 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
         </div>
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <Esqueleto className="h-72 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
-          <Esqueleto className="h-48 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+          <Esqueleto className="h-72 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
+          <Esqueleto className="h-48 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
         </div>
       </div>
     </div>

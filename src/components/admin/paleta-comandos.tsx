@@ -117,11 +117,11 @@ const COMANDOS: Comando[] = [
   {
     id: "nav-panel",
     grupo: "Navegación",
-    etiqueta: "Panel principal",
-    descripcion: "KPIs, aging de cobros y actividad reciente",
+    etiqueta: "Resumen",
+    descripcion: "KPIs, cobros y vencimientos, tareas y actividad reciente",
     href: "/admin/panel",
     icono: "panel",
-    palabrasClave: "inicio dashboard resumen",
+    palabrasClave: "inicio dashboard panel principal",
   },
   {
     id: "nav-clientes",
@@ -138,6 +138,15 @@ const COMANDOS: Comando[] = [
     descripcion: "Presupuestos, albaranes y facturas",
     href: "/admin/documentos",
     icono: "documentos",
+  },
+  {
+    id: "nav-cobros",
+    grupo: "Navegación",
+    etiqueta: "Cobros",
+    descripcion: "Saldo pendiente, antigüedad, vencidas e cobros registrados",
+    href: "/admin/cobros",
+    icono: "cobros",
+    palabrasClave: "cobro pendiente vencida aging antiguedad impagadas reclamar",
   },
   {
     id: "nav-campanas",
@@ -188,6 +197,15 @@ const COMANDOS: Comando[] = [
     descripcion: "Empresa, catálogo, pagos y equipo",
     href: "/admin/ajustes",
     icono: "ajustes",
+  },
+  {
+    id: "nav-ayuda",
+    grupo: "Navegación",
+    etiqueta: "Ayuda",
+    descripcion: "Guías rápidas, atajos de teclado y contacto",
+    href: "/admin/ayuda",
+    icono: "ayuda",
+    palabrasClave: "guia manual soporte atajos teclado como",
   },
 ];
 
@@ -339,7 +357,7 @@ export function PaletaComandos() {
           ) : (
             grupos.map((grupo) => (
               <div key={grupo.nombre} className="mb-esp2 last:mb-0">
-                <p className="px-esp3 py-1.5 text-micro font-semibold uppercase tracking-wider text-texto-terciario">
+                <p className="px-esp3 py-1.5 text-etiqueta uppercase text-texto-secundario">
                   {grupo.nombre}
                 </p>
                 <div className="flex flex-col gap-0.5">

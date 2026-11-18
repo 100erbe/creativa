@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { Boton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 
@@ -27,22 +28,18 @@ export default async function PaginaAvisos() {
 
   return (
     <div className="flex flex-col gap-esp6">
-      <div className="flex items-center gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-texto-primario">Avisos al equipo</h1>
-          <p className="text-sm text-texto-secundario">
-            Comunicaciones al equipo. Los urgentes se repiten hasta que cada persona confirma.
-          </p>
-        </div>
-        <Link href="/admin/avisos/nuevo" className="shrink-0" aria-label="Nuevo aviso">
-          <Boton>
+      <CabeceraPagina
+        titulo="Avisos al equipo"
+        subtitulo="Comunicaciones al equipo. Los urgentes se repiten hasta que cada persona confirma."
+        acciones={
+          <Link href="/admin/avisos/nuevo" className={clasesBoton("primario", "m", "shrink-0")} aria-label="Nuevo aviso">
             <Icono nombre="mas" size={16} />
             <span className="hidden sm:inline">Nuevo aviso</span>
-          </Boton>
-        </Link>
-      </div>
+          </Link>
+        }
+      />
 
-      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
+      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
         {avisos.map((a) => {
           const destinatarios = a.avisos_destinatarios ?? [];
           const total = destinatarios.length;

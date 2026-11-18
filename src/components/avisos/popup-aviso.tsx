@@ -126,7 +126,7 @@ export function PopupAviso() {
           className="flex min-w-0 flex-1 items-start gap-esp3 rounded-md text-left outline-offset-4"
           aria-label={`Abrir aviso: ${aviso.titulo}`}
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-marca-sutil">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-marca-sutil">
             <Icono nombre="avisos" size={18} className="text-icono-marca" />
           </span>
           <span className="min-w-0 flex-1">

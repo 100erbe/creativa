@@ -35,7 +35,7 @@ export function Campo({
 
   return (
     <div className={cn("flex flex-col gap-esp1", className)}>
-      <label htmlFor={id} className="text-xs font-medium text-texto-secundario">
+      <label htmlFor={id} className="text-etiqueta text-texto-secundario">
         {etiqueta}
       </label>
       <input
@@ -49,7 +49,7 @@ export function Campo({
         aria-invalid={!!error}
         aria-describedby={mensajeId}
         className={cn(
-          "min-h-11 h-11 md:min-h-9 md:h-9 rounded-md border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none transition-[border-color,box-shadow] duration-rapida ease-suave placeholder:text-texto-terciario",
+          "min-h-11 h-11 md:min-h-10 md:h-10 rounded-lg border bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none transition-[border-color,box-shadow] duration-rapida ease-suave placeholder:text-texto-terciario",
           "focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20",
           error ? "border-borde-peligro" : "border-borde-campo",
         )}

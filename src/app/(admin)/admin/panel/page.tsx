@@ -2,458 +2,429 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
-import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
+import { AlertaDescartable } from "@/components/ui/alerta-descartable";
+import { TarjetaKpiDinamica, type SerieKpi } from "@/components/ui/tarjeta-kpi-dinamica";
+import { Tarjeta, CabeceraTarjeta } from "@/components/ui/tarjeta";
+import { Insignia } from "@/components/ui/insignia";
+import { FilaTarea } from "@/components/ui/fila-tarea";
+import { FilaDocumento } from "@/components/ui/fila-documento";
+import { EstadoVacio } from "@/components/ui/estado-vacio";
+import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { euros, fechaLarga, fechaMedia } from "@/lib/formato";
+import { euros, fechaLarga } from "@/lib/formato";
 import { saludo } from "@/lib/saludo";
-import { clasificarAgingCobro, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { clasificarAgingCobro, ETIQUETA_TIPO } from "@/lib/documentos";
+import { hoyEnEspana } from "@/lib/estado-cuenta";
+import {
+  campanasActivas,
+  crearCalculadora,
+  facturado,
+  intervalos,
+  PERIODOS,
+  sumarDiasIso,
+  type Periodo,
+} from "@/lib/series-panel";
+import { cn } from "@/lib/cn";
+import { PanelCampanas, PanelDocumentosRecientes, type CampanaResumen, type DocumentoReciente } from "./paneles";
 
 export const dynamic = "force-dynamic";
+
+// Resumen (diseño Figma "01 · Dashboard — vista completa"): cabecera, alerta de datos pendientes,
+// 4 tarjetas KPI dinámicas (Semana / Mes / Año, tooltip al pasar el ratón), Cobros y vencimientos +
+// Tareas pendientes, Documentos recientes + Campañas. La antigüedad completa del saldo está en /admin/cobros.
+
+const DIAS_BORRADOR_ANTIGUO = 14;
 
 export default async function PaginaPanel() {
   const supabase = await createClient();
   const usuario = await obtenerUsuarioActual();
-  const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+  const ahora = new Date();
+  const hoy = hoyEnEspana(ahora);
 
   const resultados = await Promise.all([
     supabase
-      .from("documentos")
-      .select("total")
-      .in("tipo", ["factura", "rectificativa"])
-      .neq("estado", "borrador")
-      .gte("fecha", inicioMes),
-    supabase
       .from("v_estado_cobro")
-      .select("id, tipo, numero_completo, cliente_id, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"]),
-    supabase.from("v_progreso_campana").select("*").eq("estado_campana", "en_curso"),
+      .select("id, tipo, numero_completo, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro"),
+    supabase.from("cobros").select("documento_id, fecha, importe"),
+    supabase.from("campanas").select("id, estado, fecha_inicio, fecha_fin"),
+    supabase.from("v_progreso_campana").select("*"),
     supabase
       .from("documentos")
       .select("id, numero_completo, tipo, estado, total, cliente_razon_social, fecha, clientes(razon_social)")
       .order("fecha", { ascending: false })
-      .limit(5),
+      .order("id", { ascending: false })
+      .limit(30),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("revisar", true),
+    supabase
+      .from("documentos")
+      .select("id", { count: "exact", head: true })
+      .eq("estado", "borrador")
+      .lt("fecha", sumarDiasIso(hoy, -DIAS_BORRADOR_ANTIGUO)),
   ]);
   lanzarSiError(...resultados);
   const [
-    { data: facturadoMes },
-    { data: pendientesCobro },
-    { data: campanasActivas },
-    { data: documentosRecientes },
+    { data: estadoCobro },
+    { data: cobros },
+    { data: campanas },
+    { data: progreso },
+    { data: recientes },
     { count: porRevisar },
+    { count: borradoresAntiguos },
   ] = resultados;
 
-  const totalFacturado = (facturadoMes ?? []).reduce((s, d) => s + Number(d.total), 0);
-  const totalPendiente = (pendientesCobro ?? []).reduce((s, d) => s + Number(d.pendiente ?? 0), 0);
-
-  const conSaldo = (pendientesCobro ?? [])
-    .filter((d) => Number(d.pendiente ?? 0) > 0.01 && d.id != null)
+  // ── Cobros (mismo criterio que antes y que /admin/cobros) ─────────────────────────────
+  const filasCobro = (estadoCobro ?? []).filter((d) => d.id != null && d.fecha != null);
+  const pendientesAbiertos = filasCobro.filter((d) => ["pendiente", "parcial", "vencida"].includes(d.estado_cobro ?? ""));
+  const totalPendiente = pendientesAbiertos.reduce((s, d) => s + Number(d.pendiente ?? 0), 0);
+  const conSaldo = pendientesAbiertos
+    .filter((d) => Number(d.pendiente ?? 0) > 0.01)
     .map((d) => ({
       ...d,
+      id: d.id as number,
       pendienteNum: Number(d.pendiente ?? 0),
-      aging: clasificarAgingCobro(d.estado_cobro, d.fecha_vencimiento, hoy),
+      aging: clasificarAgingCobro(d.estado_cobro, d.fecha_vencimiento, ahora),
     }));
-
-  const alDia = conSaldo.filter((d) => d.aging.tramo === "al_dia");
-  const vencidas1a30 = conSaldo.filter((d) => d.aging.tramo === "vencida_30");
-  const vencidas31a89 = conSaldo.filter((d) => d.aging.tramo === "vencida_60");
+  const suma = (l: typeof conSaldo) => l.reduce((s, d) => s + d.pendienteNum, 0);
   const criticas90 = conSaldo
     .filter((d) => d.aging.tramo === "critica_90")
     .sort((a, b) => b.aging.diasVencido - a.aging.diasVencido);
-
-  const sumarPendiente = (lista: typeof conSaldo) => lista.reduce((s, d) => s + d.pendienteNum, 0);
-  const sumaAlDia = sumarPendiente(alDia);
-  const suma1a30 = sumarPendiente(vencidas1a30);
-  const suma31a89 = sumarPendiente(vencidas31a89);
-  const sumaCriticas90 = sumarPendiente(criticas90);
-  const totalAging = Math.max(0.01, sumaAlDia + suma1a30 + suma31a89 + sumaCriticas90);
-
-  const vencidasTotales = vencidas1a30.length + vencidas31a89.length + criticas90.length;
+  const vencidas = conSaldo.filter((d) => d.aging.tramo !== "al_dia");
   // Sin fecha de vencimiento una factura nunca cuenta como vencida: los KPI a cero no significan «al día».
   const sinVencimiento = conSaldo.filter((d) => d.tipo === "factura" && !d.fecha_vencimiento);
-  const sumaSinVencimiento = sumarPendiente(sinVencimiento);
+  const nSinVenc = sinVencimiento.length;
   const nPorRevisar = porRevisar ?? 0;
-  const totalPuntos = (campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_totales), 0);
-  const totalIncidencias = (campanasActivas ?? []).reduce((s, c) => s + Number(c.puntos_con_incidencia), 0);
+  const nBorradores = borradoresAntiguos ?? 0;
 
-  const listaPrioritaria =
-    criticas90.length > 0
-      ? criticas90.slice(0, 6)
-      : [...vencidas31a89, ...vencidas1a30].sort((a, b) => b.aging.diasVencido - a.aging.diasVencido).slice(0, 4);
+  // ── Series de las tarjetas KPI ─────────────────────────────────────────────────────────
+  const docs = filasCobro.map((d) => ({
+    id: d.id as number,
+    fecha: d.fecha as string,
+    fechaVencimiento: d.fecha_vencimiento,
+    total: Number(d.total ?? 0),
+  }));
+  const calc = crearCalculadora(
+    docs,
+    (cobros ?? []).map((c) => ({ documentoId: c.documento_id, fecha: c.fecha, importe: Number(c.importe) })),
+  );
+  const fechasCampanas = (campanas ?? []).map((c) => ({ estado: c.estado, inicio: c.fecha_inicio, fin: c.fecha_fin }));
+  const progresoCampanas = progreso ?? [];
+  const enCurso = progresoCampanas.filter((c) => c.estado_campana === "en_curso");
+  const nEnCurso = enCurso.length;
+  const totalPuntos = enCurso.reduce((s, c) => s + Number(c.puntos_totales ?? 0), 0);
+  const totalIncidencias = enCurso.reduce((s, c) => s + Number(c.puntos_con_incidencia ?? 0), 0);
+  const sumaCriticas90 = suma(criticas90);
 
-  const tramos = [
-    {
-      clave: "al_dia",
-      etiqueta: "En plazo",
-      cantidad: alDia.length,
-      importe: sumaAlDia,
-      porcentaje: (sumaAlDia / totalAging) * 100,
-      colorBarra: "bg-texto-info",
-      punto: "bg-texto-info",
-      href: "/admin/documentos?cobro=pendiente",
-      destacado: false,
-    },
-    {
-      clave: "1_30",
-      etiqueta: "1–30 días",
-      cantidad: vencidas1a30.length,
-      importe: suma1a30,
-      porcentaje: (suma1a30 / totalAging) * 100,
-      colorBarra: "bg-texto-aviso",
-      punto: "bg-texto-aviso",
-      href: "/admin/documentos?cobro=vencida",
-      destacado: false,
-    },
-    {
-      clave: "31_89",
-      etiqueta: "31–89 días",
-      cantidad: vencidas31a89.length,
-      importe: suma31a89,
-      porcentaje: (suma31a89 / totalAging) * 100,
-      colorBarra: "bg-fondo-peligro",
-      punto: "bg-fondo-peligro",
-      href: "/admin/documentos?cobro=vencida",
-      destacado: false,
-    },
-    {
-      clave: "90_mas",
-      etiqueta: "90+ días (Crítico)",
-      cantidad: criticas90.length,
-      importe: sumaCriticas90,
-      porcentaje: (sumaCriticas90 / totalAging) * 100,
-      colorBarra: "bg-fondo-critico",
-      punto: "bg-fondo-critico",
-      href: "/admin/documentos?cobro=vencida_90",
-      destacado: criticas90.length > 0,
-    },
-  ];
+  // Control: la serie histórica se reconstruye con documentos + cobros; hoy debe dar lo mismo que la vista.
+  const reconstruidoHoy = calc.pendiente(hoy);
+  if (Math.abs(reconstruidoHoy - totalPendiente) > 0.01) {
+    console.warn(
+      `[panel] El saldo reconstruido (${reconstruidoHoy.toFixed(2)}) no coincide con v_estado_cobro (${totalPendiente.toFixed(2)}).`,
+    );
+  }
+
+  const ints = Object.fromEntries(PERIODOS.map((p) => [p, intervalos(p, hoy)])) as Record<Periodo, ReturnType<typeof intervalos>>;
+  const serie = (fn: (p: Periodo) => SerieKpi) => Object.fromEntries(PERIODOS.map((p) => [p, fn(p)])) as Record<Periodo, SerieKpi>;
+  const ultimo = (p: Periodo) => ints[p].length - 1;
+
+  const serieFacturacion = serie((p) => {
+    const puntos = ints[p].map((i) => {
+      const v = facturado(docs, i.inicio, i.fin);
+      return { etiqueta: i.etiqueta, valor: v, texto: euros(v) };
+    });
+    return { valor: euros(puntos.reduce((s, x) => s + x.valor, 0)), puntos };
+  });
+  // Saldos: el último punto es exactamente la cifra de hoy (la misma de /admin/cobros).
+  const seriePendiente = serie((p) => ({
+    valor: euros(totalPendiente),
+    puntos: ints[p].map((i, k) => {
+      const v = k === ultimo(p) ? totalPendiente : calc.pendiente(i.fin);
+      return { etiqueta: i.etiqueta, valor: Math.max(0, v), texto: euros(v) };
+    }),
+  }));
+  const serieRiesgo = serie((p) => ({
+    valor: euros(sumaCriticas90),
+    puntos: ints[p].map((i, k) => {
+      const v = k === ultimo(p) ? sumaCriticas90 : calc.vencido90(i.fin);
+      return { etiqueta: i.etiqueta, valor: v, texto: euros(v) };
+    }),
+  }));
+  const activas = (n: number) => `${n} activa${n === 1 ? "" : "s"}`;
+  const serieCampanas = serie((p) => ({
+    valor: String(nEnCurso),
+    puntos: ints[p].map((i, k) => {
+      const v = k === ultimo(p) ? nEnCurso : campanasActivas(fechasCampanas, i.fin);
+      return { etiqueta: i.etiqueta, valor: v, texto: activas(v) };
+    }),
+  }));
+
+  // ── Tareas pendientes (generadas a partir de los datos) ───────────────────────────────
+  const tareas: { titulo: string; detalle: string; href: string }[] = [];
+  if (nSinVenc > 0)
+    tareas.push({
+      titulo: "Añadir vencimientos",
+      detalle: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} · ${euros(suma(sinVencimiento))}`,
+      href: "/admin/documentos?revision=sin_vencimiento&cobro=pendiente&tipo=factura",
+    });
+  if (nPorRevisar > 0)
+    tareas.push({
+      titulo: "Validar importación",
+      detalle: `${nPorRevisar} documento${nPorRevisar === 1 ? "" : "s"} pendiente${nPorRevisar === 1 ? "" : "s"}`,
+      href: "/admin/documentos?revision=revisar",
+    });
+  if (criticas90.length > 0)
+    tareas.push({
+      titulo: "Reclamar las vencidas 90+ días",
+      detalle: `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} · ${euros(sumaCriticas90)}`,
+      href: "/admin/cobros?ver=90",
+    });
+  if (nBorradores > 0)
+    tareas.push({
+      titulo: "Revisar borradores antiguos",
+      detalle: `${nBorradores} con más de ${DIAS_BORRADOR_ANTIGUO} días sin emitir`,
+      href: "/admin/documentos?estado=borrador",
+    });
+
+  // ── Documentos recientes y campañas (para los paneles con pestañas) ───────────────────
+  const cobroPorId = new Map(filasCobro.map((d) => [d.id as number, d.estado_cobro]));
+  const documentosRecientes: DocumentoReciente[] = (recientes ?? []).map((d) => {
+    const cobro = cobroPorId.get(d.id);
+    const pago: DocumentoReciente["pago"] =
+      d.tipo === "factura" && d.estado !== "anulado"
+        ? cobro === "cobrada"
+          ? { texto: "Cobrada", tono: "exito" }
+          : cobro === "vencida"
+            ? { texto: "Vencida", tono: "peligro" }
+            : cobro === "parcial"
+              ? { texto: "Cobro parcial", tono: "aviso" }
+              : undefined
+        : undefined;
+    const cliente = Array.isArray(d.clientes) ? d.clientes[0] : d.clientes;
+    return {
+      id: d.id,
+      tipo: d.tipo,
+      tipoEtiqueta: ETIQUETA_TIPO[d.tipo] ?? d.tipo,
+      numero: d.numero_completo ?? "Borrador",
+      cliente: d.cliente_razon_social ?? cliente?.razon_social ?? null,
+      importe: euros(Number(d.total)),
+      estado: d.estado,
+      pago,
+    };
+  });
+  const campanasResumen: CampanaResumen[] = progresoCampanas
+    .filter((c) => c.campana_id != null && c.estado_campana != null)
+    .map((c) => ({
+      id: c.campana_id as number,
+      nombre: c.campana ?? "Campaña",
+      cliente: c.cliente,
+      estado: c.estado_campana as CampanaResumen["estado"],
+      hechos: Number(c.puntos_instalados ?? 0) + Number(c.puntos_verificados ?? 0) + Number(c.puntos_retirados ?? 0),
+      total: Number(c.puntos_totales ?? 0),
+      incidencias: Number(c.puntos_con_incidencia ?? 0),
+    }));
+
+  const nombre = usuario?.nombre ? `${saludo(ahora)}, ${usuario.nombre} · ` : "";
 
   return (
-    <div className="flex flex-col gap-esp6">
-      <div className="flex items-center gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">
-            {saludo()}, {usuario?.nombre}
-          </h1>
-          <p className="text-sm capitalize text-texto-secundario">{fechaLarga(hoy)}</p>
-        </div>
-        <Link href="/admin/documentos/nuevo" className="shrink-0" aria-label="Nuevo documento">
-          <Boton>
+    <div className="flex flex-col gap-esp5">
+      <CabeceraPagina
+        titulo="Resumen"
+        subtitulo={
+          <>
+            {nombre}
+            <span className={nombre ? "" : "capitalize"}>{fechaLarga(hoy)}</span>
+          </>
+        }
+        acciones={
+          <Link href="/admin/documentos/nuevo" className={clasesBoton("primario", "m", "shrink-0")} aria-label="Nuevo documento">
             <Icono nombre="mas" size={16} />
             <span className="hidden sm:inline">Nuevo documento</span>
-          </Boton>
-        </Link>
-      </div>
+          </Link>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-esp3 md:gap-esp4 xl:grid-cols-4">
-        <TarjetaKpi
-          etiqueta="Facturado este mes"
-          valor={euros(totalFacturado)}
-          href="/admin/documentos?tipo=factura"
-        />
-        <TarjetaKpi
-          etiqueta="Pendiente de cobro"
-          valor={euros(totalPendiente)}
-          href={vencidasTotales > 0 ? "/admin/documentos?cobro=vencida" : "/admin/documentos?cobro=pendiente"}
-          detalle={vencidasTotales > 0 ? `${vencidasTotales} vencidas` : "al día"}
-          colorDetalle={vencidasTotales > 0 ? "text-texto-peligro" : "text-texto-exito"}
-          tono={vencidasTotales > 0 ? "aviso" : "default"}
-        />
-        <TarjetaKpi
-          etiqueta="Insoluto crítico (90+ días)"
-          valor={euros(sumaCriticas90)}
-          href="/admin/documentos?cobro=vencida_90"
-          detalle={
-            criticas90.length > 0
-              ? `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} > 90d`
-              : "sin riesgo > 90 días"
+      {(nSinVenc > 0 || nPorRevisar > 0) && (
+        <AlertaDescartable
+          claveSesion="panel-datos-pendientes"
+          titulo="Hay datos pendientes de revisar"
+          descripcion={[
+            nSinVenc > 0 ? `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} sin vencimiento` : null,
+            nPorRevisar > 0
+              ? `${nPorRevisar} documento${nPorRevisar === 1 ? "" : "s"} importado${nPorRevisar === 1 ? "" : "s"} por validar`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" y ")
+            .concat(".")}
+          accion={
+            <a href="#tareas-pendientes" className={clasesBoton("primario")}>
+              Ir a tareas
+            </a>
           }
-          colorDetalle={criticas90.length > 0 ? "text-texto-critico font-medium" : "text-texto-exito"}
-          tono={criticas90.length > 0 ? "critico" : "default"}
         />
-        <TarjetaKpi
-          etiqueta="Campañas activas"
-          href="/admin/campanas?estado=en_curso"
-          valor={String(campanasActivas?.length ?? 0)}
-          detalle={`${totalPuntos} puntos · ${totalIncidencias} incidencia${totalIncidencias === 1 ? "" : "s"}`}
-          colorDetalle={totalIncidencias > 0 ? "text-texto-peligro" : "text-texto-secundario"}
-          tono={totalIncidencias > 0 ? "peligro" : "default"}
-        />
-      </div>
-
-      {(sinVencimiento.length > 0 || nPorRevisar > 0) && (
-        <section
-          aria-label="Datos pendientes de completar"
-          className="flex flex-col gap-esp2 rounded-lg border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3"
-        >
-          <div className="flex items-center gap-esp2">
-            <Icono nombre="alerta" size={18} className="shrink-0 text-texto-aviso" />
-            <h2 className="text-sm font-semibold text-texto-primario">Las cifras de cobros no están completas</h2>
-          </div>
-          {sinVencimiento.length > 0 && (
-            <p className="text-sm text-texto-primario">
-              <strong className="font-semibold">{sinVencimiento.length}</strong> factura
-              {sinVencimiento.length === 1 ? "" : "s"} pendiente{sinVencimiento.length === 1 ? "" : "s"} (
-              <span className="tabular-nums">{euros(sumaSinVencimiento)}</span>) sin fecha de vencimiento: no aparecen
-              como vencidas ni en «90+ días».{" "}
-              <Link
-                href="/admin/documentos?revision=sin_vencimiento&cobro=pendiente&tipo=factura"
-                className="font-medium text-texto-marca hover:underline"
-              >
-                Ver facturas
-              </Link>
-            </p>
-          )}
-          {nPorRevisar > 0 && (
-            <p className="text-sm text-texto-primario">
-              <strong className="font-semibold">{nPorRevisar}</strong> documento{nPorRevisar === 1 ? "" : "s"} de la
-              importación por revisar.{" "}
-              <Link href="/admin/documentos?revision=revisar" className="font-medium text-texto-marca hover:underline">
-                Abrir la cola
-              </Link>
-            </p>
-          )}
-        </section>
       )}
 
-      {/* Sección prioritaria de Aging y facturas insolutas 90+ días */}
-      <section
-        aria-labelledby="titulo-aging"
-        className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs md:p-esp6"
-      >
-        <div className="flex flex-wrap items-center gap-esp2">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-esp2">
-              <h2 id="titulo-aging" className="text-base font-semibold text-texto-primario">
-                Control de cobros y facturas insolutas
-              </h2>
-              {criticas90.length > 0 && (
-                <Insignia tono="critico" solido>
-                  {criticas90.length} en riesgo 90+ días
-                </Insignia>
-              )}
-            </div>
-            <p className="text-xs text-texto-secundario">
-              Distribución de saldo pendiente por antigüedad desde el vencimiento.
-            </p>
-          </div>
-          <Link
-            href="/admin/documentos?cobro=vencida_90"
-            className="group inline-flex min-h-9 items-center gap-1 text-sm font-medium text-texto-marca transition-colors duration-rapida ease-suave hover:underline"
-          >
-            Revisar insolutas
-            <Icono nombre="flechaDerecha" size={14} className="transition-transform duration-rapida ease-salida group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-
-        {conSaldo.length > 0 && (
-          <div
-            className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-completo bg-fondo-sutil"
-            role="img"
-            aria-label="Distribución de importes pendientes por antigüedad"
-          >
-            {tramos.map((t) =>
-              t.importe > 0 ? (
-                <div
-                  key={t.clave}
-                  className={t.colorBarra}
-                  style={{ width: `${Math.max(2, t.porcentaje)}%` }}
-                  title={`${t.etiqueta}: ${euros(t.importe)}`}
-                />
-              ) : null,
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-esp2 lg:grid-cols-4">
-          {tramos.map((t) => (
-            <Link
-              key={t.clave}
-              href={t.href}
-              className={
-                t.destacado
-                  ? "flex flex-col gap-1 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 p-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil"
-                  : "flex flex-col gap-1 rounded-md border border-borde-default bg-fondo-sutil/50 p-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
-              }
-            >
-              <div className="flex items-center gap-1.5">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${t.punto}`} aria-hidden="true" />
-                <span
-                  className={`truncate text-xs font-medium ${t.destacado ? "text-texto-critico" : "text-texto-secundario"}`}
-                >
-                  {t.etiqueta}
-                </span>
-              </div>
-              <p
-                className={`tabular-nums text-base font-semibold ${t.destacado ? "text-texto-critico" : "text-texto-primario"}`}
-              >
-                {euros(t.importe)}
-              </p>
-              <p className="tabular-nums text-micro text-texto-terciario">
-                {t.cantidad} factura{t.cantidad === 1 ? "" : "s"}
-              </p>
-            </Link>
-          ))}
-        </div>
-
-        {listaPrioritaria.length > 0 ? (
-          <div className="flex flex-col gap-esp2 border-t border-borde-default pt-esp3">
-            <p className="text-micro font-semibold uppercase tracking-wider text-texto-terciario">
-              {criticas90.length > 0 ? "Atención prioritaria — Vencidas 90+ días" : "Próximas facturas vencidas"}
-            </p>
-            <div className="flex flex-col gap-esp2">
-              {listaPrioritaria.map((d) => {
-                const es90 = d.aging.esCritica90;
-                return (
-                  <Link
-                    key={d.id}
-                    href={`/admin/documentos/${d.id}`}
-                    className={
-                      es90
-                        ? "group flex flex-col gap-esp2 rounded-md border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-critico-sutil sm:flex-row sm:items-center sm:gap-esp4"
-                        : "group flex flex-col gap-esp2 rounded-md border border-borde-default bg-fondo-superficie px-esp3 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil sm:flex-row sm:items-center sm:gap-esp4"
-                    }
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-esp2">
-                        <span className="truncate text-sm font-semibold text-texto-primario">
-                          {d.cliente_razon_social ?? "Sin cliente"}
-                        </span>
-                        <Insignia tono={es90 ? "critico" : "peligro"} solido={es90}>
-                          {es90 ? `90+ días · ${d.aging.diasVencido}d` : `${d.aging.diasVencido}d vencida`}
-                        </Insignia>
-                      </div>
-                      <p className="tabular-nums mt-0.5 text-xs text-texto-secundario">
-                        {d.numero_completo ?? `Doc #${d.id}`}
-                        {d.fecha_vencimiento ? ` · Venció el ${fechaMedia(d.fecha_vencimiento)}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between gap-esp4 sm:justify-end">
-                      <span
-                        className={`tabular-nums text-sm font-semibold ${es90 ? "text-texto-critico" : "text-texto-peligro"}`}
-                      >
-                        {euros(d.pendienteNum)}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-texto-marca">
-                        Gestionar cobro
-                        <Icono nombre="flechaDerecha" size={13} className="transition-transform duration-rapida ease-salida group-hover:translate-x-0.5" />
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          sinVencimiento.length > 0 ? (
-            <p className="rounded-md bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs font-medium text-texto-aviso">
-              No hay facturas vencidas con fecha, pero {sinVencimiento.length} pendiente
-              {sinVencimiento.length === 1 ? "" : "s"} no tiene{sinVencimiento.length === 1 ? "" : "n"} vencimiento.
-            </p>
-          ) : (
-            <p className="rounded-md bg-fondo-exito-sutil px-esp3 py-esp2 text-xs font-medium text-texto-exito">
-              Todas las facturas emitidas están al día o sin vencimientos pendientes.
-            </p>
-          )
-        )}
-      </section>
-
-      <div className="flex flex-1 flex-col gap-esp6 xl:flex-row">
-        <div className="flex min-w-0 flex-1 flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6">
-          <div className="flex items-center">
-            <h2 className="flex-1 text-base font-semibold text-texto-primario">Campañas en curso</h2>
-            <Link href="/admin/campanas?vista=pipeline" className="text-sm font-medium text-texto-marca hover:underline">
-              Ver pipeline
-            </Link>
-          </div>
-          <div className="flex flex-col divide-y divide-borde-default">
-            {(campanasActivas ?? []).map((c) => {
-              const total = Number(c.puntos_totales) || 1;
-              const hechos =
-                Number(c.puntos_instalados) + Number(c.puntos_verificados) + Number(c.puntos_retirados);
-              return (
-                <Link
-                  key={c.campana_id}
-                  href={`/admin/campanas/${c.campana_id}`}
-                  className="-mx-esp2 flex items-center gap-esp4 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-texto-primario">{c.campana}</p>
-                    <p className="truncate text-xs text-texto-terciario">{c.cliente}</p>
-                  </div>
-                  <div className="hidden w-[160px] items-center gap-esp3 sm:flex">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
-                      <div
-                        className="h-full rounded-completo bg-fondo-marca transition-[width] duration-lenta ease-salida"
-                        style={{ width: `${Math.round((hechos / total) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="tabular-nums text-xs text-texto-secundario">
-                      {hechos}/{total}
-                    </span>
-                  </div>
-                  <Insignia
-                    tono={
-                      Number(c.puntos_con_incidencia) > 0
-                        ? "peligro"
-                        : (TONO_POR_ESTADO[c.estado_campana ?? ""] ?? "neutro")
-                    }
-                  >
-                    {Number(c.puntos_con_incidencia) > 0 ? "Incidencia" : "En curso"}
-                  </Insignia>
-                </Link>
-              );
-            })}
-            {(campanasActivas ?? []).length === 0 && (
-              <p className="py-esp4 text-sm text-texto-terciario">No hay campañas en curso ahora mismo.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex w-full flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp4 py-esp5 shadow-xs md:px-esp6 xl:w-[420px]">
-          <div className="flex items-center">
-            <h2 className="flex-1 text-base font-semibold text-texto-primario">Documentos recientes</h2>
-            <Link href="/admin/documentos" className="text-sm font-medium text-texto-marca hover:underline">
-              Ver todos
-            </Link>
-          </div>
-          <div className="flex flex-col divide-y divide-borde-default">
-            {(documentosRecientes ?? []).map((d) => (
-              <Link
-                key={d.id}
-                href={`/admin/documentos/${d.id}`}
-                className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
-              >
-                <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-md bg-fondo-sutil sm:flex">
-                  <Icono nombre="documentos" size={18} className="text-icono-default" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario">
-                    {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
-                  </p>
-                  <p className="truncate text-sm font-medium text-texto-primario">
-                    {d.numero_completo ?? "Borrador"}
-                  </p>
-                  <p className="truncate text-xs text-texto-terciario">
-                    {d.cliente_razon_social ?? (Array.isArray(d.clientes) ? d.clientes[0] : d.clientes)?.razon_social}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <p className="tabular-nums whitespace-nowrap text-sm font-medium text-texto-primario">
-                    {euros(Number(d.total))}
-                  </p>
-                  <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
-                    {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
-                  </Insignia>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-esp4 sm:grid-cols-2 xl:grid-cols-4">
+        <TarjetaKpiDinamica
+          etiqueta="Facturación"
+          significado="Documentos emitidos en el período"
+          tipo="barras"
+          color="facturacion"
+          series={serieFacturacion}
+          nota={{ texto: "Ver documentos", href: "/admin/documentos?tipo=factura", tono: "marca" }}
+        />
+        <TarjetaKpiDinamica
+          etiqueta="Pendiente de cobro"
+          significado="Saldo al cierre · no es facturación"
+          tipo="linea"
+          color="cobro"
+          series={seriePendiente}
+          nota={
+            nSinVenc > 0
+              ? { texto: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} sin vencimiento`, href: "/admin/cobros?ver=sin_vencimiento" }
+              : vencidas.length > 0
+                ? { texto: `${vencidas.length} vencida${vencidas.length === 1 ? "" : "s"}`, href: "/admin/cobros?ver=vencidas", tono: "peligro" }
+                : { texto: "Ver cobros", href: "/admin/cobros", tono: "marca" }
+          }
+        />
+        <TarjetaKpiDinamica
+          etiqueta="Vencido · más de 90 días"
+          significado={nSinVenc > 0 ? "Importe conocido · evaluación parcial" : "Saldo vencido hace más de 90 días"}
+          tipo="linea"
+          color="riesgo"
+          series={serieRiesgo}
+          nota={
+            nSinVenc > 0
+              ? { texto: "Sin fecha: riesgo no evaluable", href: "/admin/cobros?ver=sin_vencimiento", tono: "peligro" }
+              : criticas90.length > 0
+                ? { texto: `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} por reclamar`, href: "/admin/cobros?ver=90", tono: "peligro" }
+                : { texto: "Sin riesgo conocido > 90 días" }
+          }
+        />
+        <TarjetaKpiDinamica
+          etiqueta="Campañas activas"
+          significado="Activas al cierre del período"
+          tipo="linea"
+          color="campanas"
+          series={serieCampanas}
+          nota={{
+            texto: `${totalPuntos} puntos · ${totalIncidencias} incidencia${totalIncidencias === 1 ? "" : "s"} actuales`,
+            href: "/admin/campanas?estado=en_curso",
+            tono: totalIncidencias > 0 ? "peligro" : "default",
+          }}
+        />
       </div>
+
+      <div className="flex flex-col gap-esp5 xl:flex-row">
+        {/* Cobros y vencimientos */}
+        <Tarjeta como="section" aria-labelledby="titulo-cobros" className="min-w-0 flex-1">
+          <CabeceraTarjeta
+            id="titulo-cobros"
+            titulo="Cobros y vencimientos"
+            estado={nSinVenc > 0 ? <Insignia tono="aviso">Datos parciales</Insignia> : undefined}
+          />
+          <div className="grid grid-cols-1 gap-esp4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-borde-default">
+            <Hecho etiqueta="Saldo pendiente" valor={euros(totalPendiente)} alcance={`${conSaldo.length} factura${conSaldo.length === 1 ? "" : "s"} con saldo`} />
+            <Hecho
+              etiqueta="Sin fecha de vencimiento"
+              valor={euros(suma(sinVencimiento))}
+              tono={nSinVenc > 0 ? "aviso" : undefined}
+              alcance={nSinVenc > 0 ? `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} por completar` : "Todas tienen vencimiento"}
+            />
+            <Hecho
+              etiqueta="Vencido 90+ días conocido"
+              valor={euros(sumaCriticas90)}
+              tono={criticas90.length > 0 ? "critico" : undefined}
+              alcance={nSinVenc > 0 ? "No confirma ausencia de riesgo" : `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"}`}
+            />
+          </div>
+          {nSinVenc > 0 && (
+            <div className="flex gap-esp3 rounded-lg bg-fondo-sutil px-esp4 py-esp3">
+              <Icono nombre="alerta" size={20} className="text-icono-default" />
+              <p className="text-meta font-medium text-texto-primario">
+                La antigüedad del saldo todavía no es fiable. Completa los vencimientos y valida los datos antes de
+                interpretar el riesgo.
+              </p>
+            </div>
+          )}
+          {criticas90.length > 0 && (
+            <div className="-mx-esp3 flex flex-col">
+              {criticas90.slice(0, 3).map((d) => (
+                <FilaDocumento
+                  key={d.id}
+                  href={`/admin/documentos/${d.id}`}
+                  cliente={d.cliente_razon_social}
+                  numero={d.numero_completo ?? `Doc #${d.id}`}
+                  tipo={ETIQUETA_TIPO[d.tipo ?? ""] ?? ""}
+                  importe={euros(d.pendienteNum)}
+                  estado="vencida"
+                  textoEstado={`Vencida hace ${d.aging.diasVencido} días`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="mt-auto flex flex-wrap items-center gap-esp3">
+            <p className="min-w-0 flex-1 text-etiqueta text-texto-secundario">
+              Antigüedad, facturas y clientes con saldo en Cobros.
+            </p>
+            <Link href="/admin/cobros" className={clasesBoton("secundario")}>
+              Ver cobros
+            </Link>
+          </div>
+        </Tarjeta>
+
+        {/* Tareas pendientes */}
+        <Tarjeta
+          como="section"
+          id="tareas-pendientes"
+          aria-labelledby="titulo-tareas"
+          className="w-full scroll-mt-esp6 xl:w-[448px] xl:shrink-0"
+        >
+          <CabeceraTarjeta id="titulo-tareas" titulo="Tareas pendientes" />
+          {tareas.length > 0 ? (
+            <div className="flex flex-col divide-y divide-borde-default">
+              {tareas.map((t) => (
+                <FilaTarea key={t.titulo} titulo={t.titulo} detalle={t.detalle} href={t.href} />
+              ))}
+            </div>
+          ) : (
+            <EstadoVacio icono="check" titulo="Todo al día" descripcion="No hay datos por completar ni cobros en riesgo." />
+          )}
+        </Tarjeta>
+      </div>
+
+      <div className="flex flex-col gap-esp5 xl:flex-row">
+        <PanelDocumentosRecientes documentos={documentosRecientes} />
+        <PanelCampanas campanas={campanasResumen} />
+      </div>
+    </div>
+  );
+}
+
+/** Un dato del panel «Cobros y vencimientos»: etiqueta 13/20, cifra 20/28, alcance 12/18. */
+function Hecho({
+  etiqueta,
+  valor,
+  alcance,
+  tono,
+}: {
+  etiqueta: string;
+  valor: string;
+  alcance: string;
+  tono?: "aviso" | "critico";
+}) {
+  return (
+    <div className="flex flex-col gap-esp2 sm:px-esp6 sm:first:pl-0 sm:last:pr-0">
+      <p className="text-meta font-medium text-texto-secundario">{etiqueta}</p>
+      <p
+        className={cn(
+          "tabular-nums text-importe",
+          tono === "aviso" ? "text-texto-aviso" : tono === "critico" ? "text-texto-critico" : "text-texto-primario",
+        )}
+      >
+        {valor}
+      </p>
+      <p className="text-etiqueta text-texto-secundario">{alcance}</p>
     </div>
   );
 }

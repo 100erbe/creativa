@@ -50,7 +50,7 @@ export default async function PaginaMisGastos({
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
       <div className="flex items-center gap-esp3">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold tracking-tight text-texto-primario">Mis gastos</h1>
+          <h1 className="text-2xl font-bold text-texto-primario">Mis gastos</h1>
           <p className="text-xs text-texto-secundario">Tickets y pequeños gastos de campo.</p>
         </div>
         <Link href="/app/gastos/nuevo" className="shrink-0">
@@ -89,14 +89,14 @@ export default async function PaginaMisGastos({
       <div className="grid grid-cols-3 gap-esp2">
         <Link
           href="/app/gastos?estado=pendiente"
-          className="flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5 shadow-xs"
+          className="flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5"
         >
           <span className="text-micro text-texto-terciario">Pendientes</span>
           <span className="tabular-nums text-sm font-semibold text-texto-primario">{euros(suma(pendientes))}</span>
         </Link>
         <Link
           href="/app/gastos?estado=aprobado"
-          className="flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5 shadow-xs"
+          className="flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5"
         >
           <span className="text-micro text-texto-terciario">Aprobados</span>
           <span className="tabular-nums text-sm font-semibold text-texto-exito">{euros(suma(aprobados))}</span>
@@ -105,8 +105,8 @@ export default async function PaginaMisGastos({
           href="/app/gastos?estado=rechazado"
           className={
             rechazados.length > 0
-              ? "flex flex-col gap-0.5 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp2.5 shadow-xs"
-              : "flex flex-col gap-0.5 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5 shadow-xs"
+              ? "flex flex-col gap-0.5 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/60 px-esp3 py-esp2.5"
+              : "flex flex-col gap-0.5 rounded-xl border border-borde-default bg-fondo-superficie px-esp3 py-esp2.5"
           }
         >
           <span className={`text-micro ${rechazados.length > 0 ? "text-texto-critico" : "text-texto-terciario"}`}>
@@ -136,7 +136,7 @@ export default async function PaginaMisGastos({
               key={f.valor}
               href={f.valor ? `/app/gastos?estado=${f.valor}` : "/app/gastos"}
               aria-current={activo ? "true" : undefined}
-              className={`tabular-nums inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors ${
+              className={`tabular-nums inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors ${
                 activo
                   ? f.valor === "rechazado"
                     ? "bg-fondo-critico text-texto-inverso"
@@ -151,7 +151,7 @@ export default async function PaginaMisGastos({
       </div>
 
       {visibles.length === 0 && (
-        <p className="rounded-lg border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
+        <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
           {filtroEstado ? "No hay gastos con este estado." : "Todavía no has registrado ningún gasto."}
         </p>
       )}
@@ -162,7 +162,7 @@ export default async function PaginaMisGastos({
           const editable = g.tipo === "menor" && (g.estado === "pendiente" || rechazado);
           const contenido = (
             <div
-              className={`flex flex-col gap-1.5 rounded-lg border px-esp4 py-esp3 shadow-xs transition-colors ${
+              className={`flex flex-col gap-1.5 rounded-lg border px-esp4 py-esp3 transition-colors ${
                 rechazado
                   ? "border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil/40"
                   : "border-borde-default bg-fondo-superficie"

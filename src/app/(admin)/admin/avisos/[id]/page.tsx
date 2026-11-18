@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { AccionesAviso, BotonReenviar } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -47,23 +48,27 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex max-w-3xl flex-col gap-esp5">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href="/admin/avisos"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          Avisos
-        </Link>
-        <div className="flex flex-wrap items-center gap-esp3">
-          <h1 className="min-w-0 flex-1 text-2xl font-semibold text-texto-primario">{a.titulo}</h1>
-          {a.urgente && <Insignia tono="peligro">Urgente</Insignia>}
-          {a.cerrado_en && <Insignia tono="neutro">Cerrado</Insignia>}
-        </div>
-        <p className="text-xs text-texto-terciario">Enviado el {fechaHora.format(new Date(a.creado_en))}</p>
-      </div>
+      <CabeceraPagina
+        antes={
+          <Link
+            href="/admin/avisos"
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            Avisos
+          </Link>
+        }
+        titulo={a.titulo}
+        subtitulo={`Enviado el ${fechaHora.format(new Date(a.creado_en))}`}
+        acciones={
+          <>
+            {a.urgente && <Insignia tono="peligro">Urgente</Insignia>}
+            {a.cerrado_en && <Insignia tono="neutro">Cerrado</Insignia>}
+          </>
+        }
+      />
 
-      <p className="whitespace-pre-line rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm text-texto-primario">
+      <p className="whitespace-pre-line rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm text-texto-primario">
         {a.cuerpo}
       </p>
 
@@ -72,7 +77,7 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
         {!a.cerrado_en && <AccionesAviso avisoId={a.id} />}
       </div>
 
-      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp5">
+      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp5">
         {filas.map((f) => {
           const sinDispositivo = !cuenta[f.usuario_id];
           return (

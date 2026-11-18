@@ -11,20 +11,22 @@ export type TonoInsignia =
   | "critico"
   | "info";
 
+// Sistema "Documentos": etiqueta rectangular (radio 8, padding 4/8, texto 12/18 seminegrita) sin borde,
+// como el estado "Datos parciales" de Figma. Solo la variante crítica conserva un borde para distinguirse.
 const tonos: Record<TonoInsignia, string> = {
-  neutro: "bg-fondo-sutil border-borde-default text-texto-secundario",
-  marca: "bg-fondo-marca-sutil border-borde-marca text-texto-marca",
-  exito: "bg-fondo-exito-sutil border-borde-exito text-texto-exito",
-  aviso: "bg-fondo-aviso-sutil border-borde-aviso text-texto-aviso",
-  peligro: "bg-fondo-peligro-sutil border-borde-peligro-sutil text-texto-peligro",
-  critico: "bg-fondo-critico-sutil border-borde-critico-sutil text-texto-critico font-semibold",
-  info: "bg-fondo-info-sutil border-borde-info text-texto-info",
+  neutro: "bg-fondo-hover text-texto-secundario",
+  marca: "bg-fondo-marca-sutil text-texto-marca",
+  exito: "bg-fondo-exito-sutil text-texto-exito",
+  aviso: "bg-fondo-aviso-sutil text-texto-aviso",
+  peligro: "bg-fondo-peligro-sutil text-texto-peligro",
+  critico: "bg-fondo-critico-sutil text-texto-critico ring-1 ring-inset ring-borde-critico-sutil",
+  info: "bg-fondo-info-sutil text-texto-info",
 };
 
 const tonosSolidos: Partial<Record<TonoInsignia, string>> = {
-  critico: "bg-fondo-critico border-borde-critico text-texto-inverso font-semibold",
-  peligro: "bg-fondo-peligro border-borde-peligro text-texto-inverso font-semibold",
-  marca: "bg-fondo-marca border-fondo-marca text-texto-sobre-marca font-semibold",
+  critico: "bg-fondo-critico text-texto-inverso",
+  peligro: "bg-fondo-peligro text-texto-inverso",
+  marca: "bg-fondo-marca text-texto-sobre-marca",
 };
 
 // Mapea los estados de negocio (documentos, campañas, puntos) a un tono.
@@ -32,8 +34,8 @@ const tonosSolidos: Partial<Record<TonoInsignia, string>> = {
 export const TONO_POR_ESTADO: Record<string, TonoInsignia> = {
   borrador: "neutro",
   pendiente: "aviso",
-  emitida: "aviso",
-  emitido: "aviso",
+  emitida: "marca",
+  emitido: "marca",
   en_curso: "info",
   entregado: "info",
   planificada: "neutro",
@@ -70,15 +72,14 @@ export function Insignia({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-esp1 rounded-completo border px-esp2 py-[2px] text-xs font-medium transition-colors duration-rapida ease-suave",
+        "inline-flex items-center gap-esp1 whitespace-nowrap rounded-md px-esp2 py-esp1 text-etiqueta transition-colors duration-rapida ease-suave",
         solido ? (tonosSolidos[tono] ?? tonos[tono]) : tonos[tono],
         className,
       )}
     >
-      <span
-        className={cn("h-1.5 w-1.5 rounded-full bg-current", tono === "critico" && solido && "animate-pulse")}
-        aria-hidden="true"
-      />
+      {tono === "critico" && solido && (
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" aria-hidden="true" />
+      )}
       {children}
     </span>
   );

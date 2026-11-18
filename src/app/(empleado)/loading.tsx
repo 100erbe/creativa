@@ -11,8 +11,8 @@ export default function CargandoEmpleado() {
     >
       <span className="sr-only">Cargando contenido…</span>
       <Esqueleto className="h-6 w-40" />
-      <Esqueleto className="h-24 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
-      <Esqueleto className="h-24 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-24 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-24 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
     </div>
   );
 }

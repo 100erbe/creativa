@@ -16,10 +16,10 @@ export default function CargandoMapa() {
         <Esqueleto className="h-9 w-24 rounded-completo bg-fondo-sutil" />
         <Esqueleto className="h-9 w-28 rounded-completo bg-fondo-sutil" />
       </div>
-      <Esqueleto className="h-[360px] w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+      <Esqueleto className="h-[360px] w-full rounded-xl border border-borde-default bg-fondo-superficie" />
       <div className="flex flex-col gap-esp2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Esqueleto key={i} className="h-16 w-full rounded-lg border border-borde-default bg-fondo-superficie" />
+          <Esqueleto key={i} className="h-16 w-full rounded-xl border border-borde-default bg-fondo-superficie" />
         ))}
       </div>
     </div>

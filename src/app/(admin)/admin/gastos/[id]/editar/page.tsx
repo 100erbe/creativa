@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { Icono } from "@/components/ui/iconos";
 import { FormularioGasto } from "@/components/gastos/formulario-gasto";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { cargarOpcionesGasto, hoyEnEspana } from "../../opciones";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +21,18 @@ export default async function PaginaEditarGasto({ params }: { params: Promise<{ 
 
   return (
     <div className="flex max-w-3xl flex-col gap-esp5">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href={`/admin/gastos/${gasto.id}`}
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          {gasto.codigo}
-        </Link>
-        <h1 className="text-2xl font-semibold text-texto-primario">Editar gasto</h1>
-      </div>
+      <CabeceraPagina
+        antes={
+          <Link
+            href={`/admin/gastos/${gasto.id}`}
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            {gasto.codigo}
+          </Link>
+        }
+        titulo="Editar gasto"
+      />
       <FormularioGasto
         inicial={gasto}
         hoy={hoyEnEspana()}

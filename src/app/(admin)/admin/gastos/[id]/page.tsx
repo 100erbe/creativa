@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { euros, fechaMedia } from "@/lib/formato";
 import {
   BUCKET_TICKETS,
@@ -50,28 +51,32 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex max-w-3xl flex-col gap-esp5">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href="/admin/gastos"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          Gastos
-        </Link>
-        <div className="flex flex-wrap items-center gap-esp3">
-          <h1 className="text-2xl font-semibold text-texto-primario">{gasto.codigo}</h1>
-          <Insignia tono={TONO_ESTADO_GASTO[gasto.estado]}>{ETIQUETA_ESTADO_GASTO[gasto.estado]}</Insignia>
-          <Insignia tono={deducible ? "marca" : "neutro"}>{ETIQUETA_TIPO_GASTO[gasto.tipo]}</Insignia>
-          <div className="ml-auto">
-            {gasto.estado !== "reembolsado" && (
-              <Link href={`/admin/gastos/${gasto.id}/editar`}>
-                <Boton variante="secundario">Editar</Boton>
-              </Link>
-            )}
-          </div>
-        </div>
-        <p className="text-sm text-texto-secundario">{gasto.concepto}</p>
-      </div>
+      <CabeceraPagina
+        antes={
+          <Link
+            href="/admin/gastos"
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            Gastos
+          </Link>
+        }
+        titulo={
+          <span className="flex flex-wrap items-center gap-esp3">
+            {gasto.codigo}
+            <Insignia tono={TONO_ESTADO_GASTO[gasto.estado]}>{ETIQUETA_ESTADO_GASTO[gasto.estado]}</Insignia>
+            <Insignia tono={deducible ? "marca" : "neutro"}>{ETIQUETA_TIPO_GASTO[gasto.tipo]}</Insignia>
+          </span>
+        }
+        subtitulo={gasto.concepto}
+        acciones={
+          gasto.estado !== "reembolsado" ? (
+            <Link href={`/admin/gastos/${gasto.id}/editar`} className={clasesBoton("secundario")}>
+              Editar
+            </Link>
+          ) : undefined
+        }
+      />
 
       {gasto.estado === "rechazado" && gasto.motivo_rechazo && (
         <div className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3 text-sm text-texto-peligro">
@@ -79,7 +84,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5 md:grid-cols-3">
         <Dato etiqueta="Fecha">{fechaMedia(gasto.fecha)}</Dato>
         <Dato etiqueta="Categoría">{gasto.categorias_gasto?.nombre}</Dato>
         <Dato etiqueta="Responsable">{responsable}</Dato>
@@ -106,8 +111,8 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         )}
       </div>
 
-      <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
-        <h2 className="text-base font-semibold text-texto-primario">{deducible ? "Factura" : "Ticket"}</h2>
+      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+        <h2 className="text-titulo-panel text-texto-primario">{deducible ? "Factura" : "Ticket"}</h2>
         {urlTicket ? (
           esPdf ? (
             <a href={urlTicket} target="_blank" rel="noreferrer" className="text-sm font-medium text-texto-marca">

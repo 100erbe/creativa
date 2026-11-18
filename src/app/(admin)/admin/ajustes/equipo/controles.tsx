@@ -61,7 +61,7 @@ export function Equipo({ personas, yoId, dispositivos }: { personas: Persona[]; 
         </Boton>
       )}
 
-      <div className="flex flex-col divide-y divide-fondo-hover rounded-lg border border-borde-default bg-fondo-superficie px-esp5">
+      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp5">
         {personas.map((p) =>
           editando === p.id ? (
             <div key={p.id} className="py-esp3">
@@ -107,7 +107,7 @@ function FormularioPersona({ persona, esYo, onCerrar }: { persona?: Persona; esY
 
   return (
     <form
-      className="flex flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4"
+      className="flex flex-col gap-esp3 rounded-xl border border-borde-foco bg-fondo-superficie p-esp4"
       onSubmit={(e) => {
         e.preventDefault();
         ejecutar(async () => {
@@ -120,7 +120,7 @@ function FormularioPersona({ persona, esYo, onCerrar }: { persona?: Persona; esY
         });
       }}
     >
-      <h2 className="text-base font-semibold text-texto-primario">{esAlta ? "Nueva persona" : "Editar persona"}</h2>
+      <h2 className="text-titulo-panel text-texto-primario">{esAlta ? "Nueva persona" : "Editar persona"}</h2>
       <div className="grid grid-cols-1 gap-esp3 sm:grid-cols-2">
         <label className={etiqueta}>
           Nombre *

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
+import { PestanasEnlace } from "@/components/ui/pestanas";
 import { Icono } from "@/components/ui/iconos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO_CAMPANA as ETIQUETA_ESTADO } from "@/lib/etiquetas";
@@ -97,71 +99,54 @@ export default async function PaginaCampanas({
 
   return (
     <div className="flex flex-col gap-esp5">
-      <div className="flex flex-wrap items-center gap-esp3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-texto-primario">Campañas</h1>
-          <p className="text-sm text-texto-secundario">Soportes, instalaciones y fotos de cada campaña.</p>
-        </div>
-
-        {/* Selector Lista / Pipeline */}
-        <div
-          role="group"
-          aria-label="Modo de visualización"
-          className="inline-flex rounded-md border border-borde-default bg-fondo-superficie p-0.5 shadow-xs"
-        >
-          <Link
-            href={urlCampanas({ estado, vista: "lista" })}
-            aria-current={vista === "lista" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
-              vista === "lista"
-                ? "bg-fondo-marca-sutil text-texto-marca"
-                : "text-texto-secundario hover:text-texto-primario"
-            }`}
-          >
-            <Icono nombre="lista" size={14} />
-            Lista
-          </Link>
-          <Link
-            href={urlCampanas({ vista: "pipeline" })}
-            aria-current={vista === "pipeline" ? "true" : undefined}
-            className={`inline-flex min-h-9 items-center gap-1.5 rounded px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
-              vista === "pipeline"
-                ? "bg-fondo-marca-sutil text-texto-marca"
-                : "text-texto-secundario hover:text-texto-primario"
-            }`}
-          >
-            <Icono nombre="kanban" size={14} />
-            Pipeline
-          </Link>
-        </div>
-
-        <Link href="/admin/campanas/nueva" className="shrink-0" aria-label="Nueva campaña">
-          <Boton>
-            <Icono nombre="mas" size={16} />
-            <span className="hidden sm:inline">Nueva campaña</span>
-          </Boton>
-        </Link>
-      </div>
+      <CabeceraPagina
+        titulo="Campañas"
+        subtitulo="Soportes, instalaciones y fotos de cada campaña."
+        acciones={
+          <>
+            <PestanasEnlace
+              etiqueta="Modo de visualización"
+              className="w-[200px]"
+              opciones={[
+                {
+                  href: urlCampanas({ estado, vista: "lista" }),
+                  etiqueta: (
+                    <>
+                      <Icono nombre="lista" size={14} /> Lista
+                    </>
+                  ),
+                  activa: vista === "lista",
+                },
+                {
+                  href: urlCampanas({ vista: "pipeline" }),
+                  etiqueta: (
+                    <>
+                      <Icono nombre="kanban" size={14} /> Pipeline
+                    </>
+                  ),
+                  activa: vista === "pipeline",
+                },
+              ]}
+            />
+            <Link href="/admin/campanas/nueva" className={clasesBoton("primario", "m", "shrink-0")} aria-label="Nueva campaña">
+              <Icono nombre="mas" size={16} />
+              <span className="hidden sm:inline">Nueva campaña</span>
+            </Link>
+          </>
+        }
+      />
 
       {vista === "lista" && (
-        <div className="flex flex-wrap gap-esp2" role="group" aria-label="Filtrar campañas por estado">
-          {FILTROS.map((f) => {
-            const activo = estado === f.valor;
-            return (
-              <Link
-                key={f.valor}
-                href={urlCampanas({ estado: f.valor, vista: "lista" })}
-                aria-current={activo ? "true" : undefined}
-                className={`inline-flex min-h-10 items-center rounded-completo px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 ${
-                  activo
-                    ? "bg-fondo-marca text-texto-sobre-marca"
-                    : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
-                }`}
-              >
-                {f.etiqueta}
-              </Link>
-            );
-          })}
+        <div className="overflow-x-auto">
+          <PestanasEnlace
+            etiqueta="Filtrar campañas por estado"
+            className="min-w-[480px] max-w-[640px]"
+            opciones={FILTROS.map((f) => ({
+              href: urlCampanas({ estado: f.valor, vista: "lista" }),
+              etiqueta: f.etiqueta,
+              activa: estado === f.valor,
+            }))}
+          />
         </div>
       )}
 
@@ -197,7 +182,7 @@ export default async function PaginaCampanas({
                     <Link
                       key={c.id}
                       href={`/admin/campanas/${c.id}`}
-                      className={`flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 shadow-xs transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
+                      className={`flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
                         c.incidencias > 0
                           ? "border-borde-peligro-sutil border-l-4 border-l-borde-peligro hover:border-borde-peligro"
                           : "border-borde-default hover:border-borde-campo"
@@ -252,7 +237,7 @@ export default async function PaginaCampanas({
           })}
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-lg border border-borde-default bg-fondo-superficie shadow-xs">
+        <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
           {filas.map((c) => (
             <Link
               key={c.id}

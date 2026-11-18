@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
+import { contarNoLeidos } from "@/lib/push/bandeja";
 import {
   VistaCatalogo,
   type CategoriaAdmin,
@@ -76,6 +77,7 @@ export default async function PaginaCatalogo({
       categorias={categorias}
       productos={productos}
       nuevoInicial={nuevo === "1"}
+      noLeidos={await contarNoLeidos()}
     />
   );
 }

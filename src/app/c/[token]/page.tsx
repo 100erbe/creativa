@@ -55,13 +55,13 @@ export default async function PaginaPublicaCliente({
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-esp5 bg-fondo-lienzo px-esp4 py-esp6 sm:py-esp8">
       <Logo alto={40} className="self-start" />
 
-      <section className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs sm:p-esp5">
+      <section className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 sm:p-esp5">
         <div className="flex flex-wrap items-start justify-between gap-esp2">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium uppercase tracking-wide text-texto-terciario">
               {cabecera.cliente_nombre}
             </p>
-            <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-texto-primario sm:text-2xl">
+            <h1 className="mt-0.5 text-2xl font-bold text-texto-primario sm:text-titulo-pagina">
               {cabecera.campana_nombre}
             </h1>
             <p className="mt-0.5 text-xs text-texto-secundario">
@@ -124,7 +124,7 @@ export default async function PaginaPublicaCliente({
         {filas.map((p) => (
           <div
             key={p.punto_id}
-            className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-superficie p-esp4 shadow-xs sm:p-esp5"
+            className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 sm:p-esp5"
           >
             <div className="flex items-start gap-esp3">
               <div className="min-w-0 flex-1">

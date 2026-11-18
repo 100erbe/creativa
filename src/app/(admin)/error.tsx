@@ -10,7 +10,7 @@ export default function ErrorAdmin({ error, reset }: { error: Error & { digest?:
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-esp4 py-esp8 text-center">
-      <h1 className="text-xl font-semibold text-texto-primario">No se han podido cargar los datos</h1>
+      <h1 className="text-2xl font-bold text-texto-primario">No se han podido cargar los datos</h1>
       <p className="text-sm text-texto-secundario">
         Ha habido un problema al consultar la información. Tus datos no se han perdido: prueba de nuevo y, si
         sigue fallando, avisa a quien administra la app.

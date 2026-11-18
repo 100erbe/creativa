@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 
 /** Estilo de campo: 44px y 16px en móvil (evita el zoom de iOS), compacto en escritorio. */
 export const CAMPO =
-  "h-11 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none transition-[border-color,box-shadow,background-color] duration-rapida ease-suave focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
+  "h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base text-texto-primario outline-none transition-[border-color,box-shadow,background-color] duration-rapida ease-suave focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 disabled:bg-fondo-sutil disabled:opacity-60 md:h-9 md:text-sm";
 
 /**
  * Buscador genérico.
@@ -81,7 +81,7 @@ export function PanelBusqueda({
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:hidden"
         >
           <Icono nombre="atras" size={20} />
         </button>

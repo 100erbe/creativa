@@ -32,7 +32,7 @@ type Asignado = { id: number; usuarioId: string; nombre: string; estado: string;
 type Candidato = { id: string; nombre: string };
 
 const CLASE_SELECT_COMPACTO =
-  "min-h-11 h-11 md:min-h-8 md:h-8 w-full rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-[9px] text-base leading-6 text-texto-primario outline-none focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50 md:py-[5px] md:text-xs md:leading-5";
+  "min-h-11 h-11 md:min-h-8 md:h-8 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-[9px] text-base leading-6 text-texto-primario outline-none focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50 md:py-[5px] md:text-xs md:leading-5";
 
 const CLASE_ACCION_COMPACTA =
   "inline-flex min-h-11 h-11 md:min-h-8 md:h-8 items-center justify-center gap-1.5 rounded-md px-esp3 text-sm font-medium transition-colors duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 md:text-xs";
@@ -170,7 +170,7 @@ export function ControlesPunto({
               if (!(await confirmar("¿Eliminar este punto? No se puede deshacer."))) return;
               ejecutar(() => desenvolver(eliminarPuntoCampana(campanaId, puntoId)));
             }}
-            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-md border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
+            className="inline-flex min-h-11 h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-texto-secundario transition-colors duration-rapida ease-suave hover:border-borde-peligro-sutil hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:cursor-not-allowed disabled:opacity-50 md:min-h-8 md:h-8 md:w-8"
           >
             <Icono nombre="eliminar" size={15} />
           </button>
@@ -294,7 +294,7 @@ export function EnlaceCliente({
           value={url}
           aria-label="Enlace público para el cliente"
           onFocus={(e) => e.currentTarget.select()}
-          className="h-9 min-w-[200px] flex-1 rounded-md border border-borde-campo bg-fondo-sutil px-esp3 font-mono text-xs text-texto-secundario md:h-8"
+          className="h-9 min-w-[200px] flex-1 rounded-lg border border-borde-campo bg-fondo-sutil px-esp3 font-mono text-xs text-texto-secundario md:h-8"
         />
         <Boton
           tamano="s"
@@ -422,7 +422,7 @@ export function EditarCampana({
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   return (
     <form
-      className="animate-estado-entrar mt-esp3 flex w-full basis-full max-w-2xl flex-col gap-esp3 rounded-lg border border-borde-foco bg-fondo-superficie p-esp4 shadow-xs"
+      className="animate-estado-entrar mt-esp3 flex w-full basis-full max-w-2xl flex-col gap-esp3 rounded-xl border border-borde-foco bg-fondo-superficie p-esp4"
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
@@ -469,7 +469,7 @@ export function EditarCampana({
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           rows={2}
-          className="rounded-md border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
+          className="rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm"
         />
       </label>
       {error && <p className="text-xs text-texto-peligro">{error}</p>}

@@ -4,6 +4,7 @@ import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { fechaMedia } from "@/lib/formato";
 import { cuentaConectada, gmailConfigurado, urlRetornoOAuth } from "@/lib/gmail";
+import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { BotonDesconectar } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -23,20 +24,24 @@ export default async function PaginaGmail({
 
   return (
     <div className="flex max-w-3xl flex-col gap-esp6">
-      <div className="flex flex-col gap-esp2">
-        <Link
-          href="/admin/ajustes"
-          className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
-        >
-          <Icono nombre="atras" size={16} />
-          Ajustes
-        </Link>
-        <h1 className="text-2xl font-semibold text-texto-primario">Gmail</h1>
-        <p className="text-sm text-texto-secundario">
-          Con Gmail conectado, «Reclamar impagadas» deja en tu bandeja un borrador con el estado de cuenta y las
+      <CabeceraPagina
+        antes={
+          <Link
+            href="/admin/ajustes"
+            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          >
+            <Icono nombre="atras" size={16} />
+            Ajustes
+          </Link>
+        }
+        titulo="Gmail"
+        subtitulo={
+          <>
+            Con Gmail conectado, «Reclamar impagadas» deja en tu bandeja un borrador con el estado de cuenta y las
           facturas insolutas ya adjuntas. Tú lo revisas y lo envías desde Gmail.
-        </p>
-      </div>
+          </>
+        }
+      />
 
       {ok && (
         <p role="status" className="rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp3 py-esp2 text-sm text-texto-exito">
@@ -49,10 +54,10 @@ export default async function PaginaGmail({
         </p>
       )}
 
-      <section className="flex flex-col gap-esp4 rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+      <section className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
         <div className="flex flex-wrap items-center gap-esp3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold text-texto-primario">Cuenta conectada</h2>
+            <h2 className="text-titulo-panel text-texto-primario">Cuenta conectada</h2>
             {cuenta ? (
               <p className="text-sm text-texto-secundario">
                 <strong className="text-texto-primario">{cuenta.email}</strong> · desde el {fechaMedia(cuenta.conectadaEn)}
@@ -87,7 +92,7 @@ export default async function PaginaGmail({
         </p>
       </section>
 
-      <details className="rounded-lg border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm text-texto-secundario">
+      <details className="rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm text-texto-secundario">
         <summary className="cursor-pointer font-medium text-texto-primario">Configuración inicial (una sola vez)</summary>
         <ol className="mt-esp3 flex list-decimal flex-col gap-esp2 pl-esp5">
           <li>

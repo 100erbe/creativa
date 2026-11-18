@@ -18,11 +18,14 @@ export function Campana({
   href,
   etiquetaEnlace,
   noLeidos = 0,
+  conEtiqueta = false,
   className,
 }: {
   href: string;
   etiquetaEnlace: string;
   noLeidos?: number;
+  /** Botón «Avisos» de la cabecera de página (sistema "Documentos"): campana + texto, con borde. */
+  conEtiqueta?: boolean;
   className?: string;
 }) {
   const pathname = usePathname();
@@ -67,13 +70,21 @@ export function Campana({
         aria-label={pendientes > 0 ? `Avisos: ${pendientes} sin leer` : "Avisos"}
         aria-haspopup="dialog"
         className={cn(
-          "relative flex h-11 w-11 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press",
+          conEtiqueta
+            ? "relative flex min-h-11 items-center gap-esp2 rounded-lg border border-borde-default bg-fondo-superficie px-esp3 text-etiqueta text-texto-primario transition-[background-color,border-color,transform] duration-rapida ease-suave hover:border-borde-fuerte hover:bg-fondo-sutil active:scale-press md:min-h-[46px]"
+            : "relative flex h-11 w-11 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press",
           className,
         )}
       >
-        <Icono nombre="avisos" size={22} />
+        <Icono nombre="avisos" size={conEtiqueta ? 20 : 22} className="text-icono-default" />
+        {conEtiqueta && <span>Avisos</span>}
         {pendientes > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-micro font-semibold leading-none text-texto-inverso">
+          <span
+            className={cn(
+              "flex h-4 min-w-4 items-center justify-center rounded-full bg-fondo-peligro px-1 text-micro font-semibold leading-none text-texto-inverso",
+              conEtiqueta ? "tabular-nums" : "absolute right-1 top-1",
+            )}
+          >
             {pendientes > 9 ? "9+" : pendientes}
           </span>
         )}
@@ -100,11 +111,11 @@ export function Campana({
           />
           <div className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[85dvh] w-full flex-col gap-esp3 rounded-t-xl border border-borde-default bg-fondo-superficie p-esp4 shadow-elevado sm:mt-12 sm:w-[420px] sm:rounded-xl">
             <div className="flex items-center">
-              <h2 className="flex-1 text-base font-semibold text-texto-primario">Avisos</h2>
+              <h2 className="flex-1 text-titulo-panel text-texto-primario">Avisos</h2>
               <button
                 onClick={() => setAbierto(false)}
                 aria-label="Cerrar"
-                className="flex h-9 w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
               >
                 <Icono nombre="cerrar" size={20} />
               </button>
