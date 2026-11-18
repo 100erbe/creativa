@@ -162,7 +162,7 @@ export default async function PaginaCampana({
           Campañas
         </Link>
 
-        {/* Blocco 1: Header unificata con barra metriche compatta e condivisione cliente */}
+        {/* Blocco 1: Resoconto della campagna in evidenza (senza il link, che va in fondo) */}
         <section className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
           <div className="flex flex-wrap items-start justify-between gap-esp3 p-esp4 md:p-esp5">
             <div className="min-w-0 flex-1">
@@ -264,20 +264,6 @@ export default async function PaginaCampana({
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col gap-esp2 border-t border-borde-default bg-fondo-superficie px-esp4 py-esp3 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp5">
-            <span className="shrink-0 text-etiqueta uppercase text-texto-secundario">
-              Enlace cliente
-            </span>
-            <div className="min-w-0 flex-1">
-              <EnlaceCliente
-                campanaId={campanaId}
-                url={urlEnlace}
-                vistas={Number(enlace?.vistas ?? 0)}
-                expiraEn={enlace?.expira_en ?? null}
-              />
-            </div>
-          </div>
         </section>
       </div>
 
@@ -291,20 +277,14 @@ export default async function PaginaCampana({
         fechasCampana={fechasCampana}
         puntos={puntosParaMapa}
       >
-      {/* Blocco 2: Mappa panoramica & Riepilogo articoli */}
-      <ZonaMapaCampana
-        titulo={`Mapa · ${campana.nombre}`}
-        resumen={articulosPunto.length > 0 ? <ResumenArticulos articulos={articulosPunto} /> : null}
-      />
+      {/* Blocco 2: Mappa panoramica */}
+      <ZonaMapaCampana titulo={`Mapa · ${campana.nombre}`} />
 
-      {/* Blocco 3: Sezione Puntos strutturata ad alta densità */}
-      <section className="flex flex-col gap-esp3">
+      {/* Blocco 3: Puntos (come nella schermata del wizard) */}
+      <section className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:px-esp6 md:py-esp5">
         <div className="flex flex-wrap items-baseline justify-between gap-esp2">
           <div className="flex items-center gap-esp2">
-            <h2 className="text-titulo-panel text-texto-primario">Puntos</h2>
-            <span className="tabular-nums rounded-completo border border-borde-default bg-fondo-superficie px-2 py-0.5 text-xs font-medium text-texto-secundario">
-              {lista.length}
-            </span>
+            <h2 className="text-base font-semibold text-texto-primario">Puntos de la campaña · {lista.length}</h2>
           </div>
           {lista.length > 0 && (
             <span className="text-etiqueta text-texto-secundario">
@@ -313,10 +293,14 @@ export default async function PaginaCampana({
           )}
         </div>
 
+        {articulosPunto.length > 0 && <ResumenArticulos articulos={articulosPunto} />}
+
         {lista.length > 0 ? (
-          <div className="divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+          <div className="flex flex-col divide-y divide-borde-default">
             {lista.map((p, idx) => {
               const puntoCampana = puntosParaMapa[idx]!;
+              const articuloEtiqueta = p.linea_id != null ? articulosPunto.find((a) => a.id === p.linea_id)?.etiqueta : undefined;
+              const etiquetaResumen = articuloEtiqueta ?? (ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte);
               const asignados = (asignaciones ?? [])
                 .filter((a) => a.punto_id === p.id)
                 .map((a) => {
@@ -336,48 +320,37 @@ export default async function PaginaCampana({
                 <TarjetaPuntoCampana
                   key={p.id}
                   punto={puntoCampana}
-                  className={`flex flex-col gap-esp3 px-esp4 py-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/40 md:px-esp5 ${
-                    esIncidencia ? "border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/20" : ""
+                  className={`flex flex-col gap-esp2 px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil ${
+                    esIncidencia ? "border-l-4 border-l-borde-peligro bg-fondo-peligro-sutil/20 pl-esp3" : ""
                   }`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-esp3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-esp2">
-                        <span className="tabular-nums flex h-6 w-6 shrink-0 items-center justify-center rounded bg-fondo-sutil font-mono text-xs font-semibold text-texto-secundario">
-                          #{idx + 1}
-                        </span>
-                        <h3 className="text-sm font-semibold text-texto-primario">{nombreVisiblePunto(p.nombre)}</h3>
-                        <span className="rounded border border-borde-default bg-fondo-sutil px-1.5 py-0.5 text-xs font-medium text-texto-secundario">
-                          {ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte}
-                        </span>
-                        {p.piezas != null && (
-                          <span className="tabular-nums text-xs text-texto-terciario">{num(Number(p.piezas))} pzs</span>
-                        )}
-                        <Insignia tono={TONO_POR_ESTADO[p.estado] ?? "neutro"}>
-                          {ETIQUETA_ESTADO[p.estado] ?? p.estado}
-                        </Insignia>
-                      </div>
+                  <div className="flex flex-col gap-esp2 lg:flex-row lg:items-start lg:justify-between lg:gap-esp3">
+                    <div className="flex min-w-0 flex-1 items-start gap-esp3">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-completo bg-fondo-sutil text-xs font-medium text-texto-secundario">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-esp2">
+                          <p className="text-sm font-medium text-texto-primario">
+                            {nombreVisiblePunto(p.nombre)}{" "}
+                            <span className="font-normal text-texto-terciario">
+                              · {etiquetaResumen}
+                              {p.piezas != null ? ` · ${num(Number(p.piezas))} pzs` : ""}
+                            </span>
+                          </p>
+                          <Insignia tono={TONO_POR_ESTADO[p.estado] ?? "neutro"} className="shrink-0">
+                            {ETIQUETA_ESTADO[p.estado] ?? p.estado}
+                          </Insignia>
+                        </div>
 
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-esp3 gap-y-1 text-xs text-texto-secundario">
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${p.latitud},${p.longitud}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-medium text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-marca"
-                        >
-                          <Icono nombre="ubicacion" size={13} className="text-icono-marca" />
-                          <span>{p.direccion || "Ver en Google Maps"}</span>
-                        </a>
-                        {(p.fecha_colocacion_prevista || p.fecha_retirada_prevista) && (
-                          <span className="tabular-nums text-texto-terciario">
-                            {p.fecha_colocacion_prevista ? `Colocar ${fechaCorta(p.fecha_colocacion_prevista)}` : ""}
-                            {p.fecha_colocacion_prevista && p.fecha_retirada_prevista ? " · " : ""}
-                            {p.fecha_retirada_prevista ? `Retirar ${fechaCorta(p.fecha_retirada_prevista)}` : ""}
-                          </span>
-                        )}
-                      </div>
+                        {p.direccion && <p className="truncate text-xs text-texto-secundario">{p.direccion}</p>}
 
-                      {p.notas && <p className="mt-1 text-xs text-texto-terciario">{p.notas}</p>}
+                        <p className="text-xs text-texto-terciario">
+                          {p.fecha_colocacion_prevista ? `Colocar ${fechaCorta(p.fecha_colocacion_prevista)}` : "Sin fecha"}
+                          {p.fecha_retirada_prevista ? ` · retirar ${fechaCorta(p.fecha_retirada_prevista)}` : ""}
+                          {p.notas ? ` · ${p.notas}` : ""}
+                        </p>
+                      </div>
                     </div>
 
                     <ControlesPunto
@@ -391,13 +364,13 @@ export default async function PaginaCampana({
                   </div>
 
                   {esIncidencia && p.incidencia && (
-                    <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario">
+                    <p className="ml-9 rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp3 py-esp2 text-xs text-texto-primario">
                       <strong className="text-texto-peligro">Incidencia:</strong> {p.incidencia}
                     </p>
                   )}
 
                   {fotosPunto.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3">
+                    <div className="ml-9 flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3">
                       {fotosPunto.map((f) => {
                         const url = urlPorRuta.get(f.url_foto);
                         const autor = f.usuario_id ? usuarioPorId.get(f.usuario_id) : undefined;
@@ -456,12 +429,27 @@ export default async function PaginaCampana({
             })}
           </div>
         ) : (
-          <p className="rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp4 py-esp6 text-center text-sm text-texto-terciario">
+          <p className="text-sm text-texto-terciario">
             Esta campaña aún no tiene puntos. Pulsa «Añadir o modificar puntos» en el mapa para empezar.
           </p>
         )}
       </section>
       </ProveedorAnadirPunto>
+
+      {/* Blocco 4: Enlace público para el cliente al final */}
+      <section className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp5">
+        <span className="shrink-0 text-etiqueta uppercase text-texto-secundario">
+          Enlace cliente
+        </span>
+        <div className="min-w-0 flex-1">
+          <EnlaceCliente
+            campanaId={campanaId}
+            url={urlEnlace}
+            vistas={Number(enlace?.vistas ?? 0)}
+            expiraEn={enlace?.expira_en ?? null}
+          />
+        </div>
+      </section>
     </div>
   );
 }
@@ -476,38 +464,24 @@ function ResumenArticulos({
 }) {
   if (articulos.length === 0) return null;
   return (
-    <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
-      <p className="text-etiqueta uppercase text-texto-secundario">Artículos repartidos</p>
-      <div className="flex flex-col gap-esp3">
-        {articulos.map((a) => {
-          const restan = a.piezas - a.repartidas;
-          const exceso = restan < 0;
-          const porcentaje = a.piezas > 0 ? Math.min(100, Math.round((a.repartidas / a.piezas) * 100)) : 0;
-          return (
-            <div key={a.id} className="flex flex-col gap-1">
-              <div className="flex items-baseline justify-between gap-esp2 text-xs">
-                <span className="min-w-0 flex-1 truncate font-medium text-texto-primario" title={`${a.etiqueta} · ${a.documento}`}>
-                  {a.etiqueta}
-                </span>
-                <span className={exceso ? "tabular-nums whitespace-nowrap text-texto-aviso" : "tabular-nums whitespace-nowrap text-texto-secundario"}>
-                  {num(a.repartidas)} / {num(a.piezas)}
-                  {exceso ? ` (+${num(-restan)})` : restan > 0 ? ` · ${num(restan)} rest.` : " · completo"}
-                </span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-completo bg-fondo-sutil">
-                <div
-                  className={
-                    exceso
-                      ? "h-full bg-fondo-aviso transition-[width] duration-lenta ease-salida"
-                      : "h-full bg-fondo-marca transition-[width] duration-lenta ease-salida"
-                  }
-                  style={{ width: `${porcentaje}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex flex-col gap-1 rounded-md bg-fondo-sutil px-esp3 py-esp2">
+      {articulos.map((a) => {
+        const restan = a.piezas - a.repartidas;
+        const exceso = restan < 0;
+        return (
+          <p key={a.id} className="text-xs text-texto-secundario">
+            <span className="font-medium text-texto-primario">{a.etiqueta}</span> · {num(a.repartidas)} /{" "}
+            {num(a.piezas)}
+            {exceso ? (
+              <span className="text-texto-aviso"> · te pasas en {num(-restan)}</span>
+            ) : restan === 0 ? (
+              " · completo"
+            ) : (
+              ` · quedan ${num(restan)}`
+            )}
+          </p>
+        );
+      })}
     </div>
   );
 }

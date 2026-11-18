@@ -19,8 +19,8 @@ import {
   finalizarCampana,
   eliminarCampana,
 } from "./acciones";
-import { useAnadirPunto } from "./anadir-punto";
 import { CAMPO } from "@/components/ui/panel-busqueda";
+import { SelectorFecha } from "@/components/ui/selector-fecha";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
 import { desenvolver } from "@/lib/accion";
@@ -30,10 +30,7 @@ type Asignado = { id: number; usuarioId: string; nombre: string; estado: string;
 type Candidato = { id: string; nombre: string };
 
 const CLASE_SELECT_COMPACTO =
-  "min-h-11 h-11 md:min-h-8 md:h-8 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-[9px] text-base leading-6 text-texto-primario outline-none focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50 md:py-[5px] md:text-xs md:leading-5";
-
-const CLASE_ACCION_COMPACTA =
-  "inline-flex min-h-11 h-11 md:min-h-8 md:h-8 items-center justify-center gap-1.5 rounded-md px-esp3 text-sm font-medium transition-colors duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 md:text-xs";
+  "min-h-9 h-9 md:min-h-8 md:h-8 rounded-lg border border-borde-default bg-fondo-sutil px-esp2.5 py-1 text-xs font-medium text-texto-secundario outline-none transition-colors duration-rapida ease-suave hover:border-borde-campo hover:text-texto-primario focus:border-borde-foco disabled:cursor-not-allowed disabled:opacity-50";
 
 /** Asignar / quitar personas de un punto y marcarlo como verificado. */
 export function ControlesPunto({
@@ -53,7 +50,6 @@ export function ControlesPunto({
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
-  const { editarPorId } = useAnadirPunto();
   const [error, setError] = useState<string | null>(null);
 
   function ejecutar(accion: () => Promise<void>) {
@@ -73,7 +69,7 @@ export function ControlesPunto({
   const retiradaPendiente = asignados.some((a) => a.rol === "retirador" && a.estado !== "completada");
 
   return (
-    <div data-accion-fila="" className="flex w-full flex-col gap-esp2 lg:w-auto lg:items-end">
+    <div data-accion-fila="" className="flex flex-col gap-esp2 pl-9 lg:w-auto lg:items-end lg:pl-0">
       {asignados.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 lg:justify-end">
           {asignados.map((a) => (
@@ -104,30 +100,28 @@ export function ControlesPunto({
       )}
 
       <div className="flex flex-wrap items-center gap-esp2 lg:justify-end">
-        <div className="min-w-[148px] flex-1 sm:flex-initial">
-          <select
-            value=""
-            disabled={pendiente || libres.length === 0}
-            onChange={(e) => {
-              const usuarioId = e.target.value;
-              if (!usuarioId) return;
-              ejecutar(() => desenvolver(asignarPunto(campanaId, puntoId, usuarioId)));
-            }}
-            aria-label={`Asignar responsable para ${puntoNombre}`}
-            className={CLASE_SELECT_COMPACTO}
-          >
-            <option value="">{libres.length === 0 ? "Todos asignados" : "Asignar a…"}</option>
-            {libres.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value=""
+          disabled={pendiente || libres.length === 0}
+          onChange={(e) => {
+            const usuarioId = e.target.value;
+            if (!usuarioId) return;
+            ejecutar(() => desenvolver(asignarPunto(campanaId, puntoId, usuarioId)));
+          }}
+          aria-label={`Asignar responsable para ${puntoNombre}`}
+          className={CLASE_SELECT_COMPACTO}
+        >
+          <option value="">{libres.length === 0 ? "Todos asignados" : "Asignar a…"}</option>
+          {libres.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nombre}
+            </option>
+          ))}
+        </select>
         {estado === "instalado" && (
           <Boton
             tamano="s"
-            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
+            className="!min-h-9 !h-9 md:!min-h-8 md:!h-8 !text-xs"
             disabled={pendiente}
             onClick={() => ejecutar(() => desenvolver(verificarPunto(campanaId, puntoId)))}
           >
@@ -138,7 +132,7 @@ export function ControlesPunto({
         {estado === "incidencia" && (
           <Boton
             tamano="s"
-            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
+            className="!min-h-9 !h-9 md:!min-h-8 md:!h-8 !text-xs"
             disabled={pendiente}
             onClick={() => ejecutar(() => desenvolver(resolverIncidencia(campanaId, puntoId)))}
           >
@@ -146,45 +140,35 @@ export function ControlesPunto({
             Resolver incidencia
           </Boton>
         )}
-        <button
-          type="button"
-          disabled={pendiente}
-          onClick={() => editarPorId(puntoId)}
-          className={`${CLASE_ACCION_COMPACTA} border border-borde-campo bg-fondo-superficie text-texto-primario hover:bg-fondo-sutil`}
-        >
-          Editar
-        </button>
       </div>
 
       {instalado && (
         <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp2 lg:justify-end">
           <span className="text-xs font-medium text-texto-secundario">Retirada</span>
           {!retiradaPendiente && (
-            <div className="min-w-[148px] flex-1 sm:flex-initial">
-              <select
-                value=""
-                disabled={pendiente}
-                onChange={(e) => {
-                  const usuarioId = e.target.value;
-                  if (!usuarioId) return;
-                  ejecutar(() => desenvolver(programarRetirada(campanaId, puntoId, usuarioId)));
-                }}
-                aria-label="Quién retira el punto"
-                className={CLASE_SELECT_COMPACTO}
-              >
-                <option value="">Encargar a…</option>
-                {candidatos.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value=""
+              disabled={pendiente}
+              onChange={(e) => {
+                const usuarioId = e.target.value;
+                if (!usuarioId) return;
+                ejecutar(() => desenvolver(programarRetirada(campanaId, puntoId, usuarioId)));
+              }}
+              aria-label="Quién retira el punto"
+              className={CLASE_SELECT_COMPACTO}
+            >
+              <option value="">Encargar a…</option>
+              {candidatos.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
           )}
           <Boton
             tamano="s"
             variante="fantasma"
-            className="!min-h-11 !h-11 md:!min-h-8 md:!h-8 !text-sm md:!text-xs"
+            className="!min-h-9 !h-9 md:!min-h-8 md:!h-8 !text-xs"
             disabled={pendiente}
             onClick={async () => {
               if (!(await confirmar("¿Marcar este punto como retirado?"))) return;
@@ -418,11 +402,17 @@ export function EditarCampana({
         </label>
         <label className={etiqueta}>
           Inicio
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={CAMPO} />
+          <SelectorFecha
+            value={inicio}
+            onChange={(v) => {
+              setInicio(v);
+              if (fin && v && fin < v) setFin("");
+            }}
+          />
         </label>
         <label className={etiqueta}>
           Fin
-          <input type="date" value={fin} min={inicio || undefined} onChange={(e) => setFin(e.target.value)} className={CAMPO} />
+          <SelectorFecha value={fin} min={inicio || undefined} onChange={setFin} />
         </label>
       </div>
       <label className={etiqueta}>

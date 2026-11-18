@@ -138,54 +138,44 @@ export function ProveedorAnadirPunto({
 }
 
 /**
- * Bloque del mapa de la campaña + resumen de artículos repartidos.
+ * Bloque del mapa de la campaña a ancho completo.
  * Usa exactamente la misma experiencia de mapa a pantalla completa que el wizard.
  */
-export function ZonaMapaCampana({
-  titulo,
-  resumen,
-}: {
-  titulo: string;
-  resumen?: React.ReactNode;
-}) {
+export function ZonaMapaCampana({ titulo }: { titulo: string }) {
   const { editar, datos } = useAnadirPunto();
   const { campanaId, fechasCampana, puntos } = datos;
 
   return (
-    <div className={resumen ? "grid grid-cols-1 gap-esp4 xl:grid-cols-[1fr_320px]" : ""}>
-      <MapaInteractivoCampana
-        tituloModal={titulo}
-        puntos={puntos.map((p) => ({
-          ...p,
-          detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
-        }))}
-        onCrearPunto={async ({ pos, direccionInicial }) => {
-          const creado = await desenvolver(
-            anadirPuntoCampana(campanaId, {
-              direccion: direccionInicial,
-              latitud: pos.latitud,
-              longitud: pos.longitud,
-              fechaColocacion: fechasCampana.inicio ?? "",
-              fechaRetirada: fechasCampana.fin ?? "",
-            }),
-          );
-          return {
-            ...creado,
-            tieneFotos: false,
-            detalle: ETIQUETA_SOPORTE[creado.tipo_soporte],
-          };
-        }}
-        onMoverPunto={(p, nuevaPos, dir) =>
-          desenvolver(moverPuntoCampana(campanaId, p.id, nuevaPos.latitud, nuevaPos.longitud, dir))
-        }
-        onAbrirPunto={(p) => editar(p)}
-        onActualizarDireccionTardia={(creado, dirTardia) => {
-          void moverPuntoCampana(campanaId, creado.id, creado.latitud, creado.longitud, dirTardia);
-        }}
-      />
-
-      {resumen}
-    </div>
+    <MapaInteractivoCampana
+      tituloModal={titulo}
+      puntos={puntos.map((p) => ({
+        ...p,
+        detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
+      }))}
+      onCrearPunto={async ({ pos, direccionInicial }) => {
+        const creado = await desenvolver(
+          anadirPuntoCampana(campanaId, {
+            direccion: direccionInicial,
+            latitud: pos.latitud,
+            longitud: pos.longitud,
+            fechaColocacion: fechasCampana.inicio ?? "",
+            fechaRetirada: fechasCampana.fin ?? "",
+          }),
+        );
+        return {
+          ...creado,
+          tieneFotos: false,
+          detalle: ETIQUETA_SOPORTE[creado.tipo_soporte],
+        };
+      }}
+      onMoverPunto={(p, nuevaPos, dir) =>
+        desenvolver(moverPuntoCampana(campanaId, p.id, nuevaPos.latitud, nuevaPos.longitud, dir))
+      }
+      onAbrirPunto={(p) => editar(p)}
+      onActualizarDireccionTardia={(creado, dirTardia) => {
+        void moverPuntoCampana(campanaId, creado.id, creado.latitud, creado.longitud, dirTardia);
+      }}
+    />
   );
 }
 

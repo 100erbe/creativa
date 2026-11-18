@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { CAMPO } from "@/components/ui/panel-busqueda";
+import { SelectorFecha } from "@/components/ui/selector-fecha";
 import { confirmar } from "@/components/ui/dialogos";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { formatoPiezas, nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
@@ -177,16 +178,16 @@ function FormularioDetallesPunto({
       </Etiqueta>
       <div className="grid grid-cols-2 gap-esp2">
         <Etiqueta texto="Colocar el">
-          <input type="date" value={colocacion} onChange={(e) => setColocacion(e.target.value)} className={entrada} />
+          <SelectorFecha
+            value={colocacion}
+            onChange={(v) => {
+              setColocacion(v);
+              if (retirada && v && retirada < v) setRetirada("");
+            }}
+          />
         </Etiqueta>
         <Etiqueta texto="Retirar el">
-          <input
-            type="date"
-            value={retirada}
-            min={colocacion || undefined}
-            onChange={(e) => setRetirada(e.target.value)}
-            className={entrada}
-          />
+          <SelectorFecha value={retirada} min={colocacion || undefined} onChange={setRetirada} />
         </Etiqueta>
       </div>
       <Etiqueta texto="Cómo instalar">
@@ -243,7 +244,7 @@ export function ModalDetallesPunto({
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (document.querySelector('[role="alertdialog"]')) return;
+        if (document.querySelector('[role="alertdialog"], [data-selector-fecha]')) return;
         onCerrar();
       }
     };

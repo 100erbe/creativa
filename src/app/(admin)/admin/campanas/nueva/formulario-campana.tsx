@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { CAMPO } from "@/components/ui/panel-busqueda";
+import { SelectorFecha } from "@/components/ui/selector-fecha";
 import { desenvolver } from "@/lib/accion";
 import { crearCampanaNueva } from "./acciones";
 
@@ -78,11 +79,17 @@ export function FormularioCampana({
       <div className="grid grid-cols-2 gap-esp3">
         <label className={etiqueta}>
           Inicio (colocación)
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={CAMPO} />
+          <SelectorFecha
+            value={inicio}
+            onChange={(v) => {
+              setInicio(v);
+              if (fin && v && fin < v) setFin("");
+            }}
+          />
         </label>
         <label className={etiqueta}>
           Fin (retirada)
-          <input type="date" value={fin} min={inicio || undefined} onChange={(e) => setFin(e.target.value)} className={CAMPO} />
+          <SelectorFecha value={fin} min={inicio || undefined} onChange={setFin} />
         </label>
       </div>
       <label className={etiqueta}>

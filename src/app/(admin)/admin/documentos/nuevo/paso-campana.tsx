@@ -10,6 +10,7 @@ import { MapaInteractivoCampana } from "@/components/mapa/mapa-interactivo-campa
 import { ModalDetallesPunto, type ArticuloModalData } from "@/components/mapa/modal-detalles-punto";
 import { TarjetaDeslizablePunto } from "@/components/mapa/tarjeta-deslizable-punto";
 import { BarraAccion, CAMPO } from "@/components/ui/panel-busqueda";
+import { SelectorFecha } from "@/components/ui/selector-fecha";
 import { cn } from "@/lib/cn";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
@@ -141,10 +142,16 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
         </Etiqueta>
         <div className="grid grid-cols-2 gap-esp3">
           <Etiqueta texto="Inicio (colocación)">
-            <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className={entrada} />
+            <SelectorFecha
+              value={inicio}
+              onChange={(v) => {
+                setInicio(v);
+                if (fin && v && fin < v) setFin("");
+              }}
+            />
           </Etiqueta>
           <Etiqueta texto="Fin (retirada)">
-            <input type="date" value={fin} min={inicio || undefined} onChange={(e) => setFin(e.target.value)} className={entrada} />
+            <SelectorFecha value={fin} min={inicio || undefined} onChange={setFin} />
           </Etiqueta>
         </div>
         <Etiqueta texto="Indicaciones generales">
