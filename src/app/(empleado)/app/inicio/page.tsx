@@ -3,7 +3,7 @@ import { CabeceraPaginaBase } from "@/components/ui/cabecera-pagina-base";
 import { SubtituloHoy } from "@/components/ui/subtitulo-hoy";
 import { KpiStripDesplegable } from "@/components/empleado/kpi-strip-desplegable";
 import { TarjetaProyeccionAgenda } from "@/components/empleado/tarjeta-proyeccion-agenda";
-import { TarjetaPunto } from "@/components/empleado/tarjeta-punto";
+import { TarjetaProximaInstalacion } from "@/components/empleado/tarjeta-proxima-instalacion";
 import { BotonAccionRapida } from "@/app/(empleado)/app/agenda/boton-accion-rapida";
 import { cargarDatosAgenda } from "@/lib/agenda-datos";
 import { saludo } from "@/lib/saludo";
@@ -57,7 +57,7 @@ export default async function PaginaInicioEmpleado() {
         {proximasInstalaciones.length > 0 ? (
           <div className="flex flex-col gap-esp2">
             {proximasInstalaciones.map((p) => (
-              <TarjetaPunto key={p.asignacion_id} p={p} />
+              <TarjetaProximaInstalacion key={p.asignacion_id} p={p} />
             ))}
           </div>
         ) : (
