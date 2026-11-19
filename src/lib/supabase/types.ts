@@ -43,6 +43,7 @@ export type Database = {
       }
       asignaciones_punto: {
         Row: {
+          cierre_notificado_en: string | null
           creado_en: string
           estado: Database["public"]["Enums"]["estado_asignacion"]
           fecha_completada: string | null
@@ -54,6 +55,7 @@ export type Database = {
           usuario_id: string
         }
         Insert: {
+          cierre_notificado_en?: string | null
           creado_en?: string
           estado?: Database["public"]["Enums"]["estado_asignacion"]
           fecha_completada?: string | null
@@ -65,6 +67,7 @@ export type Database = {
           usuario_id: string
         }
         Update: {
+          cierre_notificado_en?: string | null
           creado_en?: string
           estado?: Database["public"]["Enums"]["estado_asignacion"]
           fecha_completada?: string | null

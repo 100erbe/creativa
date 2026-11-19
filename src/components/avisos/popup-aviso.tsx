@@ -72,17 +72,20 @@ export function PopupAviso() {
     }
   }, [router]);
 
-  // Línea base al entrar, sondeo y avisos del service worker.
+  // Línea base al entrar, sondeo, eventos Realtime y avisos del service worker.
   useEffect(() => {
     void comprobar();
     const cadaCuanto = setInterval(() => document.visibilityState === "visible" && void comprobar(), SONDEO_MS);
     const alVolver = () => document.visibilityState === "visible" && void comprobar();
     const alMensaje = (e: MessageEvent) => e.data?.tipo === "aviso-nuevo" && void comprobar();
+    const alRealtime = () => void comprobar();
     document.addEventListener("visibilitychange", alVolver);
+    window.addEventListener("creativa:notificacion", alRealtime);
     navigator.serviceWorker?.addEventListener("message", alMensaje);
     return () => {
       clearInterval(cadaCuanto);
       document.removeEventListener("visibilitychange", alVolver);
+      window.removeEventListener("creativa:notificacion", alRealtime);
       navigator.serviceWorker?.removeEventListener("message", alMensaje);
     };
   }, [comprobar]);

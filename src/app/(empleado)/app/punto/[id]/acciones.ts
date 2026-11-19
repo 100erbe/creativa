@@ -78,6 +78,11 @@ export const subirFotoPunto = accion(async (formData: FormData) => {
     await supabase.from("asignaciones_punto").update({ estado: "en_curso" }).eq("id", asignacionId).eq("estado", "pendiente");
   }
 
+  // Notificación ligera a la administración (solo bandeja/campana, sin push) cuando un miembro sube una foto.
+  if (user.rol !== "admin") {
+    enSegundoPlano(() => avisarFotoAdministracion(puntoId, user.id, user.nombre, user.apellidos));
+  }
+
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
 });
@@ -113,24 +118,70 @@ export type EstadosAnteriores = { punto: string; asignacion: string };
 const ESTADOS_PUNTO_REABRIR = ["pendiente", "incidencia"];
 const ETIQUETA_ESTADO = { instalado: "instalado", retirado: "retirado" } as const;
 
-/** Avisa a la administración de que un miembro ha cerrado un punto (instalado o retirado). */
-async function avisarCierreAdministracion(puntoId: number, estado: keyof typeof ETIQUETA_ESTADO) {
+async function obtenerContextoPunto(puntoId: number) {
   const supabase = await createClient();
   const [{ data: punto }, usuario] = await Promise.all([
     supabase.from("puntos_campana").select("nombre, campana_id, campanas(nombre)").eq("id", puntoId).maybeSingle(),
     obtenerUsuarioActual(),
   ]);
-  if (!punto) return;
+  if (!punto) return null;
   const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
+  return { punto, campanaNombre: campana?.nombre ?? null, usuario };
+}
+
+/** Notificación ligera (solo bandeja, sin push) cuando un miembro añade una foto a un punto. */
+async function avisarFotoAdministracion(
+  puntoId: number,
+  usuarioId: string,
+  nombre: string,
+  apellidos: string | null,
+) {
+  const ctx = await obtenerContextoPunto(puntoId);
+  if (!ctx) return;
+  const quien = [nombre, apellidos].filter(Boolean).join(" ") || "Un miembro";
+  await notificarAdministradores(
+    {
+      tipo: "foto_punto",
+      titulo: `Nueva foto en ${ctx.punto.nombre}`,
+      cuerpo: `${quien}${ctx.campanaNombre ? ` · ${ctx.campanaNombre}` : ""}`,
+      url: `/admin/campanas/${ctx.punto.campana_id}`,
+      tag: `foto-punto-${puntoId}`,
+    },
+    { excluir: usuarioId, soloBandeja: true },
+  );
+}
+
+/** Avisa a la administración de que un miembro ha cerrado un punto (retirado) o lo ha reabierto como no instalado. */
+async function avisarCierreAdministracion(puntoId: number, estado: keyof typeof ETIQUETA_ESTADO) {
+  const ctx = await obtenerContextoPunto(puntoId);
+  if (!ctx) return;
+  const quien = [ctx.usuario?.nombre, ctx.usuario?.apellidos].filter(Boolean).join(" ") || "Un miembro";
   await notificarAdministradores(
     {
       tipo: `punto_${estado}`,
-      titulo: `Punto ${ETIQUETA_ESTADO[estado]}: ${punto.nombre}`,
-      cuerpo: `${usuario?.nombre ?? "Un miembro"}${campana?.nombre ? ` (${campana.nombre})` : ""}`,
-      url: `/admin/campanas/${punto.campana_id}`,
+      titulo: `Punto ${ETIQUETA_ESTADO[estado]}: ${ctx.punto.nombre}`,
+      cuerpo: `${quien}${ctx.campanaNombre ? ` (${ctx.campanaNombre})` : ""}`,
+      url: `/admin/campanas/${ctx.punto.campana_id}`,
       tag: `cierre-${puntoId}`,
     },
-    { excluir: usuario?.id },
+    { excluir: ctx.usuario?.id },
+  );
+}
+
+/** Avisa de inmediato a la administración si un punto ya notificado vuelve a marcarse como no instalado. */
+async function avisarReaperturaAdministracion(puntoId: number, nombre: string, apellidos: string | null, usuarioId: string) {
+  const ctx = await obtenerContextoPunto(puntoId);
+  if (!ctx) return;
+  const quien = [nombre, apellidos].filter(Boolean).join(" ") || "Un miembro";
+  await notificarAdministradores(
+    {
+      tipo: "punto_reabierto",
+      titulo: `Punto marcado como no instalado: ${ctx.punto.nombre}`,
+      cuerpo: `${quien}${ctx.campanaNombre ? ` (${ctx.campanaNombre})` : ""}`,
+      url: `/admin/campanas/${ctx.punto.campana_id}`,
+      tag: `reapertura-${puntoId}`,
+    },
+    { excluir: usuarioId },
   );
 }
 
@@ -139,6 +190,7 @@ const ESTADOS_ASIGNACION_REABRIR = ["pendiente", "en_curso"];
 /**
  * Marca el punto como instalado. Devuelve los estados anteriores para poder deshacerlo
  * (el botón "Deshacer" de unos segundos usa exactamente esos).
+ * La notificación a administración se difiere ~1 min vía pg_cron para evitar avisos por error.
  */
 export const marcarPuntoInstalado = accion(async (
   puntoId: number,
@@ -146,9 +198,10 @@ export const marcarPuntoInstalado = accion(async (
 ): Promise<EstadosAnteriores> => {
   const supabase = await createClient();
 
-  const [{ data: punto }, { data: asignacion }] = await Promise.all([
+  const [{ data: punto }, { data: asignacion }, usuario] = await Promise.all([
     supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle(),
     supabase.from("asignaciones_punto").select("estado, punto_id").eq("id", asignacionId).maybeSingle(),
+    obtenerUsuarioActual(),
   ]);
   if (!punto || !asignacion || asignacion.punto_id !== puntoId) {
     throw new Error("No se encuentra el punto o la asignación.");
@@ -163,17 +216,21 @@ export const marcarPuntoInstalado = accion(async (
     .eq("id", puntoId);
   if (errorPunto) throw new Error(errorPunto.message);
 
+  const ahoraIso = new Date().toISOString();
   const { error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
-    .update({ estado: "completada", fecha_completada: new Date().toISOString() })
+    .update({
+      estado: "completada",
+      fecha_completada: ahoraIso,
+      // Si cierra un admin no hace falta notificarlo después; si es miembro queda pendiente 1 min.
+      cierre_notificado_en: usuario?.rol === "admin" ? ahoraIso : null,
+    })
     .eq("id", asignacionId);
   if (errorAsignacion) {
     // Dejar el punto como estaba si la asignación no se pudo actualizar.
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
     throw new Error(errorAsignacion.message);
   }
-
-  enSegundoPlano(() => avisarCierreAdministracion(puntoId, "instalado"));
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
@@ -182,9 +239,8 @@ export const marcarPuntoInstalado = accion(async (
 
 /**
  * Deshace "marcar como instalado": sirve para el botón "Deshacer" de unos segundos (con los
- * estados anteriores exactos) y para reabrir el punto más tarde si se marcó por error
- * (sin ellos: vuelve a pendiente / en curso). No se puede reabrir un punto ya verificado por
- * el administrador: lo impide esta función y, además, un trigger de la base de datos.
+ * estados anteriores exactos) y para marcarlo más tarde como no instalado por error u otro problema.
+ * Si ya había pasado el minuto de gracia y el admin fue notificado, se le avisa inmediatamente.
  */
 export const reabrirPunto = accion(async (
   puntoId: number,
@@ -193,7 +249,11 @@ export const reabrirPunto = accion(async (
 ) => {
   const supabase = await createClient();
 
-  const { data: punto } = await supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle();
+  const [{ data: punto }, { data: asignacionAntes }, usuario] = await Promise.all([
+    supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle(),
+    supabase.from("asignaciones_punto").select("cierre_notificado_en").eq("id", asignacionId).maybeSingle(),
+    obtenerUsuarioActual(),
+  ]);
   if (!punto) throw new Error("No se encuentra el punto.");
   if (punto.estado === "verificado") {
     throw new Error("El administrador ya ha verificado este punto: no se puede reabrir.");
@@ -217,9 +277,19 @@ export const reabrirPunto = accion(async (
 
   const { error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
-    .update({ estado: estadoAsignacion as "pendiente", fecha_completada: null })
+    .update({
+      estado: estadoAsignacion as "pendiente",
+      fecha_completada: null,
+      cierre_notificado_en: null,
+    })
     .eq("id", asignacionId);
   if (errorAsignacion) throw new Error(errorAsignacion.message);
+
+  if (asignacionAntes?.cierre_notificado_en != null && usuario && usuario.rol !== "admin") {
+    enSegundoPlano(() =>
+      avisarReaperturaAdministracion(puntoId, usuario.nombre, usuario.apellidos, usuario.id),
+    );
+  }
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
@@ -275,9 +345,10 @@ export const marcarPuntoRetirado = accion(async (puntoId: number, asignacionId: 
   const { error: errorPunto } = await supabase.from("puntos_campana").update({ estado: "retirado" }).eq("id", puntoId);
   if (errorPunto) throw new Error(errorPunto.message);
 
+  const ahoraIso = new Date().toISOString();
   const { error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
-    .update({ estado: "completada", fecha_completada: new Date().toISOString() })
+    .update({ estado: "completada", fecha_completada: ahoraIso, cierre_notificado_en: ahoraIso })
     .eq("id", asignacionId);
   if (errorAsignacion) {
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);

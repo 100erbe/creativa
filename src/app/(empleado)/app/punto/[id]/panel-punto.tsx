@@ -101,8 +101,15 @@ export function PanelPunto({
   const [progreso, setProgreso] = useState<{ hecho: number; total: number } | null>(null);
   const [aviso, setAviso] = useState<{ tono: "ok" | "aviso"; texto: string } | null>(null);
 
-  // Deshacer "marcar como instalado"
+  // Deshacer "marcar como instalado" y retorno automático tras completar
   const [deshacer, setDeshacer] = useState<{ anteriores: EstadosAnteriores; restantes: number } | null>(null);
+  const retornoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (retornoRef.current) clearTimeout(retornoRef.current);
+    };
+  }, []);
 
   const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
 
@@ -300,6 +307,15 @@ export function PanelPunto({
         const anteriores = await desenvolver(marcarPuntoInstalado(punto.id, asignacion.id));
         setDeshacer({ anteriores, restantes: SEGUNDOS_DESHACER });
         router.refresh();
+        if (retornoRef.current) clearTimeout(retornoRef.current);
+        retornoRef.current = setTimeout(() => {
+          retornoRef.current = null;
+          if (typeof window !== "undefined" && window.history.length > 1) {
+            router.back();
+          } else {
+            router.push("/app/inicio");
+          }
+        }, 1000);
       } catch (err) {
         void avisar(err instanceof Error ? err.message : "No se pudo marcar el punto.");
       }
@@ -308,6 +324,10 @@ export function PanelPunto({
 
   function deshacerAhora() {
     if (!asignacion || !deshacer) return;
+    if (retornoRef.current) {
+      clearTimeout(retornoRef.current);
+      retornoRef.current = null;
+    }
     const anteriores = deshacer.anteriores;
     setDeshacer(null);
     iniciar(async () => {
@@ -322,7 +342,15 @@ export function PanelPunto({
 
   async function reabrir() {
     if (!asignacion) return;
-    if (!(await confirmar("¿Volver a dejar este punto como pendiente? Hazlo solo si lo marcaste como instalado por error."))) return;
+    if (
+      !(await confirmar(
+        "¿Marcar este punto como no instalado?\n" +
+          "Hazlo si se marcó por error o por algún problema en el punto. Si ya ha pasado el aviso inicial, se notificará al administrador.",
+        { aceptar: "Confirmar", peligro: true },
+      ))
+    ) {
+      return;
+    }
     iniciar(async () => {
       try {
         await desenvolver(reabrirPunto(punto.id, asignacion.id));
@@ -599,7 +627,7 @@ export function PanelPunto({
             Punto marcado como instalado
           </p>
           <Boton variante="fantasma" tamano="s" onClick={reabrir} cargando={pendiente}>
-            ¿Marcado por error? Reabrir punto
+            Marcar como no instalado
           </Boton>
         </div>
       )}

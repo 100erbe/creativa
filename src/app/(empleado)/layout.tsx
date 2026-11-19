@@ -7,6 +7,7 @@ import { contarNoLeidos } from "@/lib/push/bandeja";
 import { avisosUrgentesPendientes } from "@/lib/avisos/pendientes";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
+import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { urlAvatar } from "@/lib/avatar";
 
 function hoyEnEspana() {
@@ -64,6 +65,7 @@ export default async function LayoutEmpleado({
       />
       <main id="contenido-empleado" tabIndex={-1} className="flex-1 overflow-y-auto pb-24 outline-none">
         <div className="mx-auto w-full max-w-3xl">
+          <SincronizadorVivo usuarioId={usuario.id} esAdmin={false} />
           <IniciarAvisos />
           {urgentes.length > 0 && (
             <Link

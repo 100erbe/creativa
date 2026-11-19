@@ -15,14 +15,20 @@ export type Aviso = {
   urgente?: boolean;
 };
 
+export type OpcionesNotificar = {
+  excluir?: string;
+  /** Guarda solo en la bandeja/campana (notificación ligera, sin enviar Web Push al dispositivo). */
+  soloBandeja?: boolean;
+};
+
 /**
- * Guarda el aviso en la bandeja de cada persona y lo envía por push.
+ * Guarda el aviso en la bandeja de cada persona y, salvo que `soloBandeja` sea true, lo envía por push.
  *
  * Nunca lanza: un fallo al avisar no debe romper la acción que lo provocó (asignar un punto, por ejemplo).
  * Fuera de producción no hace nada, porque las previews y el entorno local comparten la base de datos
  * real y avisarían a la gente de verdad (para probar en local: PUSH_HABILITADO=1).
  */
-export async function notificar(destinatarios: string[], aviso: Aviso, opciones: { excluir?: string } = {}) {
+export async function notificar(destinatarios: string[], aviso: Aviso, opciones: OpcionesNotificar = {}) {
   const ids = [...new Set(destinatarios)].filter((id) => id && id !== opciones.excluir);
   if (ids.length === 0 || !envioRealPermitido()) return;
 
@@ -40,13 +46,15 @@ export async function notificar(destinatarios: string[], aviso: Aviso, opciones:
       );
       if (error) console.error("notificar (bandeja):", error.message);
     }
-    await enviarPush(
-      ids,
-      { titulo: aviso.titulo, cuerpo: aviso.cuerpo, url: aviso.url, tag: aviso.tag, urgente: aviso.urgente },
-      // Prioridad alta siempre: son avisos de trabajo (cambios de plan, incidencias). Con prioridad normal, Android
-      // puede retener el aviso durante minutos u horas si el móvil está en reposo (Doze).
-      { tipo: "real", urgencia: "high" },
-    );
+    if (!opciones.soloBandeja) {
+      await enviarPush(
+        ids,
+        { titulo: aviso.titulo, cuerpo: aviso.cuerpo, url: aviso.url, tag: aviso.tag, urgente: aviso.urgente },
+        // Prioridad alta siempre: son avisos de trabajo (cambios de plan, incidencias). Con prioridad normal, Android
+        // puede retener el aviso durante minutos u horas si el móvil está en reposo (Doze).
+        { tipo: "real", urgencia: "high" },
+      );
+    }
   } catch (e) {
     console.error("notificar:", e);
   }
@@ -60,7 +68,7 @@ async function idsAdministradores(): Promise<string[]> {
   return (data ?? []).map((u) => u.id);
 }
 
-export async function notificarAdministradores(aviso: Aviso, opciones: { excluir?: string } = {}) {
+export async function notificarAdministradores(aviso: Aviso, opciones: OpcionesNotificar = {}) {
   await notificar(await idsAdministradores(), aviso, opciones);
 }
 

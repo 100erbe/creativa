@@ -5,6 +5,7 @@ import { BarraLateral } from "@/components/admin/barra-lateral";
 import { PaletaComandos } from "@/components/admin/paleta-comandos";
 import { IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { PopupAviso } from "@/components/avisos/popup-aviso";
+import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { contarNoLeidos } from "@/lib/push/bandeja";
 import { sumarDias } from "@/lib/documentos";
 import { urlAvatar } from "@/lib/avatar";
@@ -57,6 +58,7 @@ export default async function LayoutAdmin({
       <PaletaComandos />
       <IniciarAvisos />
       <PopupAviso />
+      <SincronizadorVivo usuarioId={usuario.id} esAdmin />
       <main
         id="contenido-principal"
         tabIndex={-1}
