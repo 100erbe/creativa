@@ -7,9 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
+import { documentosAsociadosACampanas } from "@/lib/campanas/documentos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
+import { BotonEliminarCampana } from "../boton-eliminar-campana";
 import { ProveedorAnadirPunto, TarjetaPuntoCampana, ZonaMapaCampana, type PuntoCampanaData } from "./anadir-punto";
 import { AvisoFinalizar, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
 
@@ -61,11 +63,9 @@ export default async function PaginaCampana({
       .order("creado_en", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
   ]);
   lanzarSiError(...resultadosBase);
-  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }, { count: documentosVinculados }] =
-    resultadosBase;
+  const [{ data: campana }, { data: puntos }, { data: usuarios }, { data: enlace }] = resultadosBase;
 
   if (!campana) notFound();
 
@@ -106,7 +106,11 @@ export default async function PaginaCampana({
   const fechasCampana = { inicio: campana.fecha_inicio, fin: campana.fecha_fin };
 
   // Artículos de los presupuestos/facturas vinculados y piezas ya repartidas entre los puntos.
-  const articulosCampana = await articulosDeCampana(supabase, campanaId);
+  const [articulosCampana, docsPorCampana] = await Promise.all([
+    articulosDeCampana(supabase, campanaId),
+    documentosAsociadosACampanas(supabase, [{ id: campana.id, documento_id: campana.documento_id }]),
+  ]);
+  const documentosAsociados = docsPorCampana.get(campana.id) ?? [];
   const repartidas = new Map<number, number>();
   for (const p of puntos ?? []) {
     if (p.linea_id != null) repartidas.set(p.linea_id, (repartidas.get(p.linea_id) ?? 0) + Number(p.piezas ?? 0));
@@ -156,13 +160,13 @@ export default async function PaginaCampana({
       <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/campanas"
-          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
+          className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Campañas
         </Link>
 
-        {/* Blocco 1: Resoconto della campagna in evidenza (senza il link, che va in fondo) */}
+        {/* Bloque 1: Resumen destacado de la campaña (sin el enlace, que va al final) */}
         <section className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
           <div className="flex flex-wrap items-start justify-between gap-esp3 p-esp4 md:p-esp5">
             <div className="min-w-0 flex-1">
@@ -195,10 +199,15 @@ export default async function PaginaCampana({
             </div>
 
             <BotonAvisos />
+            <BotonEliminarCampana
+              campanaId={campanaId}
+              nombre={campana.nombre}
+              contenido={{ puntos: lista.length, fotos: totalFotos }}
+              documentos={documentosAsociados}
+              redirigirA="/admin/campanas"
+            />
             <EditarCampana
               campanaId={campanaId}
-              eliminable={!campana.documento_id && (documentosVinculados ?? 0) === 0}
-              contenido={{ puntos: lista.length, fotos: totalFotos }}
               inicial={{
                 nombre: campana.nombre,
                 estado: campana.estado,
@@ -277,10 +286,10 @@ export default async function PaginaCampana({
         fechasCampana={fechasCampana}
         puntos={puntosParaMapa}
       >
-      {/* Blocco 2: Mappa panoramica */}
+      {/* Bloque 2: Mapa panorámico */}
       <ZonaMapaCampana titulo={`Mapa · ${campana.nombre}`} />
 
-      {/* Blocco 3: Puntos (come nella schermata del wizard) */}
+      {/* Bloque 3: Puntos (como en la pantalla del asistente) */}
       <section className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:px-esp6 md:py-esp5">
         <div className="flex flex-wrap items-baseline justify-between gap-esp2">
           <div className="flex items-center gap-esp2">
@@ -335,7 +344,7 @@ export default async function PaginaCampana({
                             {nombreVisiblePunto(p.nombre)}{" "}
                             <span className="font-normal text-texto-terciario">
                               · {etiquetaResumen}
-                              {p.piezas != null ? ` · ${num(Number(p.piezas))} pzs` : ""}
+                              {p.piezas != null ? ` · ${num(Number(p.piezas))} ud` : ""}
                             </span>
                           </p>
                           <Insignia tono={TONO_POR_ESTADO[p.estado] ?? "neutro"} className="shrink-0">
@@ -436,7 +445,7 @@ export default async function PaginaCampana({
       </section>
       </ProveedorAnadirPunto>
 
-      {/* Blocco 4: Enlace público para el cliente al final */}
+      {/* Bloque 4: Enlace público para el cliente al final */}
       <section className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp5">
         <span className="shrink-0 text-etiqueta uppercase text-texto-secundario">
           Enlace cliente

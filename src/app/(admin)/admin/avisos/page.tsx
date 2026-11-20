@@ -30,7 +30,7 @@ export default async function PaginaAvisos() {
   return (
     <div className="flex flex-col gap-esp6">
       <CabeceraPagina
-        antes={<BotonVolver href="/admin/panel" usarHistorial />}
+        antes={<BotonVolver href="/admin/panel" usarHistorial className="hidden md:inline-flex" />}
         titulo="Avisos al equipo"
         subtitulo="Comunicaciones al equipo. Los urgentes se repiten hasta que cada persona confirma."
         acciones={

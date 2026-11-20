@@ -144,8 +144,8 @@ export function PanelCampanas({ campanas }: { campanas: CampanaResumen[] }) {
         id="titulo-campanas"
         titulo="Campañas"
         accion={
-          <Link href="/admin/campanas?vista=pipeline" className={clasesBoton("secundario")}>
-            Ver pipeline
+          <Link href="/admin/campanas?vista=tablero" className={clasesBoton("secundario")}>
+            Ver tablero
           </Link>
         }
       />

@@ -15,7 +15,8 @@ import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros } from "@/lib/formato";
 import { saludo } from "@/lib/saludo";
-import { clasificarAgingCobro, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_TIPO } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { hoyEnEspana } from "@/lib/estado-cuenta";
 import {
   campanasActivas,
@@ -46,8 +47,15 @@ export default async function PaginaPanel() {
   const resultados = await Promise.all([
     supabase
       .from("v_estado_cobro")
-      .select("id, tipo, numero_completo, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro"),
-    supabase.from("cobros").select("documento_id, fecha, importe"),
+      .select("id, tipo, numero_completo, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
+      .limit(5000),
+    supabase
+      .from("documentos")
+      .select("id, estado, documento_origen_id")
+      .in("tipo", ["factura", "rectificativa"])
+      .neq("estado", "borrador")
+      .limit(5000),
+    supabase.from("cobros").select("documento_id, fecha, importe").limit(5000),
     supabase.from("campanas").select("id, estado, fecha_inicio, fecha_fin"),
     supabase.from("v_progreso_campana").select("*"),
     supabase
@@ -66,6 +74,7 @@ export default async function PaginaPanel() {
   lanzarSiError(...resultados);
   const [
     { data: estadoCobro },
+    { data: metaDocs },
     { data: cobros },
     { data: campanas },
     { data: progreso },
@@ -74,25 +83,18 @@ export default async function PaginaPanel() {
     { count: borradoresAntiguos },
   ] = resultados;
 
-  // ── Cobros (mismo criterio que antes y que /admin/cobros) ─────────────────────────────
-  const filasCobro = (estadoCobro ?? []).filter((d) => d.id != null && d.fecha != null);
-  const pendientesAbiertos = filasCobro.filter((d) => ["pendiente", "parcial", "vencida"].includes(d.estado_cobro ?? ""));
-  const totalPendiente = pendientesAbiertos.reduce((s, d) => s + Number(d.pendiente ?? 0), 0);
-  const conSaldo = pendientesAbiertos
-    .filter((d) => Number(d.pendiente ?? 0) > 0.01)
-    .map((d) => ({
-      ...d,
-      id: d.id as number,
-      pendienteNum: Number(d.pendiente ?? 0),
-      aging: clasificarAgingCobro(d.estado_cobro, d.fecha_vencimiento, ahora),
-    }));
-  const suma = (l: typeof conSaldo) => l.reduce((s, d) => s + d.pendienteNum, 0);
-  const criticas90 = conSaldo
-    .filter((d) => d.aging.tramo === "critica_90")
-    .sort((a, b) => b.aging.diasVencido - a.aging.diasVencido);
-  const vencidas = conSaldo.filter((d) => d.aging.tramo !== "al_dia");
-  // Sin fecha de vencimiento una factura nunca cuenta como vencida: los KPI a cero no significan «al día».
-  const sinVencimiento = conSaldo.filter((d) => d.tipo === "factura" && !d.fecha_vencimiento);
+  // ── Cobros (mismo criterio que /admin/cobros y que el estado de cuenta) ───────────────
+  const metaPorId = new Map((metaDocs ?? []).map((d) => [d.id, d]));
+  const {
+    vigentes: filasCobro,
+    totalPendiente,
+    conSaldo,
+    criticas90,
+    vencidas,
+    sinVencimiento,
+    sumaSaldo,
+    sumaCriticas90,
+  } = resumirCobrosPendientes(estadoCobro ?? [], metaDocs ?? [], ahora);
   const nSinVenc = sinVencimiento.length;
   const nPorRevisar = porRevisar ?? 0;
   const nBorradores = borradoresAntiguos ?? 0;
@@ -100,8 +102,10 @@ export default async function PaginaPanel() {
   // ── Series de las tarjetas KPI ─────────────────────────────────────────────────────────
   const docs = filasCobro.map((d) => ({
     id: d.id as number,
+    tipo: d.tipo ?? undefined,
     fecha: d.fecha as string,
     fechaVencimiento: d.fecha_vencimiento,
+    documentoOrigenId: metaPorId.get(d.id as number)?.documento_origen_id ?? null,
     total: Number(d.total ?? 0),
   }));
   const calc = crearCalculadora(
@@ -114,13 +118,18 @@ export default async function PaginaPanel() {
   const nEnCurso = enCurso.length;
   const totalPuntos = enCurso.reduce((s, c) => s + Number(c.puntos_totales ?? 0), 0);
   const totalIncidencias = enCurso.reduce((s, c) => s + Number(c.puntos_con_incidencia ?? 0), 0);
-  const sumaCriticas90 = suma(criticas90);
 
-  // Control: la serie histórica se reconstruye con documentos + cobros; hoy debe dar lo mismo que la vista.
+  // Control: las series históricas se reconstruyen con documentos + cobros; hoy debe dar lo mismo que el resumen.
   const reconstruidoHoy = calc.pendiente(hoy);
   if (Math.abs(reconstruidoHoy - totalPendiente) > 0.01) {
     console.warn(
       `[panel] El saldo reconstruido (${reconstruidoHoy.toFixed(2)}) no coincide con v_estado_cobro (${totalPendiente.toFixed(2)}).`,
+    );
+  }
+  const vencido90Hoy = calc.vencido90(hoy);
+  if (Math.abs(vencido90Hoy - sumaCriticas90) > 0.01) {
+    console.warn(
+      `[panel] El vencido 90+ reconstruido (${vencido90Hoy.toFixed(2)}) no coincide con sumaCriticas90 (${sumaCriticas90.toFixed(2)}).`,
     );
   }
 
@@ -164,7 +173,7 @@ export default async function PaginaPanel() {
   if (nSinVenc > 0)
     tareas.push({
       titulo: "Añadir vencimientos",
-      detalle: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} · ${euros(suma(sinVencimiento))}`,
+      detalle: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} · ${euros(sumaSaldo(sinVencimiento))}`,
       href: "/admin/documentos?revision=sin_vencimiento&cobro=pendiente&tipo=factura",
     });
   if (nPorRevisar > 0)
@@ -277,24 +286,24 @@ export default async function PaginaPanel() {
           color="cobro"
           series={seriePendiente}
           nota={
-            nSinVenc > 0
-              ? { texto: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} sin vencimiento`, href: "/admin/cobros?ver=sin_vencimiento" }
-              : vencidas.length > 0
-                ? { texto: `${vencidas.length} vencida${vencidas.length === 1 ? "" : "s"}`, href: "/admin/cobros?ver=vencidas", tono: "peligro" }
+            vencidas.length > 0
+              ? { texto: `${vencidas.length} vencida${vencidas.length === 1 ? "" : "s"}`, href: "/admin/cobros?ver=vencidas", tono: "peligro" }
+              : nSinVenc > 0
+                ? { texto: `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} sin vencimiento`, href: "/admin/cobros?ver=sin_vencimiento" }
                 : { texto: "Ver cobros", href: "/admin/cobros", tono: "marca" }
           }
         />
         <TarjetaKpiDinamica
           etiqueta="Vencido · más de 90 días"
-          significado={nSinVenc > 0 ? "Importe conocido · evaluación parcial" : "Saldo vencido hace más de 90 días"}
+          significado={nSinVenc > 0 ? "Más de 90 días desde vencimiento o emisión" : "Saldo vencido hace más de 90 días"}
           tipo="linea"
           color="riesgo"
           series={serieRiesgo}
           nota={
-            nSinVenc > 0
-              ? { texto: "Sin fecha: riesgo no evaluable", href: "/admin/cobros?ver=sin_vencimiento", tono: "peligro" }
-              : criticas90.length > 0
-                ? { texto: `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} por reclamar`, href: "/admin/cobros?ver=90", tono: "peligro" }
+            criticas90.length > 0
+              ? { texto: `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} por reclamar`, href: "/admin/cobros?ver=90", tono: "peligro" }
+              : nSinVenc > 0
+                ? { texto: "Sin fecha: evaluación por emisión", href: "/admin/cobros?ver=sin_vencimiento" }
                 : { texto: "Sin riesgo conocido > 90 días" }
           }
         />
@@ -321,26 +330,26 @@ export default async function PaginaPanel() {
             estado={nSinVenc > 0 ? <Insignia tono="aviso">Datos parciales</Insignia> : undefined}
           />
           <div className="grid grid-cols-1 gap-esp4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-borde-default">
-            <Hecho etiqueta="Saldo pendiente" valor={euros(totalPendiente)} alcance={`${conSaldo.length} factura${conSaldo.length === 1 ? "" : "s"} con saldo`} />
+            <Hecho etiqueta="Saldo pendiente" valor={euros(totalPendiente)} alcance={`${conSaldo.length} documento${conSaldo.length === 1 ? "" : "s"} con saldo`} />
             <Hecho
               etiqueta="Sin fecha de vencimiento"
-              valor={euros(suma(sinVencimiento))}
+              valor={euros(sumaSaldo(sinVencimiento))}
               tono={nSinVenc > 0 ? "aviso" : undefined}
               alcance={nSinVenc > 0 ? `${nSinVenc} factura${nSinVenc === 1 ? "" : "s"} por completar` : "Todas tienen vencimiento"}
             />
             <Hecho
-              etiqueta="Vencido 90+ días conocido"
+              etiqueta="Vencido 90+ días"
               valor={euros(sumaCriticas90)}
               tono={criticas90.length > 0 ? "critico" : undefined}
-              alcance={nSinVenc > 0 ? "No confirma ausencia de riesgo" : `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"}`}
+              alcance={criticas90.length > 0 ? `${criticas90.length} factura${criticas90.length === 1 ? "" : "s"} por reclamar` : "Sin riesgo > 90 días"}
             />
           </div>
           {nSinVenc > 0 && (
             <div className="flex gap-esp3 rounded-lg bg-fondo-sutil px-esp4 py-esp3">
               <Icono nombre="alerta" size={20} className="text-icono-default" />
               <p className="text-meta font-medium text-texto-primario">
-                La antigüedad del saldo todavía no es fiable. Completa los vencimientos y valida los datos antes de
-                interpretar el riesgo.
+                Hay facturas sin fecha de vencimiento: no cuentan en 1–89 días, aunque las que superan 90 días desde la
+                emisión sí aparecen como vencidas.
               </p>
             </div>
           )}
@@ -353,9 +362,13 @@ export default async function PaginaPanel() {
                   cliente={d.cliente_razon_social}
                   numero={d.numero_completo ?? `Doc #${d.id}`}
                   tipo={ETIQUETA_TIPO[d.tipo ?? ""] ?? ""}
-                  importe={euros(d.pendienteNum)}
+                  importe={euros(d.saldoNeto)}
                   estado="vencida"
-                  textoEstado={`Vencida hace ${d.aging.diasVencido} días`}
+                  textoEstado={
+                    d.fecha_vencimiento
+                      ? `Vencida hace ${d.aging.diasVencido} días`
+                      : `Emitida hace ${d.aging.diasVencido} días`
+                  }
                 />
               ))}
             </div>

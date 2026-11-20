@@ -1,4 +1,4 @@
-import { EsqueletoCabecera, EsqueletoPipeline } from "@/components/ui/esqueleto";
+import { EsqueletoCabecera, EsqueletoTablero } from "@/components/ui/esqueleto";
 
 export default function CargandoCampanas() {
   return (
@@ -11,7 +11,7 @@ export default function CargandoCampanas() {
     >
       <span className="sr-only">Cargando campañas…</span>
       <EsqueletoCabecera />
-      <EsqueletoPipeline columnas={4} />
+      <EsqueletoTablero columnas={4} />
     </div>
   );
 }

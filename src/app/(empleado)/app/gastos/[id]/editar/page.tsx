@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
-import { BotonVolver } from "@/components/ui/boton-volver";
 import { FormularioGasto } from "@/components/gastos/formulario-gasto";
 import { cargarOpcionesGasto, hoyEnEspana } from "@/app/(admin)/admin/gastos/opciones";
 
@@ -20,10 +19,7 @@ export default async function PaginaEditarGastoEmpleado({ params }: { params: Pr
 
   return (
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
-      <div className="flex flex-col gap-esp2">
-        <BotonVolver href="/app/gastos" etiqueta="Gastos" />
-        <h1 className="text-2xl font-bold text-texto-primario">Corregir gasto</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-texto-primario">Corregir gasto</h1>
       {gasto.estado === "rechazado" && gasto.motivo_rechazo && (
         <p className="rounded-md border border-borde-peligro-sutil bg-fondo-peligro-sutil px-esp4 py-esp3 text-sm text-texto-peligro">
           Rechazado: {gasto.motivo_rechazo}

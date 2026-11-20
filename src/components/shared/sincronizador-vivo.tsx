@@ -75,7 +75,15 @@ export function SincronizadorVivo({
       );
 
     if (esAdmin) {
-      for (const tabla of ["campanas", "puntos_campana", "asignaciones_punto", "fotos_punto", "gastos"] as const) {
+      for (const tabla of [
+        "campanas",
+        "puntos_campana",
+        "asignaciones_punto",
+        "fotos_punto",
+        "gastos",
+        "documentos",
+        "cobros",
+      ] as const) {
         canal.on("postgres_changes", { event: "*", schema: "public", table: tabla }, () => alCambio(tabla));
       }
     } else {

@@ -137,7 +137,7 @@ function FormularioDetallesPunto({
               ))}
             </select>
           </Etiqueta>
-          <Etiqueta texto="Piezas de este punto">
+          <Etiqueta texto="Unidades de este punto">
             <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
             {articuloElegido && (
               <span
@@ -164,7 +164,7 @@ function FormularioDetallesPunto({
               ))}
             </select>
           </Etiqueta>
-          <Etiqueta texto="Piezas">
+          <Etiqueta texto="Unidades">
             <input value={piezas} onChange={(e) => setPiezas(e.target.value)} inputMode="decimal" className={entrada} />
           </Etiqueta>
         </div>

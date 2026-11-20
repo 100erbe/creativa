@@ -12,7 +12,9 @@ import { Insignia } from "@/components/ui/insignia";
 import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { clasificarAgingCobro, ETIQUETA_TIPO, METODOS_COBRO } from "@/lib/documentos";
+import { ETIQUETA_TIPO, METODOS_COBRO } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { hoyEnEspana, SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { cn } from "@/lib/cn";
 
 export const dynamic = "force-dynamic";
@@ -39,13 +41,20 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
 
   const supabase = await createClient();
   const hoy = new Date();
-  const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+  const inicioMes = `${hoyEnEspana(hoy).slice(0, 7)}-01`;
 
   const resultados = await Promise.all([
     supabase
       .from("v_estado_cobro")
       .select("id, tipo, numero_completo, cliente_id, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"]),
+      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
+      .limit(5000),
+    supabase
+      .from("documentos")
+      .select("id, estado, documento_origen_id")
+      .in("tipo", ["factura", "rectificativa"])
+      .neq("estado", "borrador")
+      .limit(5000),
     supabase
       .from("cobros")
       .select("id, fecha, importe, metodo, documento_id, documento:documentos!documento_id(numero_completo, tipo, cliente_razon_social, clientes(razon_social))")
@@ -55,30 +64,22 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
     supabase.from("cobros").select("importe").gte("fecha", inicioMes),
   ]);
   lanzarSiError(...resultados);
-  const [{ data: pendientes }, { data: ultimosCobros }, { data: cobrosMes }] = resultados;
+  const [{ data: pendientes }, { data: metaDocs }, { data: ultimosCobros }, { data: cobrosMes }] = resultados;
 
-  // Mismo criterio que el panel: saldo > 0,01 € y antigüedad desde el vencimiento.
-  const conSaldo = (pendientes ?? [])
-    .filter((d) => Number(d.pendiente ?? 0) > 0.01 && d.id != null)
-    .map((d) => ({
-      ...d,
-      id: d.id as number,
-      pendienteNum: Number(d.pendiente ?? 0),
-      totalNum: Number(d.total ?? 0),
-      aging: clasificarAgingCobro(d.estado_cobro, d.fecha_vencimiento, hoy),
-      sinVencimiento: d.tipo === "factura" && !d.fecha_vencimiento,
-    }));
-
-  const suma = (l: typeof conSaldo) => l.reduce((s, d) => s + d.pendienteNum, 0);
-  const alDia = conSaldo.filter((d) => d.aging.tramo === "al_dia");
-  const v30 = conSaldo.filter((d) => d.aging.tramo === "vencida_30");
-  const v60 = conSaldo.filter((d) => d.aging.tramo === "vencida_60");
-  const v90 = conSaldo.filter((d) => d.aging.tramo === "critica_90");
-  const vencidas = [...v30, ...v60, ...v90];
-  const sinVenc = conSaldo.filter((d) => d.sinVencimiento);
-  // Como en el Resumen: el total es neto de los abonos (rectificativas con saldo negativo).
-  const totalPendiente = (pendientes ?? []).reduce((s, d) => s + Number(d.pendiente ?? 0), 0);
-  const abonosSinAplicar = totalPendiente - suma(conSaldo);
+  // Mismo criterio que el panel y el estado de cuenta: saldo neto de abonos ligados y 90+ días desde vencimiento o emisión.
+  const {
+    totalPendiente,
+    conSaldo,
+    criticas90: v90,
+    vencidas,
+    sinVencimiento: sinVenc,
+    sumaSaldo: suma,
+    abonosSinAplicar,
+  } = resumirCobrosPendientes(pendientes ?? [], metaDocs ?? [], hoy);
+  const v30 = conSaldo.filter((d) => d.saldoNeto >= SALDO_MINIMO && d.aging.tramo === "vencida_30");
+  const v60 = conSaldo.filter((d) => d.saldoNeto >= SALDO_MINIMO && d.aging.tramo === "vencida_60");
+  const idsVencidas = new Set(vencidas.map((d) => d.id));
+  const alDia = conSaldo.filter((d) => !idsVencidas.has(d.id));
   const totalAging = Math.max(0.01, suma(conSaldo));
   const cobradoMes = (cobrosMes ?? []).reduce((s, c) => s + Number(c.importe), 0);
 
@@ -92,11 +93,11 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
   const listaVista =
     vista === "vencidas" ? vencidas : vista === "90" ? v90 : vista === "sin_vencimiento" ? sinVenc : conSaldo;
   const filas = [...listaVista].sort(
-    (a, b) => b.aging.diasVencido - a.aging.diasVencido || b.pendienteNum - a.pendienteNum,
+    (a, b) => b.aging.diasVencido - a.aging.diasVencido || b.saldoNeto - a.saldoNeto,
   );
 
   // Clientes con más saldo pendiente
-  const porCliente = new Map<number, { id: number; nombre: string; importe: number; facturas: number; maxDias: number }>();
+  const porCliente = new Map<number, { id: number; nombre: string; importe: number; facturas: number; maxDias: number; esCritico90: boolean }>();
   for (const d of conSaldo) {
     if (d.cliente_id == null) continue;
     const c = porCliente.get(d.cliente_id) ?? {
@@ -105,22 +106,26 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
       importe: 0,
       facturas: 0,
       maxDias: 0,
+      esCritico90: false,
     };
-    c.importe += d.pendienteNum;
+    c.importe += d.saldoNeto;
     c.facturas += 1;
     c.maxDias = Math.max(c.maxDias, d.aging.diasVencido);
+    if (d.saldoNeto >= SALDO_MINIMO && d.aging.esCritica90) c.esCritico90 = true;
     porCliente.set(d.cliente_id, c);
   }
   const clientes = [...porCliente.values()].sort((a, b) => b.importe - a.importe).slice(0, 8);
 
   const textoEstado = (d: (typeof conSaldo)[number]) =>
-    d.sinVencimiento
-      ? "Sin fecha de vencimiento"
-      : d.aging.diasVencido > 0
-        ? `Vencida hace ${d.aging.diasVencido} día${d.aging.diasVencido === 1 ? "" : "s"}`
-        : d.fecha_vencimiento
-          ? `Vence el ${fechaMedia(d.fecha_vencimiento)}`
-          : "Pendiente de cobro";
+    d.aging.esCritica90 && !d.fecha_vencimiento
+      ? `Emitida hace ${d.aging.diasVencido} días`
+      : d.sinVencimiento
+        ? "Sin fecha de vencimiento"
+        : d.aging.diasVencido > 0
+          ? `Vencida hace ${d.aging.diasVencido} día${d.aging.diasVencido === 1 ? "" : "s"}`
+          : d.fecha_vencimiento
+            ? `Vence el ${fechaMedia(d.fecha_vencimiento)}`
+            : "Pendiente de cobro";
 
   return (
     <div className="flex flex-col gap-esp5">
@@ -174,8 +179,8 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
               {sinVenc.length} factura{sinVenc.length === 1 ? "" : "s"} sin fecha de vencimiento
             </p>
             <p className="text-meta font-medium text-texto-secundario">
-              <span className="tabular-nums">{euros(suma(sinVenc))}</span> que no cuentan como vencidas ni en «90+
-              días»: la antigüedad del saldo no es fiable hasta completarlas.
+              <span className="tabular-nums">{euros(suma(sinVenc))}</span> que no cuentan en el tramo 1–89 días hasta
+              completar su vencimiento; las que superan 90 días desde la emisión sí figuran en «90+ días».
             </p>
           </div>
           <Link
@@ -270,10 +275,10 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
                   cliente={d.cliente_razon_social}
                   numero={d.numero_completo ?? `Doc #${d.id}`}
                   tipo={ETIQUETA_TIPO[d.tipo ?? ""] ?? d.tipo ?? ""}
-                  importe={euros(d.pendienteNum)}
+                  importe={euros(d.saldoNeto)}
                   pago={
-                    d.totalNum - d.pendienteNum > 0.01
-                      ? { texto: `de ${euros(d.totalNum)}`, tono: "neutro" }
+                    Number(d.total ?? 0) - d.saldoNeto > 0.01
+                      ? { texto: `de ${euros(Number(d.total ?? 0))}`, tono: "neutro" }
                       : undefined
                   }
                   estado={d.aging.diasVencido > 0 ? "vencida" : "pendiente"}
@@ -323,13 +328,13 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
                       <span className="block truncate text-etiqueta text-texto-primario">{c.nombre}</span>
                       <span className="block text-meta font-medium text-texto-secundario">
                         {c.facturas} factura{c.facturas === 1 ? "" : "s"}
-                        {c.maxDias > 0 ? ` · hasta ${c.maxDias} días vencida` : ""}
+                        {c.maxDias > 0 ? ` · hasta ${c.maxDias} días` : ""}
                       </span>
                     </span>
                     <span
                       className={cn(
                         "tabular-nums whitespace-nowrap text-sm font-semibold",
-                        c.maxDias >= 90 ? "text-texto-critico" : "text-texto-primario",
+                        c.esCritico90 ? "text-texto-critico" : "text-texto-primario",
                       )}
                     >
                       {euros(c.importe)}

@@ -55,7 +55,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         antes={
           <Link
             href="/admin/gastos"
-            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
           >
             <Icono nombre="atras" size={16} />
             Gastos

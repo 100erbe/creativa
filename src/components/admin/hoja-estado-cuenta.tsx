@@ -1,5 +1,5 @@
 // Hoja A4 del estado de cuenta de un cliente: todas sus facturas, su situación de cobro
-// y las insolutas resaltadas con su total. Componente de presentación puro.
+// y las vencidas (+90 días) resaltadas con su total. Componente de presentación puro.
 
 import { documento } from "@/design/tokens";
 import { fechaNumerica } from "@/lib/formato";
@@ -88,7 +88,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
           <Resumen etiqueta="Pendiente de cobro" valor={formatoEuros(estado.totalPendiente)} />
           {hayAbonos && <Resumen etiqueta="Abonos sin aplicar" valor={formatoEuros(estado.abonosPendientes)} />}
           <Resumen
-            etiqueta={`Total insoluto (${estado.insolutas.length} ${estado.insolutas.length === 1 ? "factura" : "facturas"})`}
+            etiqueta={`Total vencido (+90 días) (${estado.insolutas.length} ${estado.insolutas.length === 1 ? "factura" : "facturas"})`}
             valor={formatoEuros(estado.totalInsoluto)}
             destacado={estado.totalInsoluto > 0}
           />
@@ -155,7 +155,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
 
         <section className="ml-auto mt-[5mm] w-[95mm] [break-inside:avoid]">
           <div className="flex gap-4 py-[1.2mm] text-[9.5pt]">
-            <span className="flex-1 text-documento-tenue">Total facturas insolutas</span>
+            <span className="flex-1 text-documento-tenue">Total facturas vencidas (+90 días)</span>
             <span className="whitespace-nowrap tabular-nums">{formatoEuros(estado.totalInsoluto)}</span>
           </div>
           {hayAbonos && (
@@ -165,7 +165,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
             </div>
           )}
           <div className="mt-[1.5mm] flex items-center gap-4 bg-documento-insoluto px-[3mm] py-[2.2mm] text-[11pt] font-bold text-documento-sobre-acento">
-            <span className="flex-1 tracking-[0.04em]">TOTAL INSOLUTO</span>
+            <span className="flex-1 tracking-[0.04em]">TOTAL VENCIDO (+90 DÍAS)</span>
             <span className="whitespace-nowrap tabular-nums">{formatoEuros(estado.totalAReclamar)}</span>
           </div>
         </section>
@@ -174,7 +174,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
           <section className="mt-[6mm] border border-documento-borde px-[4mm] py-[2.5mm] [break-inside:avoid]">
             <Etiqueta>Forma de pago</Etiqueta>
             <p>
-              Rogamos realicen el pago de las facturas insolutas
+              Rogamos realicen el pago de las facturas vencidas
               {d.cuenta ? (
                 <>
                   {" "}mediante transferencia a la cuenta <strong className="tabular-nums">{d.cuenta.iban}</strong> ({d.cuenta.banco})

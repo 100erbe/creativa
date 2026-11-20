@@ -7,7 +7,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { clasificarAgingCobro, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
+import { clasificarAgingCobro } from "@/lib/documentos";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -15,6 +15,8 @@ import { BotonActivo, BotonEliminarCliente, Contactos } from "./controles";
 import { cargarEstadoCuenta, mensajeReclamacion, nombreArchivoEstadoCuenta, nombreArchivoFactura } from "@/lib/estado-cuenta-datos";
 import { cuentaConectada } from "@/lib/gmail";
 import { ReclamarImpagadas } from "./reclamar-impagadas";
+import { ProductosVendidos, type ProductoVendidoItem } from "./productos-vendidos";
+import { DocumentosRecientes } from "./documentos-recientes";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ export default async function PaginaCliente({
     estadoCuenta,
     gmail,
     { data: reclamaciones },
+    { data: facturasConLineas },
   ] = await Promise.all([
     cliente.grupo_id
       ? supabase.from("grupos_empresariales").select("nombre").eq("id", cliente.grupo_id).maybeSingle()
@@ -72,8 +75,7 @@ export default async function PaginaCliente({
       .select("id, tipo, estado, numero_completo, fecha, total")
       .eq("cliente_id", clienteId)
       .order("fecha", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(8),
+      .order("id", { ascending: false }),
     supabase
       .from("documentos")
       .select("total")
@@ -101,7 +103,34 @@ export default async function PaginaCliente({
       .eq("cliente_id", clienteId)
       .order("creada_en", { ascending: false })
       .limit(5),
+    supabase
+      .from("documentos")
+      .select(
+        "id, numero_completo, fecha, lineas_documento(id, orden, descripcion, artista, cantidad, unidad, importe)",
+      )
+      .eq("cliente_id", clienteId)
+      .eq("tipo", "factura")
+      .neq("estado", "borrador")
+      .neq("estado", "anulado")
+      .order("fecha", { ascending: false })
+      .order("id", { ascending: false }),
   ]);
+  const productosVendidos: ProductoVendidoItem[] = (facturasConLineas ?? []).flatMap((doc) =>
+    [...(doc.lineas_documento ?? [])]
+      .filter((l) => Number(l.importe) > 0)
+      .sort((a, b) => a.orden - b.orden || a.id - b.id)
+      .map((l) => ({
+        id: l.id,
+        documentoId: doc.id,
+        numeroDocumento: doc.numero_completo,
+        fecha: doc.fecha,
+        descripcion: l.descripcion,
+        artista: l.artista,
+        cantidad: Number(l.cantidad),
+        unidad: l.unidad,
+        importe: Number(l.importe),
+      })),
+  );
   const insolutas = estadoCuenta?.estado.insolutas ?? [];
   const textoReclamacion = estadoCuenta ? mensajeReclamacion(estadoCuenta) : null;
 
@@ -117,7 +146,7 @@ export default async function PaginaCliente({
     }));
 
   const vencidas = cobrosConAging.filter((c) => c.aging.diasVencido > 0 || c.estado_cobro === "vencida");
-  // Insolutas: sin cobrar y con más de 90 días desde la emisión (misma regla que el estado de cuenta).
+  // Vencidas (+90 días): sin cobrar y con más de 90 días desde la emisión (misma regla que el estado de cuenta).
   const criticas90 = insolutas;
   const sumaCriticas90 = estadoCuenta?.estado.totalInsoluto ?? 0;
   const maxDiasVencido = insolutas.reduce((m, l) => Math.max(m, l.diasDesdeEmision), 0);
@@ -135,7 +164,7 @@ export default async function PaginaCliente({
       <div className="flex flex-col gap-esp3">
         <Link
           href="/admin/clientes"
-          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
+          className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Clientes
@@ -233,7 +262,7 @@ export default async function PaginaCliente({
       {criticas90.length > 0 && (
         <div
           role="region"
-          aria-label="Alerta de facturas insolutas con más de 90 días"
+          aria-label="Alerta de facturas vencidas con más de 90 días"
           className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
@@ -241,7 +270,7 @@ export default async function PaginaCliente({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-texto-critico">
-              {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} insoluta
+              {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} vencida
               {criticas90.length === 1 ? "" : "s"} con más de 90 días desde su emisión
             </p>
             <p className="tabular-nums text-xs text-texto-primario">
@@ -290,47 +319,11 @@ export default async function PaginaCliente({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
-            <div className="flex items-center justify-between gap-esp2">
-              <h2 className="text-titulo-panel text-texto-primario">Documentos recientes</h2>
-              <Link
-                href={`/admin/documentos?cliente=${clienteId}`}
-                className="text-sm font-medium text-texto-marca hover:underline"
-              >
-                Ver todos
-              </Link>
-            </div>
-            <div className="flex flex-col divide-y divide-borde-default">
-              {(documentos ?? []).map((d) => (
-                <Link
-                  key={d.id}
-                  href={`/admin/documentos/${d.id}`}
-                  className="-mx-esp2 flex items-center gap-esp3 rounded-md px-esp2 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil"
-                >
-                  <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-sutil sm:flex">
-                    <Icono nombre="documentos" size={18} className="text-icono-default" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-texto-primario">
-                      {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
-                    </p>
-                    <p className="tabular-nums text-xs text-texto-terciario">
-                      {ETIQUETA_TIPO[d.tipo] ?? d.tipo} · {fechaMedia(d.fecha)}
-                    </p>
-                  </div>
-                  <span className="tabular-nums whitespace-nowrap text-sm font-medium text-texto-primario">
-                    {euros(Number(d.total))}
-                  </span>
-                  <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
-                    {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
-                  </Insignia>
-                </Link>
-              ))}
-              {(documentos ?? []).length === 0 && (
-                <p className="py-esp3 text-sm text-texto-terciario">Este cliente aún no tiene documentos.</p>
-              )}
-            </div>
-          </div>
+          <DocumentosRecientes
+            documentos={(documentos ?? []).map((d) => ({ ...d, total: Number(d.total) }))}
+          />
+
+          <ProductosVendidos items={productosVendidos} />
 
           {(campanas ?? []).length > 0 && (
             <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">

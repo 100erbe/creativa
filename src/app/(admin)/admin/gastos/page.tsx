@@ -5,7 +5,6 @@ import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia } from "@/components/ui/insignia";
 import { Boton, clasesBoton } from "@/components/ui/boton";
-import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
@@ -150,7 +149,6 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
     <div className="flex flex-col gap-esp6">
       {revision && <ModalRevisarGasto gasto={revision} cerrarHref={enlace(actual, {})} />}
       <CabeceraPagina
-        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Gastos"
         subtitulo="Gastos deducibles (con IVA soportado) y gastos menores de caja, con aprobación y reembolso."
         acciones={

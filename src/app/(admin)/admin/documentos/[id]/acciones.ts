@@ -9,7 +9,10 @@ import { accion } from "@/lib/accion";
 function refrescar(id?: number) {
   if (id) revalidatePath(`/admin/documentos/${id}`);
   revalidatePath("/admin/documentos");
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/clientes");
   revalidatePath("/admin/panel");
+  revalidatePath("/admin", "layout");
 }
 
 /**

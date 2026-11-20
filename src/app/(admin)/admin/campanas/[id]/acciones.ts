@@ -301,7 +301,7 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
     throw new Error("Marca la ubicación en el mapa o busca la dirección.");
   }
   if (d.piezas != null && (!Number.isFinite(d.piezas) || d.piezas <= 0)) {
-    throw new Error("Las piezas del punto deben ser mayores que 0.");
+    throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
   for (const f of [d.fechaColocacion, d.fechaRetirada]) if (f && !FECHA.test(f)) throw new Error("Fecha no válida.");
   if (d.fechaColocacion && d.fechaRetirada && d.fechaRetirada < d.fechaColocacion) {
@@ -380,7 +380,7 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
       if (seMovio || (antes.direccion ?? null) !== fila.direccion) cambios.push("ubicación");
       if ((antes.notas ?? null) !== fila.notas) cambios.push("instrucciones");
       if (antes.tipo_soporte !== fila.tipo_soporte) cambios.push("soporte");
-      if ((antes.piezas == null ? null : Number(antes.piezas)) !== fila.piezas) cambios.push("piezas");
+      if ((antes.piezas == null ? null : Number(antes.piezas)) !== fila.piezas) cambios.push("unidades");
 
       if (cambios.length > 0) {
         const destinatarios = await asignadosActivos(supabase, puntoId);
@@ -605,22 +605,23 @@ export const finalizarCampana = accion(async (campanaId: number) => {
 });
 
 /**
- * Borra una campaña que no está vinculada a ningún documento (si lo está, forma parte de lo facturado).
+ * Borra una campaña y desvincula cualquier documento asociado (`documentos.campana_id = null`) sin borrar los documentos.
  * Se borran también sus fotos del almacenamiento; puntos, asignaciones y enlaces caen en cascada.
  */
 export const eliminarCampana = accion(async (campanaId: number) => {
   const admin = await exigirAdmin();
   const supabase = await createClient();
 
-  const [{ data: campana }, { count: documentos }, { data: puntos }] = await Promise.all([
+  const [{ data: campana }, { data: documentos }, { data: puntos }] = await Promise.all([
     supabase.from("campanas").select("nombre, documento_id").eq("id", campanaId).maybeSingle(),
-    supabase.from("documentos").select("id", { count: "exact", head: true }).eq("campana_id", campanaId),
+    supabase.from("documentos").select("id").eq("campana_id", campanaId),
     supabase.from("puntos_campana").select("id").eq("campana_id", campanaId),
   ]);
   if (!campana) throw new Error("No se ha encontrado la campaña.");
-  if (campana.documento_id || (documentos ?? 0) > 0) {
-    throw new Error("La campaña está vinculada a un documento: no se puede eliminar. Cámbiala a «Cancelada».");
-  }
+
+  const documentoIds = [
+    ...new Set([...(documentos ?? []).map((d) => d.id), ...(campana.documento_id ? [campana.documento_id] : [])]),
+  ];
   const ids = (puntos ?? []).map((p) => p.id);
 
   let destinatarios: string[] = [];
@@ -638,6 +639,14 @@ export const eliminarCampana = accion(async (campanaId: number) => {
       const { error } = await supabase.from("fotos_punto").delete().in("punto_id", ids);
       if (error) throw new Error(error.message);
     }
+  }
+
+  if ((documentos ?? []).length > 0) {
+    const { error: errorDesvincular } = await supabase
+      .from("documentos")
+      .update({ campana_id: null })
+      .eq("campana_id", campanaId);
+    if (errorDesvincular) throw new Error(`No se pudo desvincular de los documentos: ${errorDesvincular.message}`);
   }
 
   const { error } = await supabase.from("campanas").delete().eq("id", campanaId);
@@ -659,4 +668,9 @@ export const eliminarCampana = accion(async (campanaId: number) => {
 
   revalidatePath("/admin/campanas");
   revalidatePath("/admin/panel");
+  revalidatePath("/admin/documentos");
+  revalidatePath("/admin/documentos/nuevo");
+  for (const docId of documentoIds) {
+    revalidatePath(`/admin/documentos/${docId}`);
+  }
 });

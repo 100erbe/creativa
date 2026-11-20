@@ -402,7 +402,7 @@ export const anadirPunto = accion(async (
     throw new Error("Marca la ubicación en el mapa o busca la dirección.");
   }
   if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
-    throw new Error("Las piezas del punto deben ser mayores que 0.");
+    throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
   const supabase = await createClient();
 
@@ -500,7 +500,7 @@ export const actualizarPunto = accion(async (
 ) => {
   await exigirAdmin();
   if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
-    throw new Error("Las piezas del punto deben ser mayores que 0.");
+    throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
   if (
     datos.fecha_colocacion_prevista &&

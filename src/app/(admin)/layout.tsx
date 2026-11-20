@@ -7,7 +7,7 @@ import { IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { PopupAviso } from "@/components/avisos/popup-aviso";
 import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { contarNoLeidos } from "@/lib/push/bandeja";
-import { sumarDias } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { urlAvatar } from "@/lib/avatar";
 
 export default async function LayoutAdmin({
@@ -22,21 +22,27 @@ export default async function LayoutAdmin({
   if (!usuario || usuario.rol !== "admin") redirect("/entrar");
 
   const supabase = await createClient();
-  const hoyIso = new Date().toISOString().slice(0, 10);
-  const limite90 = sumarDias(hoyIso, -90);
 
-  const [noLeidos, resVencidas90, avatar] = await Promise.all([
+  const [noLeidos, resAbiertos, resMetaDocs, avatar] = await Promise.all([
     contarNoLeidos(),
     supabase
       .from("v_estado_cobro")
-      .select("id", { count: "exact", head: true })
+      .select("id, tipo, fecha, fecha_vencimiento, pendiente, estado_cobro")
       .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .gt("pendiente", 0.01)
-      .lte("fecha_vencimiento", limite90),
+      .limit(5000),
+    supabase
+      .from("documentos")
+      .select("id, estado, documento_origen_id")
+      .in("tipo", ["factura", "rectificativa"])
+      .neq("estado", "borrador")
+      .limit(5000),
     urlAvatar(usuario.avatarUrl),
   ]);
 
-  const vencidas90 = resVencidas90.error ? 0 : (resVencidas90.count ?? 0);
+  const vencidas90 =
+    resAbiertos.error || resMetaDocs.error
+      ? 0
+      : resumirCobrosPendientes(resAbiertos.data ?? [], resMetaDocs.data ?? []).criticas90.length;
   const iniciales = `${usuario.nombre[0] ?? ""}${usuario.apellidos?.[0] ?? ""}`.toUpperCase();
 
   return (

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icono } from "@/components/ui/iconos";
-import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 
 const SECCIONES = [
@@ -46,7 +45,6 @@ export default async function PaginaAjustes() {
   return (
     <div className="flex flex-col gap-esp6">
       <CabeceraPagina
-        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Ajustes"
         subtitulo="Lo que antes solo se podía cambiar desde la base de datos."
       />

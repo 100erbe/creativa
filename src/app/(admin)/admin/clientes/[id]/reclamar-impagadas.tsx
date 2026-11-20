@@ -29,7 +29,7 @@ type Props = {
 };
 
 /**
- * Botón «Reclamar impagadas» y su ventana: prepara los PDF (estado de cuenta + facturas insolutas)
+ * Botón «Reclamar impagadas» y su ventana: prepara los PDF (estado de cuenta + facturas vencidas)
  * de uno en uno y crea con ellos un borrador en Gmail, listo para revisar y enviar.
  */
 export function ReclamarImpagadas(p: Props) {
@@ -44,7 +44,7 @@ export function ReclamarImpagadas(p: Props) {
   const [hecho, setHecho] = useState<{ url: string; remitente: string } | null>(null);
 
   const archivos: { clave: string; archivo: "estado" | number; nombre: string; detalle: string }[] = [
-    { clave: "estado", archivo: "estado", nombre: `${p.archivoEstado}.pdf`, detalle: "Todas las facturas del cliente y el total insoluto" },
+    { clave: "estado", archivo: "estado", nombre: `${p.archivoEstado}.pdf`, detalle: "Todas las facturas del cliente y el total vencido (+90 días)" },
     ...p.insolutas.map((f) => ({
       clave: String(f.id),
       archivo: f.id,
@@ -138,8 +138,8 @@ export function ReclamarImpagadas(p: Props) {
                   Reclamar facturas impagadas
                 </h2>
                 <p className="tabular-nums text-sm text-texto-secundario">
-                  {p.insolutas.length} factura{p.insolutas.length === 1 ? "" : "s"} insoluta
-                  {p.insolutas.length === 1 ? "" : "s"} · total{" "}
+                  {p.insolutas.length} factura{p.insolutas.length === 1 ? "" : "s"} vencida
+                  {p.insolutas.length === 1 ? "" : "s"} (+90 días) · total{" "}
                   <strong className="text-texto-critico">{euros(p.totalAReclamar)}</strong>
                 </p>
               </div>

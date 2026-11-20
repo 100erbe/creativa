@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
-import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { ConfirmarLectura } from "./confirmar-lectura";
 
@@ -40,11 +38,6 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
 
   return (
     <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
-      <Link href="/app/avisos" className="-ml-1 flex w-fit items-center gap-esp1 text-sm text-texto-secundario">
-        <Icono nombre="atras" size={16} />
-        Avisos
-      </Link>
-
       <div className="flex flex-col gap-esp2">
         <div className="flex items-start gap-esp3">
           <h1 className="min-w-0 flex-1 text-2xl font-bold text-texto-primario">{a.titulo}</h1>

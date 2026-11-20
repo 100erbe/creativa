@@ -964,7 +964,7 @@ function FormularioArticulo({
               </div>
             </Etiqueta>
 
-            <Etiqueta texto={conMedidas ? "Piezas" : `Cantidad (${UNIDAD[producto.unidad] ?? producto.unidad})`}>
+            <Etiqueta texto={conMedidas ? "Unidades" : `Cantidad (${UNIDAD[producto.unidad] ?? producto.unidad})`}>
               <input
                 ref={inputPiezasRef}
                 value={piezas}
@@ -1200,7 +1200,7 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
           />
           {linea.cantidad !== linea.piezas && (
             <p className="px-esp2 text-xs text-texto-terciario">
-              {texto(linea.piezas, 3)} pzs → {texto(linea.cantidad, 3)} {UNIDAD[linea.unidad] ?? linea.unidad}
+              {texto(linea.piezas, 3)} ud → {texto(linea.cantidad, 3)} {UNIDAD[linea.unidad] ?? linea.unidad}
             </p>
           )}
         </div>

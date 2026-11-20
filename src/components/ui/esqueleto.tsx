@@ -65,7 +65,7 @@ export function EsqueletoTabla({ filas = 6 }: { filas?: number }) {
   );
 }
 
-export function EsqueletoPipeline({ columnas = 4 }: { columnas?: number }) {
+export function EsqueletoTablero({ columnas = 4 }: { columnas?: number }) {
   return (
     <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: columnas }).map((_, col) => (

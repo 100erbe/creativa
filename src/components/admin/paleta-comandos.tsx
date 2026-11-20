@@ -16,7 +16,7 @@ type GrupoResultado =
   | "Campañas"
   | "Gastos"
   | "Acciones rápidas"
-  | "Riesgo y pipeline"
+  | "Riesgo y tablero"
   | "Navegación";
 
 type ElementoPaleta = {
@@ -33,7 +33,7 @@ type ElementoPaleta = {
 };
 
 type Comando = ElementoPaleta & {
-  grupo: "Acciones rápidas" | "Riesgo y pipeline" | "Navegación";
+  grupo: "Acciones rápidas" | "Riesgo y tablero" | "Navegación";
 };
 
 const PREFIJOS_TIPO: Record<string, "factura" | "presupuesto" | "albaran" | "rectificativa"> = {
@@ -96,8 +96,8 @@ const COMANDOS: Comando[] = [
   },
   {
     id: "vencidas-90",
-    grupo: "Riesgo y pipeline",
-    etiqueta: "Facturas insolutas 90+ días",
+    grupo: "Riesgo y tablero",
+    etiqueta: "Facturas vencidas 90+ días",
     descripcion: "Ver cobros en riesgo crítico con más de 90 días vencidos",
     href: "/admin/documentos?cobro=vencida_90",
     icono: "alerta",
@@ -107,7 +107,7 @@ const COMANDOS: Comando[] = [
   },
   {
     id: "por-cobrar",
-    grupo: "Riesgo y pipeline",
+    grupo: "Riesgo y tablero",
     etiqueta: "Facturas por cobrar",
     descripcion: "Pendientes, parciales y vencidas",
     href: "/admin/documentos?cobro=pendiente",
@@ -116,7 +116,7 @@ const COMANDOS: Comando[] = [
   },
   {
     id: "clientes-deuda",
-    grupo: "Riesgo y pipeline",
+    grupo: "Riesgo y tablero",
     etiqueta: "Clientes con saldo pendiente",
     descripcion: "Listado filtrado por clientes con deuda abierta",
     href: "/admin/clientes?con_deuda=1",
@@ -124,24 +124,24 @@ const COMANDOS: Comando[] = [
     palabrasClave: "deuda saldo pendiente impagos morosos",
   },
   {
-    id: "pipeline-campanas",
-    grupo: "Riesgo y pipeline",
-    etiqueta: "Pipeline de campañas",
+    id: "tablero-campanas",
+    grupo: "Riesgo y tablero",
+    etiqueta: "Tablero de campañas",
     descripcion: "Vista Kanban por fase e incidencias",
-    href: "/admin/campanas?vista=pipeline",
+    href: "/admin/campanas?vista=tablero",
     icono: "kanban",
-    badge: "Pipeline",
+    badge: "Tablero",
     badgeTono: "marca",
     palabrasClave: "kanban tablero columnas campañas incidencias",
   },
   {
-    id: "pipeline-documentos",
-    grupo: "Riesgo y pipeline",
-    etiqueta: "Pipeline de documentos",
+    id: "tablero-documentos",
+    grupo: "Riesgo y tablero",
+    etiqueta: "Tablero de documentos",
     descripcion: "Vista Kanban de presupuestos, facturas y cobros",
-    href: "/admin/documentos?vista=pipeline",
+    href: "/admin/documentos?vista=tablero",
     icono: "kanban",
-    badge: "Pipeline",
+    badge: "Tablero",
     badgeTono: "marca",
     palabrasClave: "kanban tablero presupuestos ciclo comercial",
   },
@@ -174,7 +174,7 @@ const COMANDOS: Comando[] = [
     id: "nav-cobros",
     grupo: "Navegación",
     etiqueta: "Cobros",
-    descripcion: "Saldo pendiente, antigüedad, vencidas e cobros registrados",
+    descripcion: "Saldo pendiente, antigüedad, vencidas y cobros registrados",
     href: "/admin/cobros",
     icono: "cobros",
     palabrasClave: "cobro pendiente vencida aging antiguedad impagadas reclamar",
@@ -496,10 +496,10 @@ export function PaletaComandos() {
           "Campañas",
           "Gastos",
           "Acciones rápidas",
-          "Riesgo y pipeline",
+          "Riesgo y tablero",
           "Navegación",
         ]
-      : ["Acciones rápidas", "Riesgo y pipeline", "Navegación"];
+      : ["Acciones rápidas", "Riesgo y tablero", "Navegación"];
     return orden
       .map((nombre) => ({
         nombre,

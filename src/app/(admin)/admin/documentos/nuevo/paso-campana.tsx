@@ -374,7 +374,7 @@ function CampanaVinculada({
                         {nombreVisiblePunto(p.nombre)}{" "}
                         <span className="font-normal text-texto-terciario">
                           · {etiquetaResumen}
-                          {p.piezas != null ? ` · ${formatoPiezas(p.piezas)} pzs` : ""}
+                          {p.piezas != null ? ` · ${formatoPiezas(p.piezas)} ud` : ""}
                         </span>
                       </p>
                       {faltaArticulo && (

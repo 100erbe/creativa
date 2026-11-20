@@ -8,13 +8,13 @@ import { PestanasEnlace } from "@/components/ui/pestanas";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import {
-  clasificarAgingCobro,
   ETIQUETA_COBRO,
   ETIQUETA_ESTADO_DOC,
   ETIQUETA_TIPO,
-  sumarDias,
   validezVencida,
 } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { LimpiarBorradores } from "./limpiar-borradores";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +58,7 @@ type PdfSinAsignar = {
 const COBROS = [
   { valor: "pendiente", etiqueta: "Por cobrar", critico: false },
   { valor: "vencida", etiqueta: "Vencidas", critico: false },
-  { valor: "vencida_90", etiqueta: "Insolutas 90+ días", critico: true },
+  { valor: "vencida_90", etiqueta: "Vencidas 90+ días", critico: true },
 ] as const;
 
 const PILDORA =
@@ -89,14 +89,14 @@ export default async function PaginaDocumentos({
   searchParams: Promise<Filtros>;
 }) {
   const filtros = await searchParams;
-  const vista = filtros.vista === "pipeline" ? "pipeline" : "lista";
-  const porPagina = vista === "pipeline" ? 100 : 25;
+  const vista = filtros.vista === "tablero" || filtros.vista === "pipeline" ? "tablero" : "lista";
+  const porPagina = vista === "tablero" ? 100 : 25;
 
   const tipo = TIPOS.some((t) => t.valor === filtros.tipo) ? (filtros.tipo ?? "") : "";
   const estado = ESTADOS.some((e) => e.valor === filtros.estado) ? (filtros.estado ?? "") : "";
   // Se quitan los caracteres que rompen la sintaxis de .or() de PostgREST.
   const q = (filtros.q ?? "").replace(/[,()%*\\]/g, " ").trim();
-  const pagina = vista === "pipeline" ? 1 : Math.max(1, Number(filtros.pagina) || 1);
+  const pagina = vista === "tablero" ? 1 : Math.max(1, Number(filtros.pagina) || 1);
   const cobro =
     filtros.cobro === "pendiente" || filtros.cobro === "vencida" || filtros.cobro === "vencida_90"
       ? filtros.cobro
@@ -107,8 +107,22 @@ export default async function PaginaDocumentos({
 
   const supabase = await createClient();
   const hoy = new Date();
-  const hoyIso = hoy.toISOString().slice(0, 10);
-  const limite90 = sumarDias(hoyIso, -90);
+
+  const [{ data: abiertosCobro }, { data: metaDocs }] = await Promise.all([
+    supabase
+      .from("v_estado_cobro")
+      .select("id, tipo, fecha, fecha_vencimiento, pendiente, estado_cobro")
+      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
+      .limit(5000),
+    supabase
+      .from("documentos")
+      .select("id, estado, documento_origen_id")
+      .in("tipo", ["factura", "rectificativa"])
+      .neq("estado", "borrador")
+      .limit(5000),
+  ]);
+  const resumenCobro = resumirCobrosPendientes(abiertosCobro ?? [], metaDocs ?? [], hoy);
+  const cobroAbiertoPorId = new Map(resumenCobro.conSaldo.map((d) => [d.id, d]));
 
   // Los borradores aún no tienen el nombre del cliente copiado en el documento,
   // así que la búsqueda por nombre se resuelve primero contra la tabla clientes.
@@ -142,36 +156,25 @@ export default async function PaginaDocumentos({
     consulta = consulta.eq("tipo", "factura").neq("estado", "borrador").is("fecha_vencimiento", null);
   }
   if (cobro) {
-    let qCobro = supabase
-      .from("v_estado_cobro")
-      .select("id")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .gt("pendiente", 0.01);
-    if (cobro === "vencida_90") qCobro = qCobro.lte("fecha_vencimiento", limite90);
-    else if (cobro === "vencida") qCobro = qCobro.lt("fecha_vencimiento", hoyIso);
-
-    const { data: porCobrar } = await qCobro;
-    const ids = (porCobrar ?? []).flatMap((c) => (c.id == null ? [] : [c.id]));
+    const listaCobro =
+      cobro === "vencida_90"
+        ? resumenCobro.criticas90
+        : cobro === "vencida"
+          ? resumenCobro.vencidas
+          : resumenCobro.conSaldo;
+    const ids = listaCobro.map((c) => c.id);
     consulta = consulta.in("id", ids.length ? ids : [-1]);
   }
 
   const sinPdfs: { data: PdfSinAsignar[] } = { data: [] };
   const [
     { data: documentos, count, error: errorLista },
-    { data: criticas90Global },
     { count: nRevisar },
     { count: nSinPdf },
     { count: nSinVencimiento },
-    { count: nSinVencimientoPendientes },
     { data: pdfsSinAsignar },
   ] = await Promise.all([
     consulta,
-    supabase
-      .from("v_estado_cobro")
-      .select("id, pendiente")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .gt("pendiente", 0.01)
-      .lte("fecha_vencimiento", limite90),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("revisar", true),
     supabase.from("documentos").select("id", { count: "exact", head: true }).eq("sin_pdf", true),
     supabase
@@ -180,12 +183,6 @@ export default async function PaginaDocumentos({
       .eq("tipo", "factura")
       .neq("estado", "borrador")
       .is("fecha_vencimiento", null),
-    supabase
-      .from("v_estado_cobro")
-      .select("id", { count: "exact", head: true })
-      .eq("tipo", "factura")
-      .is("fecha_vencimiento", null)
-      .gt("pendiente", 0.01),
     revision === "revisar" || revision === "sin_pdf"
       ? supabase.from("pdfs_sin_asignar").select("id, archivo, drive_file_id, tipo, numero, total, motivo").order("archivo")
       : Promise.resolve(sinPdfs),
@@ -196,19 +193,19 @@ export default async function PaginaDocumentos({
     sin_pdf: nSinPdf ?? 0,
     sin_vencimiento: nSinVencimiento ?? 0,
   };
-  const facturasSinVencimiento = nSinVencimientoPendientes ?? 0;
+  const facturasSinVencimiento = resumenCobro.sinVencimiento.length;
 
   const filas = documentos ?? [];
   const total = count ?? 0;
   const paginas = Math.max(1, Math.ceil(total / porPagina));
 
-  // Estado de cobro + aging solo de las facturas que se muestran.
-  const idsFacturas = filas.filter((d) => d.tipo === "factura" && d.estado !== "borrador").map((d) => d.id);
-  const { data: cobros } = idsFacturas.length
+  // Estado de cobro solo de los documentos mostrados (para saber los ya cobrados además de los abiertos).
+  const idsCobrables = filas.filter((d) => (d.tipo === "factura" || d.tipo === "rectificativa") && d.estado !== "borrador").map((d) => d.id);
+  const { data: cobros } = idsCobrables.length
     ? await supabase
         .from("v_estado_cobro")
         .select("id, estado_cobro, fecha_vencimiento, pendiente")
-        .in("id", idsFacturas)
+        .in("id", idsCobrables)
     : { data: [] };
   const cobroPorId = new Map((cobros ?? []).map((c) => [c.id, c]));
 
@@ -218,7 +215,7 @@ export default async function PaginaDocumentos({
     q,
     cobro,
     revision,
-    vista: vista === "pipeline" ? "pipeline" : "",
+    vista: vista === "tablero" ? "tablero" : "",
     cliente: clienteId ? String(clienteId) : "",
   };
 
@@ -243,13 +240,14 @@ export default async function PaginaDocumentos({
   if (clienteId) chips.push({ clave: "cliente", texto: clienteFiltrado?.razon_social ?? `Cliente #${clienteId}` });
   const hayFiltros = chips.length > 0;
 
-  const totalCriticas90Global = (criticas90Global ?? []).length;
-  const importeCriticas90Global = (criticas90Global ?? []).reduce((s, c) => s + Number(c.pendiente ?? 0), 0);
+  const totalCriticas90Global = resumenCobro.criticas90.length;
+  const importeCriticas90Global = resumenCobro.sumaCriticas90;
 
-  // Agrupación en 4 etapas para la vista Pipeline
+  // Agrupación en 4 etapas para la vista Tablero
   const filasEnriquecidas = filas.map((d) => {
     const cobroDoc = cobroPorId.get(d.id);
-    const aging = cobroDoc ? clasificarAgingCobro(cobroDoc.estado_cobro, cobroDoc.fecha_vencimiento, hoy) : null;
+    const abierto = cobroAbiertoPorId.get(d.id);
+    const aging = abierto && abierto.saldoNeto >= SALDO_MINIMO ? abierto.aging : null;
     const cliente = Array.isArray(d.clientes) ? d.clientes[0] : d.clientes;
     return {
       ...d,
@@ -282,7 +280,7 @@ export default async function PaginaDocumentos({
       !["rechazado", "caducado", "anulado", "sustituido"].includes(d.estado),
   );
 
-  const columnasPipeline = [
+  const columnasTablero = [
     {
       clave: "borradores",
       titulo: "Borradores",
@@ -309,7 +307,7 @@ export default async function PaginaDocumentos({
     },
     {
       clave: "por_cobrar",
-      titulo: "Por cobrar / Insolutos",
+      titulo: "Por cobrar / Vencidas",
       punto: "bg-fondo-critico",
       items: colPorCobrar,
       totalEuros: colPorCobrar.reduce((s, d) => s + Number(d.cobroDoc?.pendiente ?? d.total), 0),
@@ -342,13 +340,13 @@ export default async function PaginaDocumentos({
                   activa: vista === "lista",
                 },
                 {
-                  href: enlace(actual, { vista: "pipeline", pagina: "" }),
+                  href: enlace(actual, { vista: "tablero", pagina: "" }),
                   etiqueta: (
                     <>
-                      <Icono nombre="kanban" size={14} /> Pipeline
+                      <Icono nombre="kanban" size={14} /> Tablero
                     </>
                   ),
-                  activa: vista === "pipeline",
+                  activa: vista === "tablero",
                 },
               ]}
             />
@@ -360,11 +358,11 @@ export default async function PaginaDocumentos({
         }
       />
 
-      {/* Banner resumen de facturas insolutas 90+ días */}
+      {/* Banner resumen de facturas vencidas 90+ días */}
       {totalCriticas90Global > 0 && (
         <div
           role="region"
-          aria-label="Alerta de facturas insolutas con más de 90 días"
+          aria-label="Alerta de facturas vencidas con más de 90 días"
           className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
@@ -372,7 +370,7 @@ export default async function PaginaDocumentos({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-texto-critico">
-              {totalCriticas90Global} factura{totalCriticas90Global === 1 ? "" : "s"} insoluta
+              {totalCriticas90Global} factura{totalCriticas90Global === 1 ? "" : "s"} vencida
               {totalCriticas90Global === 1 ? "" : "s"} con 90+ días de retraso
             </p>
             <p className="tabular-nums text-xs text-texto-primario">
@@ -408,7 +406,7 @@ export default async function PaginaDocumentos({
           <p className="min-w-0 flex-1 text-sm text-texto-primario">
             <strong className="font-semibold">{facturasSinVencimiento}</strong> factura
             {facturasSinVencimiento === 1 ? "" : "s"} pendiente{facturasSinVencimiento === 1 ? "" : "s"} de cobro sin
-            fecha de vencimiento: no cuentan como vencidas ni en «Insolutas 90+».
+            fecha de vencimiento: no cuentan como vencidas ni en «Vencidas 90+ días».
           </p>
           <Link href={enlace(actual, { revision: "sin_vencimiento", cobro: "pendiente", tipo: "factura", estado: "", pagina: "" })}>
             <Boton variante="secundario" tamano="s">
@@ -427,7 +425,7 @@ export default async function PaginaDocumentos({
           {cobro && <input type="hidden" name="cobro" value={cobro} />}
           {revision && <input type="hidden" name="revision" value={revision} />}
           {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
-          {vista === "pipeline" && <input type="hidden" name="vista" value="pipeline" />}
+          {vista === "tablero" && <input type="hidden" name="vista" value="tablero" />}
           <div className="relative min-w-0 flex-1 md:max-w-sm">
             <Icono
               nombre="buscar"
@@ -570,7 +568,7 @@ export default async function PaginaDocumentos({
               </Link>
             ))}
             <Link
-              href={vista === "pipeline" ? "/admin/documentos?vista=pipeline" : "/admin/documentos"}
+              href={vista === "tablero" ? "/admin/documentos?vista=tablero" : "/admin/documentos"}
               className="inline-flex min-h-10 items-center px-esp2 font-medium text-texto-marca md:min-h-8"
             >
               Quitar todos
@@ -615,9 +613,9 @@ export default async function PaginaDocumentos({
         </details>
       )}
 
-      {vista === "pipeline" ? (
+      {vista === "tablero" ? (
         <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
-          {columnasPipeline.map((col) => (
+          {columnasTablero.map((col) => (
             <section
               key={col.clave}
               aria-label={col.titulo}

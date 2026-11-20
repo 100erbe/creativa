@@ -11,7 +11,7 @@ import { cargarEstadoCuenta, nombreArchivoEstadoCuenta, nombreArchivoFactura } f
 import { BUCKET_RECLAMACIONES, LOTE_VALIDO, emailValido, rutaAdjunto } from "@/lib/reclamacion";
 
 /**
- * Crea en Gmail el borrador de reclamación con el estado de cuenta y las facturas insolutas
+ * Crea en Gmail el borrador de reclamación con el estado de cuenta y las facturas vencidas
  * (ya preparados en el lote) y lo deja anotado en el historial del cliente.
  */
 export const crearBorradorReclamacion = accion(
@@ -33,13 +33,13 @@ export const crearBorradorReclamacion = accion(
     const estadoCuenta = await cargarEstadoCuenta(supabase, clienteId);
     if (!estadoCuenta) throw new Error("El cliente no existe.");
     const { estado, cliente } = estadoCuenta;
-    if (estado.insolutas.length === 0) throw new Error("Este cliente no tiene facturas insolutas.");
+    if (estado.insolutas.length === 0) throw new Error("Este cliente no tiene facturas vencidas (+90 días).");
 
     // Si entre preparar y crear el borrador ha cambiado algo (un cobro nuevo), se vuelve a preparar.
     const actuales = estado.insolutas.map((l) => l.id).sort((a, b) => a - b).join(",");
     const preparadas = [...datos.documentos].sort((a, b) => a - b).join(",");
     if (actuales !== preparadas) {
-      throw new Error("Las facturas insolutas han cambiado mientras se preparaba. Cierra y vuelve a preparar la reclamación.");
+      throw new Error("Las facturas vencidas han cambiado mientras se preparaba. Cierra y vuelve a preparar la reclamación.");
     }
 
     const admin = crearClienteAdmin();

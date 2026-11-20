@@ -17,7 +17,6 @@ import {
   programarRetirada,
   marcarRetirado,
   finalizarCampana,
-  eliminarCampana,
 } from "./acciones";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { SelectorFecha } from "@/components/ui/selector-fecha";
@@ -332,14 +331,8 @@ export function EnlaceCliente({
 export function EditarCampana({
   campanaId,
   inicial,
-  eliminable,
-  contenido,
 }: {
   campanaId: number;
-  /** Sin documentos vinculados se puede borrar; con documento solo se puede cancelar. */
-  eliminable: boolean;
-  /** Lo que se borra con ella, para avisar en la confirmación. */
-  contenido: { puntos: number; fotos: number };
   inicial: { nombre: string; estado: string; fechaInicio: string | null; fechaFin: string | null; descripcion: string | null };
 }) {
   const router = useRouter();
@@ -432,31 +425,6 @@ export function EditarCampana({
         <Boton type="button" variante="secundario" onClick={() => setAbierto(false)} disabled={pendiente}>
           Cancelar
         </Boton>
-        <button
-          type="button"
-          disabled={pendiente || !eliminable}
-          title={eliminable ? undefined : "Vinculada a un documento: no se puede eliminar. Cámbiala a «Cancelada»."}
-          onClick={async () => {
-            const partes = [
-              contenido.puntos ? `${contenido.puntos} punto${contenido.puntos === 1 ? "" : "s"}` : "",
-              contenido.fotos ? `${contenido.fotos} foto${contenido.fotos === 1 ? "" : "s"}` : "",
-            ].filter(Boolean);
-            const con = partes.length ? ` Se borrarán también ${partes.join(" y ")}.` : "";
-            if (!(await confirmar(`¿Eliminar la campaña «${inicial.nombre}»?${con} No se puede deshacer.`))) return;
-            setError(null);
-            iniciar(async () => {
-              try {
-                await desenvolver(eliminarCampana(campanaId));
-                router.push("/admin/campanas");
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "No se pudo eliminar la campaña.");
-              }
-            });
-          }}
-          className="ml-auto text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-texto-secundario"
-        >
-          Eliminar campaña
-        </button>
       </div>
     </form>
   );

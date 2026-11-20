@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
 import { MenuCuenta } from "@/components/ui/menu-cuenta";
-import { Campana } from "@/components/avisos/campana";
+import { CabeceraMovil, type ConfigCabeceraMovil } from "@/components/ui/cabecera-movil";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
@@ -33,9 +33,50 @@ const ENLACES_CAJON: EnlaceEmpleado[] = [
   { href: "/app/avisos", etiqueta: "Avisos", icono: "avisos", badgeKey: "noLeidos" },
 ];
 
+/** Resuelve el estado contextual de la cabecera según la ruta activa del empleado. */
+function resolverCabeceraEmpleado(pathname: string): ConfigCabeceraMovil {
+  // 1. Vistas raíz de la barra inferior
+  if (pathname === "/app/inicio") {
+    return { modo: "logo", titulo: "Inicio", mostrarAvisos: true };
+  }
+  if (pathname === "/app/agenda") {
+    return { modo: "titulo", titulo: "Agenda", mostrarAvisos: true };
+  }
+  if (pathname === "/app/mapa") {
+    return { modo: "titulo", titulo: "Mapa", mostrarAvisos: true };
+  }
+  if (pathname === "/app/gastos") {
+    return { modo: "titulo", titulo: "Mis gastos", mostrarAvisos: true };
+  }
+
+  // 2. Flujos de creación / edición (sin campana para evitar distracciones)
+  if (pathname === "/app/gastos/nuevo") {
+    return { modo: "volver", titulo: "Añadir gasto", hrefVolver: "/app/gastos", mostrarAvisos: false };
+  }
+  if (/^\/app\/gastos\/\d+\/editar$/.test(pathname)) {
+    return { modo: "volver", titulo: "Corregir gasto", hrefVolver: "/app/gastos", mostrarAvisos: false };
+  }
+
+  // 3. Fichas de detalle y secciones secundarias
+  if (pathname.startsWith("/app/punto/")) {
+    return { modo: "volver", titulo: "Punto", hrefVolver: "/app/agenda", mostrarAvisos: true };
+  }
+  if (pathname === "/app/avisos") {
+    return { modo: "volver", titulo: "Avisos", hrefVolver: "/app/inicio", usarHistorial: true, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/app/avisos/")) {
+    return { modo: "volver", titulo: "Aviso", hrefVolver: "/app/avisos", mostrarAvisos: false };
+  }
+  if (pathname === "/app/cuenta") {
+    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/app/inicio", usarHistorial: true, mostrarAvisos: true };
+  }
+
+  return { modo: "logo", titulo: "Inicio", mostrarAvisos: true };
+}
+
 /**
- * Cabecera y barra de navegación inferior de la PWA del empleado:
- * unificada con el shell móvil administrativo (avisos arriba a la derecha y menú abajo a la derecha).
+ * Cabecera contextual y barra de navegación inferior de la PWA del empleado:
+ * unificada con el shell móvil administrativo (avisos arriba a la derecha y cajón desde la derecha).
  */
 export function CabeceraEmpleado({
   nombre,
@@ -83,23 +124,12 @@ export function CabeceraEmpleado({
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center gap-esp1 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm">
-        <button
-          type="button"
-          onClick={() => setAbierto(true)}
-          aria-label="Abrir menú"
-          aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
-        >
-          <Icono nombre="menu" size={22} />
-        </button>
-        <div className="flex flex-1 items-center">
-          <Link href="/app/inicio" aria-label="Ir a Inicio" className="inline-flex rounded-lg outline-offset-4">
-            <Logo alto={28} />
-          </Link>
-        </div>
-        <Campana href="/app/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
-      </header>
+      <CabeceraMovil
+        config={resolverCabeceraEmpleado(pathname)}
+        hrefInicio="/app/inicio"
+        hrefAvisos="/app/avisos"
+        noLeidos={noLeidos}
+      />
 
       {/* Barra inferior fija de navegación rápida para uso con el pulgar */}
       <nav
@@ -170,7 +200,7 @@ export function CabeceraEmpleado({
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
             <div className="flex items-center pb-esp2">
               <Link
                 href="/app/inicio"

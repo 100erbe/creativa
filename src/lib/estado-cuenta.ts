@@ -1,14 +1,14 @@
 // Estado de cuenta de un cliente: todas sus facturas emitidas con su situación de cobro,
-// y cuáles están insolutas. Lógica pura, sin acceso a datos, para poder probarla aparte.
+// y cuáles están vencidas (+90 días). Lógica pura, sin acceso a datos, para poder probarla aparte.
 //
 // Reglas (decididas con la empresa el 17/11/2026):
-// - «Insoluta»: con saldo pendiente y más de 90 días desde su emisión (también si se pagó una parte).
+// - «Vencida» (+90 días): con saldo pendiente y más de 90 días desde su emisión (también si se pagó una parte).
 //   No se mira la fecha de vencimiento: las facturas importadas no la tienen.
 // - Un saldo de menos de 1 € (diferencias de céntimos de la importación) se da por cobrado.
 // - Las rectificativas (abonos) ligadas a una factura se descuentan de su saldo: una factura
 //   saldada con su abono no se reclama. Los abonos sueltos sin aplicar se descuentan del total.
 
-/** Días desde la emisión a partir de los cuales una factura sin cobrar es insoluta. */
+/** Días desde la emisión a partir de los cuales una factura sin cobrar se considera vencida (+90 días). */
 export const DIAS_PARA_INSOLUTA = 90;
 /** Saldos por debajo de esto se ignoran (diferencias de céntimos). */
 export const SALDO_MINIMO = 1;
@@ -19,7 +19,7 @@ export const ETIQUETA_ESTADO_LINEA: Record<EstadoLinea, string> = {
   pagada: "Pagada",
   pendiente: "Pendiente",
   parcial: "Pago parcial",
-  insoluta: "Insoluta",
+  insoluta: "Vencida",
   abono_aplicado: "Abono aplicado",
   abono_pendiente: "Abono pendiente",
 };
@@ -57,7 +57,7 @@ export type EstadoCuenta = {
   totalInsoluto: number;
   /** Abonos sueltos todavía sin aplicar (importe negativo). */
   abonosPendientes: number;
-  /** Lo insoluto que hay que pagar ya, descontados los abonos sin aplicar (nunca menos de 0). */
+  /** Importe vencido (+90 días) a pagar ya, descontados los abonos sin aplicar (nunca menos de 0). */
   totalAReclamar: number;
 };
 

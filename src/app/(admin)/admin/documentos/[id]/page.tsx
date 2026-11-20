@@ -6,7 +6,8 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { euros, fechaMedia } from "@/lib/formato";
-import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, validezVencida } from "@/lib/documentos";
+import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, clasificarAgingCobro, validezVencida } from "@/lib/documentos";
+import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
 import { AccionesDocumento, CondicionesDocumento, Cobros, ProveedorCondiciones, RevisionDocumento } from "./controles";
@@ -157,6 +158,23 @@ export default async function PaginaDocumento({
     pendiente: Number(r.pendiente),
   }));
 
+  const pendienteBruto = Number(estadoCobro?.pendiente ?? 0);
+  const abonosRelacionados = !esRectificativa
+    ? otrasPartes.reduce((s, r) => s + (r.pendiente < -0.01 ? -r.pendiente : 0), 0)
+    : 0;
+  const pendienteNeto = Math.max(0, Math.round((pendienteBruto - Math.min(abonosRelacionados, pendienteBruto)) * 100) / 100);
+  const aging =
+    doc.tipo === "factura" &&
+    !esBorrador &&
+    doc.estado !== "anulado" &&
+    estadoCobro?.estado_cobro &&
+    estadoCobro.estado_cobro !== "cobrada" &&
+    pendienteNeto >= SALDO_MINIMO
+      ? clasificarAgingCobro(estadoCobro.estado_cobro, doc.fecha_vencimiento, new Date(), doc.fecha)
+      : null;
+  const esVencida = (aging?.diasVencido ?? 0) > 0;
+  const esCritica90 = aging?.esCritica90 ?? false;
+
   const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
   // En un borrador los datos del cliente salen de la ficha; al emitir se congelan en el documento.
   const razonSocial = doc.cliente_razon_social ?? cliente?.razon_social ?? "Sin cliente";
@@ -214,7 +232,7 @@ export default async function PaginaDocumento({
       <div className="flex flex-col gap-esp2">
         <Link
           href="/admin/documentos"
-          className="group flex w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario"
+          className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Documentos
@@ -230,9 +248,13 @@ export default async function PaginaDocumento({
             <p className="text-sm text-texto-secundario">
               {etiquetaTipo}
               {doc.version > 1 ? ` · versión ${doc.version}` : ""} · {fechaMedia(doc.fecha)}
-              {doc.fecha_vencimiento && !esBorrador && doc.tipo !== "presupuesto"
-                ? ` · vence ${fechaMedia(doc.fecha_vencimiento)}`
-                : ""}
+              {doc.fecha_vencimiento && !esBorrador && doc.tipo !== "presupuesto" ? (
+                <span className={esCritica90 ? "font-medium text-texto-critico" : esVencida ? "font-medium text-texto-peligro" : undefined}>
+                  {` · vence ${fechaMedia(doc.fecha_vencimiento)}`}
+                </span>
+              ) : (
+                ""
+              )}
               {doc.valido_hasta ? ` · válido hasta ${fechaMedia(doc.valido_hasta)}` : ""}
               {tipoCambiable && (
                 <>
@@ -247,11 +269,18 @@ export default async function PaginaDocumento({
               )}
             </p>
           </div>
-          {estadoCobro?.estado_cobro && (
-            <Insignia tono={TONO_POR_ESTADO[estadoCobro.estado_cobro] ?? "neutro"}>
-              {ETIQUETA_COBRO[estadoCobro.estado_cobro] ?? estadoCobro.estado_cobro}
-            </Insignia>
-          )}
+          {estadoCobro?.estado_cobro &&
+            (esCritica90 && aging ? (
+              <Insignia tono="critico" solido>
+                90+ días · {aging.diasVencido}d
+              </Insignia>
+            ) : (
+              <Insignia tono={esVencida ? "peligro" : (TONO_POR_ESTADO[estadoCobro.estado_cobro] ?? "neutro")}>
+                {esVencida && aging
+                  ? `${ETIQUETA_COBRO[estadoCobro.estado_cobro] ?? estadoCobro.estado_cobro} (${aging.diasVencido}d)`
+                  : (ETIQUETA_COBRO[estadoCobro.estado_cobro] ?? estadoCobro.estado_cobro)}
+              </Insignia>
+            ))}
           {vencido && <Insignia tono="aviso">Validez vencida</Insignia>}
           <Insignia tono={TONO_POR_ESTADO[doc.estado] ?? "neutro"}>
             {ETIQUETA_ESTADO_DOC[doc.estado] ?? doc.estado}
@@ -330,9 +359,32 @@ export default async function PaginaDocumento({
             )}
           </div>
         )}
+        {esCritica90 && aging && (
+          <div
+            role="region"
+            aria-label="Factura vencida con más de 90 días"
+            className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
+              <Icono nombre="alerta" size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-texto-critico">
+                Factura vencida con más de 90 días ({aging.diasVencido} días)
+              </p>
+              <p className="tabular-nums text-xs text-texto-primario">
+                Saldo pendiente en riesgo crítico:{" "}
+                <strong className="font-semibold text-texto-critico">{euros(pendienteNeto)}</strong>
+                {doc.fecha_vencimiento
+                  ? ` (vencimiento ${fechaMedia(doc.fecha_vencimiento)}).`
+                  : ` (emitida el ${fechaMedia(doc.fecha)}).`}
+              </p>
+            </div>
+          </div>
+        )}
         {cobrable && !doc.fecha_vencimiento && doc.tipo === "factura" && (
           <p className="text-xs text-texto-aviso">
-            Esta factura no tiene fecha de vencimiento: no aparecerá nunca como vencida.
+            Esta factura no tiene fecha de vencimiento: solo se evalúa como vencida al superar 90 días desde la emisión.
           </p>
         )}
       </div>
@@ -476,6 +528,7 @@ export default async function PaginaDocumento({
                 <Fila
                   etiqueta={esRectificativa && Number(estadoCobro.pendiente) < 0 ? "Pendiente a favor del cliente" : "Pendiente"}
                   valor={euros(Number(estadoCobro.pendiente))}
+                  valorClassName={esCritica90 ? "text-texto-critico" : esVencida ? "text-texto-peligro" : undefined}
                 />
               </>
             )}
@@ -501,6 +554,7 @@ export default async function PaginaDocumento({
                 <Fila
                   etiqueta="Pendiente neto"
                   valor={euros(Number(estadoCobro.pendiente) + otrasPartes.reduce((s, r) => s + r.pendiente, 0))}
+                  valorClassName={esCritica90 ? "text-texto-critico" : esVencida ? "text-texto-peligro" : undefined}
                 />
               </>
             )}
@@ -619,11 +673,11 @@ export default async function PaginaDocumento({
   );
 }
 
-function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+function Fila({ etiqueta, valor, valorClassName }: { etiqueta: string; valor: string; valorClassName?: string }) {
   return (
     <div className="flex items-center">
       <span className="flex-1 text-sm text-texto-secundario">{etiqueta}</span>
-      <span className="text-sm font-medium text-texto-primario">{valor}</span>
+      <span className={`tabular-nums text-sm font-medium ${valorClassName ?? "text-texto-primario"}`}>{valor}</span>
     </div>
   );
 }

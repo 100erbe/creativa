@@ -33,13 +33,13 @@ export default async function PaginaEstadoCuenta({ params }: { params: Promise<{
       <div className="flex flex-wrap items-center gap-esp3 print:hidden">
         <Link
           href={`/admin/clientes/${clienteId}`}
-          className="flex items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+          className="hidden items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} />
           Volver al cliente
         </Link>
         <p className="flex-1 text-xs text-texto-terciario">
-          Insolutas: facturas sin cobrar con más de {DIAS_PARA_INSOLUTA} días desde su emisión.
+          Vencidas (+90 días): facturas sin cobrar con más de {DIAS_PARA_INSOLUTA} días desde su emisión.
           {centimos > 0 &&
             ` ${centimos} factura${centimos === 1 ? "" : "s"} con una diferencia de céntimos (menos de 1 €) se da${centimos === 1 ? "" : "n"} por cobrada${centimos === 1 ? "" : "s"}.`}
         </p>

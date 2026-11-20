@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Tarjeta, CabeceraTarjeta } from "@/components/ui/tarjeta";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
@@ -51,7 +50,7 @@ const GUIAS: Guia[] = [
     resumen: "Se prepara un estado de cuenta en PDF y un borrador de correo en Gmail.",
     pasos: [
       "En Cobros, «Clientes con más saldo» lleva al estado de cuenta de cada cliente.",
-      "Revisa el estado de cuenta: una factura es insoluta con más de 90 días desde su emisión.",
+      "Revisa el estado de cuenta: una factura se considera vencida (+90 días) cuando supera los 90 días desde su emisión.",
       "En la ficha del cliente, pulsa «Reclamar impagadas»: se crea el borrador en Gmail con el estado de cuenta y las facturas adjuntas.",
       "Revisa el borrador en Gmail y envíalo desde allí.",
     ],
@@ -110,7 +109,6 @@ export default function PaginaAyuda() {
   return (
     <div className="flex flex-col gap-esp5">
       <CabeceraPagina
-        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Ayuda"
         subtitulo="Guías rápidas de las tareas habituales y atajos de teclado."
       />

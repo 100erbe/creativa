@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
 import { MenuCuenta } from "@/components/ui/menu-cuenta";
-import { Campana } from "@/components/avisos/campana";
+import { CabeceraMovil, type ConfigCabeceraMovil } from "@/components/ui/cabecera-movil";
 import { abrirPaletaComandos } from "@/components/admin/paleta-comandos";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
@@ -56,10 +56,123 @@ const ACCESOS_MOVIL: EnlaceNav[] = [
   { href: "/admin/campanas", etiqueta: "Campañas", icono: "campanas" },
 ];
 
+/** Resuelve el estado contextual de la cabecera móvil según la ruta activa. */
+function resolverCabeceraAdmin(pathname: string): ConfigCabeceraMovil {
+  // 1. Vistas raíz de la barra inferior
+  if (pathname === "/admin/panel") {
+    return { modo: "logo", titulo: "Inicio", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/documentos") {
+    return { modo: "titulo", titulo: "Documentos", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/cobros") {
+    return { modo: "titulo", titulo: "Cobros", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/campanas") {
+    return { modo: "titulo", titulo: "Campañas", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+
+  // 2. Secciones secundarias (accesibles desde el menú lateral derecho)
+  if (pathname === "/admin/clientes") {
+    return { modo: "volver", titulo: "Clientes", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/catalogo") {
+    return { modo: "volver", titulo: "Catálogo", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/gastos") {
+    return { modo: "volver", titulo: "Gastos", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/contabilidad") {
+    return { modo: "volver", titulo: "Contabilidad", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/ajustes") {
+    return { modo: "volver", titulo: "Ajustes", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/ayuda") {
+    return { modo: "volver", titulo: "Ayuda", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/cuenta") {
+    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: false, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/avisos") {
+    return { modo: "volver", titulo: "Avisos", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: false };
+  }
+
+  // 3. Flujos de creación / edición / impresión (sin campana ni distracciones)
+  if (pathname.startsWith("/admin/documentos/nuevo")) {
+    return { modo: "volver", titulo: "Nuevo documento", hrefVolver: "/admin/documentos", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  const matchDocImprimir = pathname.match(/^\/admin\/documentos\/(\d+)\/imprimir$/);
+  if (matchDocImprimir) {
+    return { modo: "volver", titulo: "Imprimir", hrefVolver: `/admin/documentos/${matchDocImprimir[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/admin/campanas/nueva")) {
+    return { modo: "volver", titulo: "Nueva campaña", hrefVolver: "/admin/campanas", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/admin/clientes/nuevo")) {
+    return { modo: "volver", titulo: "Nuevo cliente", hrefVolver: "/admin/clientes", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  const matchClienteEditar = pathname.match(/^\/admin\/clientes\/(\d+)\/editar$/);
+  if (matchClienteEditar) {
+    return { modo: "volver", titulo: "Editar cliente", hrefVolver: `/admin/clientes/${matchClienteEditar[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/admin/gastos/nuevo")) {
+    return { modo: "volver", titulo: "Nuevo gasto", hrefVolver: "/admin/gastos", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  const matchGastoEditar = pathname.match(/^\/admin\/gastos\/(\d+)\/editar$/);
+  if (matchGastoEditar) {
+    return { modo: "volver", titulo: "Editar gasto", hrefVolver: `/admin/gastos/${matchGastoEditar[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/admin/avisos/nuevo")) {
+    return { modo: "volver", titulo: "Nuevo aviso", hrefVolver: "/admin/avisos", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+
+  // 4. Fichas de detalle y subpáginas
+  if (/^\/admin\/documentos\/\d+$/.test(pathname)) {
+    return { modo: "volver", titulo: "Documento", hrefVolver: "/admin/documentos", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (/^\/admin\/campanas\/\d+$/.test(pathname)) {
+    return { modo: "volver", titulo: "Campaña", hrefVolver: "/admin/campanas", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  const matchEstadoCuenta = pathname.match(/^\/admin\/clientes\/(\d+)\/estado-cuenta$/);
+  if (matchEstadoCuenta) {
+    return { modo: "volver", titulo: "Estado de cuenta", hrefVolver: `/admin/clientes/${matchEstadoCuenta[1]}`, mostrarBusqueda: false, mostrarAvisos: true };
+  }
+  if (/^\/admin\/clientes\/\d+$/.test(pathname)) {
+    return { modo: "volver", titulo: "Cliente", hrefVolver: "/admin/clientes", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (/^\/admin\/gastos\/\d+$/.test(pathname)) {
+    return { modo: "volver", titulo: "Gasto", hrefVolver: "/admin/gastos", mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (/^\/admin\/avisos\/\d+$/.test(pathname)) {
+    return { modo: "volver", titulo: "Aviso", hrefVolver: "/admin/avisos", mostrarBusqueda: false, mostrarAvisos: false };
+  }
+  if (pathname.startsWith("/admin/ajustes/")) {
+    const titulosAjustes: Record<string, { titulo: string; avisos: boolean }> = {
+      "/admin/ajustes/empresa": { titulo: "Empresa", avisos: false },
+      "/admin/ajustes/equipo": { titulo: "Equipo", avisos: true },
+      "/admin/ajustes/pagos": { titulo: "Pagos", avisos: true },
+      "/admin/ajustes/gmail": { titulo: "Gmail", avisos: true },
+      "/admin/ajustes/avisos": { titulo: "Avisos", avisos: true },
+      "/admin/ajustes/catalogo": { titulo: "Catálogo", avisos: true },
+    };
+    const info = titulosAjustes[pathname];
+    return {
+      modo: "volver",
+      titulo: info?.titulo ?? "Ajustes",
+      hrefVolver: "/admin/ajustes",
+      mostrarBusqueda: false,
+      mostrarAvisos: info?.avisos ?? true,
+    };
+  }
+
+  return { modo: "logo", titulo: "Inicio", mostrarBusqueda: true, mostrarAvisos: true };
+}
+
 /**
  * Shell de navegación administrativa:
  * - Escritorio (md+): barra lateral fija con secciones, búsqueda ⌘K y menú de cuenta.
- * - Móvil (< md): cabecera compacta (menú, logo, búsqueda, avisos) + barra inferior + cajón completo.
+ * - Móvil (< md): cabecera contextual (título/volver, búsqueda, avisos) + barra inferior + cajón derecho.
  */
 export function BarraLateral({
   nombre,
@@ -193,32 +306,15 @@ export function BarraLateral({
         {cuenta}
       </aside>
 
-      {/* Móvil: cabecera superior */}
-      <header className="sticky top-0 z-30 flex items-center gap-esp1 border-b border-borde-default bg-fondo-superficie/95 px-esp3 py-esp2 backdrop-blur-sm md:hidden print:hidden">
-        <button
-          type="button"
-          onClick={() => setAbierto(true)}
-          aria-label="Abrir menú"
-          aria-expanded={abierto}
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
-        >
-          <Icono nombre="menu" size={22} />
-        </button>
-        <div className="flex flex-1 items-center">
-          <Link href="/admin/panel" aria-label="Ir a Inicio" className="inline-flex rounded-lg outline-offset-4">
-            <Logo alto={28} />
-          </Link>
-        </div>
-        <button
-          type="button"
-          onClick={abrirPaletaComandos}
-          aria-label="Búsqueda rápida"
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
-        >
-          <Icono nombre="buscar" size={20} />
-        </button>
-        <Campana href="/admin/avisos" etiquetaEnlace="Ver todos los avisos" noLeidos={noLeidos} />
-      </header>
+      {/* Móvil: cabecera contextual fija */}
+      <CabeceraMovil
+        config={resolverCabeceraAdmin(pathname)}
+        hrefInicio="/admin/panel"
+        hrefAvisos="/admin/avisos"
+        noLeidos={noLeidos}
+        onBuscar={abrirPaletaComandos}
+        className="md:hidden print:hidden"
+      />
 
       {/* Móvil: barra inferior de navegación rápida */}
       {!ocultarBarraInferior && (
@@ -283,7 +379,7 @@ export function BarraLateral({
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 left-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
             <div className="flex items-center pb-esp2">
               <Link
                 href="/admin/panel"

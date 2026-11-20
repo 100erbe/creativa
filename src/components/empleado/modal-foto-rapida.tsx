@@ -35,7 +35,7 @@ type EstadoCompletado = {
 };
 
 /**
- * Sheet post-captura («Scatta prima, assegna in 1 tap»):
+ * Panel post-captura («Haz la foto primero, asigna en 1 toque»):
  * muestra la foto recién tomada, sugiere automáticamente el punto más cercano por GPS/EXIF
  * y permite subir la foto (u offline) con opción de marcar el punto como instalado/retirado.
  */

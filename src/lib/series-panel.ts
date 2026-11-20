@@ -11,9 +11,12 @@
 //   La cifra del periodo es la suma de todo el periodo.
 // - pendiente de cobro (saldo): lo emitido hasta el cierre del intervalo menos lo cobrado hasta esa
 //   fecha. Mismo cálculo que v_estado_cobro, así que el punto de hoy coincide con el Resumen.
-// - vencido 90+ (saldo): la parte del saldo de facturas cuyo vencimiento es de 90 días o más antes
-//   del cierre del intervalo. Sin fecha de vencimiento nunca cuenta.
+// - vencido 90+ (saldo): la parte del saldo de facturas (o abonos positivos) con más de 90 días desde
+//   el vencimiento (o desde la fecha de emisión si no hay vencimiento) al cierre del intervalo,
+//   descontando rectificativas ligadas y saldos inferiores a 1 € (igual que el estado de cuenta).
 // - campañas activas: campañas no canceladas cuyo periodo (inicio–fin) incluye el cierre del intervalo.
+
+import { DIAS_PARA_INSOLUTA, SALDO_MINIMO } from "./estado-cuenta";
 
 export type Periodo = "semana" | "mes" | "ano";
 export const PERIODOS: Periodo[] = ["semana", "mes", "ano"];
@@ -22,8 +25,10 @@ export type Intervalo = { inicio: string; fin: string; etiqueta: string };
 
 export type DocCobro = {
   id: number;
+  tipo?: string;
   fecha: string;
   fechaVencimiento: string | null;
+  documentoOrigenId?: number | null;
   total: number;
 };
 export type Cobro = { documentoId: number; fecha: string; importe: number };
@@ -102,12 +107,27 @@ export function crearCalculadora(docs: DocCobro[], cobros: Cobro[]) {
       }
       return total;
     },
-    /** Saldo de facturas con 90+ días desde el vencimiento al cierre de `fecha`. */
+    /** Saldo con más de 90 días desde el vencimiento (o emisión si falta) al cierre de `fecha`. */
     vencido90(fecha: string) {
-      const limite = sumarDiasIso(fecha, -90);
+      const limite = sumarDiasIso(fecha, -DIAS_PARA_INSOLUTA);
+      const emitidos = saldosA(docs, (id) => cobradoHasta(porDoc.get(id), fecha), fecha);
+      const saldoNeto = new Map<number, number>(emitidos.map(({ doc, saldo }) => [doc.id, saldo]));
+
+      for (const { doc, saldo } of emitidos) {
+        if (doc.tipo === "rectificativa" && doc.documentoOrigenId != null && saldo < -0.01) {
+          const orig = saldoNeto.get(doc.documentoOrigenId) ?? 0;
+          if (orig > 0.01) {
+            const usado = Math.min(-saldo, orig);
+            saldoNeto.set(doc.documentoOrigenId, Math.round((orig - usado) * 100) / 100);
+          }
+        }
+      }
+
       let total = 0;
-      for (const { doc, saldo } of saldosA(docs, (id) => cobradoHasta(porDoc.get(id), fecha), fecha)) {
-        if (saldo > 0.01 && doc.fechaVencimiento && doc.fechaVencimiento <= limite) total += saldo;
+      for (const { doc } of emitidos) {
+        const saldo = saldoNeto.get(doc.id) ?? 0;
+        const fechaRef = doc.fechaVencimiento || doc.fecha;
+        if (saldo >= SALDO_MINIMO && fechaRef < limite) total += saldo;
       }
       return total;
     },

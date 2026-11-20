@@ -11,7 +11,7 @@ export type SafeMapCoordinates = {
 };
 
 /**
- * Permite a la mappa (children) saber si está dentro del modal y cerrarlo,
+ * Permite al mapa (children) saber si está dentro del modal y cerrarlo,
  * p. ej. tras elegir "Añadir punto aquí". Fuera de SafeMapContainer `cerrar` no hace nada.
  */
 const SafeMapContext = createContext<{ enModal: boolean; cerrar: () => void }>({
@@ -22,15 +22,15 @@ export const useSafeMap = () => useContext(SafeMapContext);
 
 export interface SafeMapContainerProps {
   children: React.ReactNode;
-  /** Titolo mostrato nell'header del Dialog/Drawer mobile */
+  /** Título mostrado en la cabecera del diálogo/cajón móvil */
   title?: string;
-  /** Coordinate per il pulsante rapido "Indicazioni" */
+  /** Coordenadas para el botón rápido "Cómo llegar" */
   coordinates?: SafeMapCoordinates | null;
-  /** Indirizzo testuale alternativo o aggiuntivo per "Indicazioni" */
+  /** Dirección de texto alternativa o adicional para "Cómo llegar" */
   address?: string | null;
-  /** Testo dell'etichetta di apertura modale (default: "Explorar mapa") */
+  /** Texto de la etiqueta de apertura del modal (por defecto: "Explorar mapa") */
   exploreLabel?: string;
-  /** Testo del pulsante indicazioni (default: "Cómo llegar") */
+  /** Texto del botón de indicaciones (por defecto: "Cómo llegar") */
   directionsLabel?: string;
   /** Control externo opcional de apertura del modal móvil. */
   open?: boolean;
@@ -47,7 +47,7 @@ export interface SafeMapContainerProps {
   varianteTrigger?: "superficie" | "primario";
   /** Icono del CTA sobre la vista previa del mapa (por defecto "expandir"). */
   exploreIcon?: NombreIcono;
-  /** Classi opzionali sul contenitore esterno */
+  /** Clases opcionales en el contenedor externo */
   className?: string;
 }
 
@@ -70,13 +70,13 @@ function buildDirectionsUrl(
 }
 
 /**
- * Wrapper anti scroll-hijacking per mappe interattive.
- * - Desktop (>= 768px): renderizza la mappa normalmente senza blocchi.
- * - Mobile (< 768px): racchiude la mappa in una card compatta (h-48) con
- *   pointer-events-none di default e margini laterali di sicurezza per lo
- *   scroll con il pollice. L'intera card è un pulsante che apre il Dialog
- *   interattivo quasi a schermo intero (etichetta visiva "Explorar mapa"),
- *   più "Cómo llegar" se sono disponibili coordinate o indirizzo.
+ * Contenedor anti scroll-hijacking para mapas interactivos.
+ * - Escritorio (>= 768px): renderiza el mapa normalmente sin bloqueos.
+ * - Móvil (< 768px): envuelve el mapa en una tarjeta compacta (h-48) con
+ *   pointer-events-none por defecto y márgenes laterales de seguridad para el
+ *   desplazamiento con el pulgar. Toda la tarjeta es un botón que abre el diálogo
+ *   interactivo casi a pantalla completa (etiqueta visual "Explorar mapa"),
+ *   además de "Cómo llegar" si hay coordenadas o dirección disponibles.
  */
 export function SafeMapContainer({
   children,

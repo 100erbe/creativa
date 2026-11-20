@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia } from "@/components/ui/insignia";
 import { Boton, clasesBoton } from "@/components/ui/boton";
-import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { euros } from "@/lib/formato";
@@ -13,7 +12,8 @@ import {
   TIPOS_CLIENTE,
   VALORES_TIPO_CLIENTE,
 } from "@/lib/clientes";
-import { clasificarAgingCobro } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 
 export const dynamic = "force-dynamic";
 
@@ -87,36 +87,38 @@ export default async function PaginaClientes({
     ? await Promise.all([
         supabase
           .from("documentos")
-          .select("cliente_id, total")
+          .select("id, cliente_id, total, estado, documento_origen_id")
           .in("cliente_id", ids)
           .in("tipo", ["factura", "rectificativa"])
           .neq("estado", "borrador"),
         supabase
           .from("v_estado_cobro")
-          .select("cliente_id, pendiente, estado_cobro, fecha_vencimiento")
+          .select("id, tipo, cliente_id, fecha, pendiente, estado_cobro, fecha_vencimiento")
           .in("cliente_id", ids),
       ])
     : [{ data: [] }, { data: [] }];
 
   const facturado = new Map<number, number>();
   for (const f of facturas ?? []) {
-    if (f.cliente_id != null) facturado.set(f.cliente_id, (facturado.get(f.cliente_id) ?? 0) + Number(f.total));
+    if (f.cliente_id != null && f.estado !== "anulado") {
+      facturado.set(f.cliente_id, (facturado.get(f.cliente_id) ?? 0) + Number(f.total));
+    }
   }
 
+  const resumenCobros = resumirCobrosPendientes(cobros ?? [], facturas ?? [], hoy);
   const pendiente = new Map<number, number>();
   const maxDiasVencido = new Map<number, number>();
   const critica90 = new Set<number>();
 
-  for (const c of cobros ?? []) {
+  for (const c of resumenCobros.vigentes) {
     if (c.cliente_id == null) continue;
-    const pend = Number(c.pendiente ?? 0);
-    pendiente.set(c.cliente_id, (pendiente.get(c.cliente_id) ?? 0) + pend);
-    if (pend > 0.01) {
-      const aging = clasificarAgingCobro(c.estado_cobro, c.fecha_vencimiento, hoy);
-      if (aging.esCritica90) critica90.add(c.cliente_id);
-      if (aging.diasVencido > (maxDiasVencido.get(c.cliente_id) ?? 0)) {
-        maxDiasVencido.set(c.cliente_id, aging.diasVencido);
-      }
+    pendiente.set(c.cliente_id, (pendiente.get(c.cliente_id) ?? 0) + Number(c.pendiente ?? 0));
+  }
+  for (const c of resumenCobros.conSaldo) {
+    if (c.cliente_id == null || c.saldoNeto < SALDO_MINIMO) continue;
+    if (c.aging.esCritica90) critica90.add(c.cliente_id);
+    if (c.aging.diasVencido > (maxDiasVencido.get(c.cliente_id) ?? 0)) {
+      maxDiasVencido.set(c.cliente_id, c.aging.diasVencido);
     }
   }
 
@@ -140,7 +142,6 @@ export default async function PaginaClientes({
   return (
     <div className="flex flex-col gap-esp5">
       <CabeceraPagina
-        antes={<BotonVolver href="/admin/panel" usarHistorial soloMovil />}
         titulo="Clientes"
         subtitulo={
           <span className="tabular-nums">

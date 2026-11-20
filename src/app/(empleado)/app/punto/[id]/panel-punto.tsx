@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
@@ -395,14 +394,7 @@ export function PanelPunto({
   return (
     <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
       <div className="flex items-start gap-esp3">
-        <Link
-          href="/app/agenda"
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center text-icono-secundario"
-          aria-label="Volver a mi agenda"
-        >
-          <Icono nombre="atras" size={22} />
-        </Link>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h1 className="text-titulo-panel text-texto-primario">{punto.nombre}</h1>
           <p className="text-sm text-texto-terciario">
             {ETIQUETA_SOPORTE[punto.tipo_soporte] ?? punto.tipo_soporte} · {campana?.nombre}
@@ -458,7 +450,7 @@ export function PanelPunto({
           {(punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista) && (
             <p className="text-xs text-texto-secundario">
               {[
-                punto.piezas != null ? `${punto.piezas} ${punto.piezas === 1 ? "pieza" : "piezas"}` : null,
+                punto.piezas != null ? `${punto.piezas} ${punto.piezas === 1 ? "unidad" : "unidades"}` : null,
                 punto.fecha_colocacion_prevista ? `Colocar el ${fechaMedia(punto.fecha_colocacion_prevista)}` : null,
                 punto.fecha_retirada_prevista ? `Retirar el ${fechaMedia(punto.fecha_retirada_prevista)}` : null,
               ]

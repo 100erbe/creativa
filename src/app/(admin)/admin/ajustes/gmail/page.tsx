@@ -28,7 +28,7 @@ export default async function PaginaGmail({
         antes={
           <Link
             href="/admin/ajustes"
-            className="flex w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario"
+            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
           >
             <Icono nombre="atras" size={16} />
             Ajustes
@@ -38,7 +38,7 @@ export default async function PaginaGmail({
         subtitulo={
           <>
             Con Gmail conectado, «Reclamar impagadas» deja en tu bandeja un borrador con el estado de cuenta y las
-          facturas insolutas ya adjuntas. Tú lo revisas y lo envías desde Gmail.
+          facturas vencidas ya adjuntas. Tú lo revisas y lo envías desde Gmail.
           </>
         }
       />

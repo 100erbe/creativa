@@ -8,6 +8,8 @@ import { PestanasEnlace } from "@/components/ui/pestanas";
 import { Icono } from "@/components/ui/iconos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO_CAMPANA as ETIQUETA_ESTADO } from "@/lib/etiquetas";
+import { documentosAsociadosACampanas } from "@/lib/campanas/documentos";
+import { BotonEliminarCampana } from "./boton-eliminar-campana";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,7 @@ const FILTROS = [
 function urlCampanas({ estado, vista }: { estado?: string; vista?: string }) {
   const params = new URLSearchParams();
   if (estado) params.set("estado", estado);
-  if (vista === "pipeline") params.set("vista", "pipeline");
+  if (vista === "tablero") params.set("vista", "tablero");
   const s = params.toString();
   return s ? `/admin/campanas?${s}` : "/admin/campanas";
 }
@@ -32,18 +34,19 @@ export default async function PaginaCampanas({
   searchParams: Promise<{ estado?: string; vista?: string }>;
 }) {
   const { estado = "", vista: vistaParam } = await searchParams;
-  const vista = vistaParam === "pipeline" ? "pipeline" : "lista";
+  const vista = vistaParam === "tablero" || vistaParam === "pipeline" ? "tablero" : "lista";
   const supabase = await createClient();
 
   const resultados = await Promise.all([
     supabase
       .from("campanas")
-      .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin")
+      .select("id, codigo, nombre, estado, fecha_inicio, fecha_fin, documento_id")
       .order("fecha_inicio", { ascending: false }),
     supabase.from("v_progreso_campana").select("*"),
   ]);
   lanzarSiError(...resultados);
   const [{ data: campanas }, { data: progreso }] = resultados;
+  const documentosPorCampana = await documentosAsociadosACampanas(supabase, campanas ?? []);
 
   const progresoPorId = new Map((progreso ?? []).map((p) => [p.campana_id, p]));
   const todas = (campanas ?? []).map((c) => {
@@ -61,12 +64,13 @@ export default async function PaginaCampanas({
       incidencias,
       fotos,
       porcentaje: total ? Math.round((hechos / total) * 100) : 0,
+      documentos: documentosPorCampana.get(c.id) ?? [],
     };
   });
 
   const filas = todas.filter((c) => !estado || c.estado === estado);
 
-  const columnasPipeline = [
+  const columnasTablero = [
     {
       clave: "planificada",
       titulo: "Planificadas",
@@ -118,13 +122,13 @@ export default async function PaginaCampanas({
                   activa: vista === "lista",
                 },
                 {
-                  href: urlCampanas({ vista: "pipeline" }),
+                  href: urlCampanas({ vista: "tablero" }),
                   etiqueta: (
                     <>
-                      <Icono nombre="kanban" size={14} /> Pipeline
+                      <Icono nombre="kanban" size={14} /> Tablero
                     </>
                   ),
-                  activa: vista === "pipeline",
+                  activa: vista === "tablero",
                 },
               ]}
             />
@@ -150,9 +154,9 @@ export default async function PaginaCampanas({
         </div>
       )}
 
-      {vista === "pipeline" ? (
+      {vista === "tablero" ? (
         <div className="grid grid-cols-1 gap-esp4 md:grid-cols-2 xl:grid-cols-4">
-          {columnasPipeline.map((col) => {
+          {columnasTablero.map((col) => {
             const totalPuntosCol = col.items.reduce((s, c) => s + c.total, 0);
             return (
               <section
@@ -179,27 +183,41 @@ export default async function PaginaCampanas({
 
                 <div className="flex flex-col gap-esp2">
                   {col.items.map((c) => (
-                    <Link
+                    <div
                       key={c.id}
-                      href={`/admin/campanas/${c.id}`}
-                      className={`flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
+                      className={`group relative flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
                         c.incidencias > 0
                           ? "border-borde-peligro-sutil border-l-4 border-l-borde-peligro hover:border-borde-peligro"
                           : "border-borde-default hover:border-borde-campo"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-texto-primario">{c.nombre}</p>
-                        <p className="truncate text-xs text-texto-secundario">{c.cliente}</p>
-                        {(c.codigo || (c.fecha_inicio && c.fecha_fin)) && (
-                          <p className="mt-0.5 truncate text-micro text-texto-terciario">
-                            {c.codigo ?? ""}
-                            {c.codigo && c.fecha_inicio && c.fecha_fin ? " · " : ""}
-                            {c.fecha_inicio && c.fecha_fin
-                              ? `${fechaCorta(c.fecha_inicio)} – ${fechaCorta(c.fecha_fin)}`
-                              : ""}
-                          </p>
-                        )}
+                      <div className="flex items-start justify-between gap-esp2">
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/admin/campanas/${c.id}`}
+                            className="block truncate text-sm font-medium text-texto-primario after:absolute after:inset-0"
+                          >
+                            {c.nombre}
+                          </Link>
+                          <p className="truncate text-xs text-texto-secundario">{c.cliente}</p>
+                          {(c.codigo || (c.fecha_inicio && c.fecha_fin)) && (
+                            <p className="mt-0.5 truncate text-micro text-texto-terciario">
+                              {c.codigo ?? ""}
+                              {c.codigo && c.fecha_inicio && c.fecha_fin ? " · " : ""}
+                              {c.fecha_inicio && c.fecha_fin
+                                ? `${fechaCorta(c.fecha_inicio)} – ${fechaCorta(c.fecha_fin)}`
+                                : ""}
+                            </p>
+                          )}
+                        </div>
+                        <BotonEliminarCampana
+                          campanaId={c.id}
+                          nombre={c.nombre}
+                          contenido={{ puntos: c.total, fotos: c.fotos }}
+                          documentos={c.documentos}
+                          variante="icono"
+                          className="relative z-10 -mr-1 -mt-1 shrink-0"
+                        />
                       </div>
 
                       <div className="flex items-center gap-esp2">
@@ -224,7 +242,7 @@ export default async function PaginaCampanas({
                             : (ETIQUETA_ESTADO[c.estado] ?? c.estado)}
                         </Insignia>
                       </div>
-                    </Link>
+                    </div>
                   ))}
                   {col.items.length === 0 && (
                     <p className="rounded-md border border-dashed border-borde-default px-esp3 py-esp5 text-center text-xs text-texto-terciario">
@@ -239,45 +257,58 @@ export default async function PaginaCampanas({
       ) : (
         <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
           {filas.map((c) => (
-            <Link
+            <div
               key={c.id}
-              href={`/admin/campanas/${c.id}`}
-              className={`flex flex-col gap-esp2 px-esp4 py-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 sm:flex-row sm:items-center sm:gap-esp4 md:px-esp6 ${
+              className={`flex items-center gap-esp2 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 ${
                 c.incidencias > 0 ? "border-l-4 border-l-borde-peligro" : ""
               }`}
             >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-texto-primario">{c.nombre}</p>
-                <p className="truncate text-xs text-texto-terciario">
-                  {c.cliente}
-                  {c.codigo ? ` · ${c.codigo}` : ""}
-                  {c.fecha_inicio && c.fecha_fin
-                    ? ` · ${fechaCorta(c.fecha_inicio)} – ${fechaCorta(c.fecha_fin)}`
-                    : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-esp3 sm:w-auto">
-                <div className="flex flex-1 items-center gap-esp2 sm:w-[150px] sm:flex-none">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
-                    <div
-                      className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
-                        c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
-                      }`}
-                      style={{ width: `${c.porcentaje}%` }}
-                    />
-                  </div>
-                  <span className="tabular-nums text-xs text-texto-secundario">
-                    {c.hechos}/{c.total}
-                  </span>
+              <Link
+                href={`/admin/campanas/${c.id}`}
+                className="flex min-w-0 flex-1 flex-col gap-esp2 py-esp4 pl-esp4 sm:flex-row sm:items-center sm:gap-esp4 md:pl-esp6"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-texto-primario">{c.nombre}</p>
+                  <p className="truncate text-xs text-texto-terciario">
+                    {c.cliente}
+                    {c.codigo ? ` · ${c.codigo}` : ""}
+                    {c.fecha_inicio && c.fecha_fin
+                      ? ` · ${fechaCorta(c.fecha_inicio)} – ${fechaCorta(c.fecha_fin)}`
+                      : ""}
+                  </p>
                 </div>
-                <span className="tabular-nums hidden w-[70px] text-xs text-texto-terciario md:block">
-                  {c.fotos} fotos
-                </span>
-                <Insignia tono={c.incidencias > 0 ? "peligro" : (TONO_POR_ESTADO[c.estado] ?? "neutro")}>
-                  {c.incidencias > 0 ? "Incidencia" : (ETIQUETA_ESTADO[c.estado] ?? c.estado)}
-                </Insignia>
+                <div className="flex items-center gap-esp3 sm:w-auto">
+                  <div className="flex flex-1 items-center gap-esp2 sm:w-[150px] sm:flex-none">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
+                      <div
+                        className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
+                          c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
+                        }`}
+                        style={{ width: `${c.porcentaje}%` }}
+                      />
+                    </div>
+                    <span className="tabular-nums text-xs text-texto-secundario">
+                      {c.hechos}/{c.total}
+                    </span>
+                  </div>
+                  <span className="tabular-nums hidden w-[70px] text-xs text-texto-terciario md:block">
+                    {c.fotos} fotos
+                  </span>
+                  <Insignia tono={c.incidencias > 0 ? "peligro" : (TONO_POR_ESTADO[c.estado] ?? "neutro")}>
+                    {c.incidencias > 0 ? "Incidencia" : (ETIQUETA_ESTADO[c.estado] ?? c.estado)}
+                  </Insignia>
+                </div>
+              </Link>
+              <div className="pr-esp2 md:pr-esp4">
+                <BotonEliminarCampana
+                  campanaId={c.id}
+                  nombre={c.nombre}
+                  contenido={{ puntos: c.total, fotos: c.fotos }}
+                  documentos={c.documentos}
+                  variante="icono"
+                />
               </div>
-            </Link>
+            </div>
           ))}
           {filas.length === 0 && (
             <p className="px-esp6 py-esp6 text-sm text-texto-terciario">No hay campañas con este filtro.</p>

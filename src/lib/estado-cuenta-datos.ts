@@ -166,7 +166,7 @@ Según nuestros registros, a fecha ${fechaNumerica(estado.fecha)} las siguientes
 
 ${lista}
 
-Total insoluto: ${formatoEuros(estado.totalInsoluto)}
+Total vencido (+90 días): ${formatoEuros(estado.totalInsoluto)}
 ${abonos}
 Les adjuntamos el estado de cuenta con todas sus facturas y una copia de cada factura pendiente. Les agradeceríamos que realizaran el pago ${pago} o que nos indicaran la fecha prevista de pago.
 

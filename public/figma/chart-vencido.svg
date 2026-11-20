@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="274" height="84" viewBox="0 0 274 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Chart / editable trend">
+<path id="Vector" opacity="0.07" d="M8 76H59.6H111.2H162.8H214.4H266V78H8V76Z" fill="#BB4A62"/>
+<g id="Vector_2">
+<path d="M0 78H274Z" fill="black"/>
+<path d="M0 78H274" stroke="#ECEEF4"/>
+</g>
+<path id="Vector_3" d="M8 76H59.6H111.2H162.8H214.4H266" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke="#BB4A62"/>
+</g>
+</svg>

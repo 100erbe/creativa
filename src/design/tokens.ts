@@ -113,7 +113,7 @@ export const documento = {
   acento: "#425D90",
   "sobre-acento": "#FFFFFF",
   sello: "#15803D",
-  // Facturas insolutas en el estado de cuenta.
+  // Facturas vencidas (+90 días) en el estado de cuenta.
   insoluto: "#B91C1C",
   "insoluto-fondo": "#FEF2F2",
   papel: "#FFFFFF",

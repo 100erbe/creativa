@@ -352,7 +352,7 @@ function SelectorCliente({
                 else entradaBusqueda.current?.blur();
               }
             }}
-            placeholder="Buscar por nombre o CIF…"
+            placeholder="Buscar por nombre o NIF/CIF…"
             role="combobox"
             aria-expanded="true"
             aria-controls="lista-clientes"
