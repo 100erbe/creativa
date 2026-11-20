@@ -16,6 +16,7 @@ import {
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { LimpiarBorradores } from "./limpiar-borradores";
+import { BarraFiltrosDocumentos, type FiltrosDocumentos } from "./barra-filtros";
 
 export const dynamic = "force-dynamic";
 
@@ -61,19 +62,7 @@ const COBROS = [
   { valor: "vencida_90", etiqueta: "Vencidas 90+ días", critico: true },
 ] as const;
 
-const PILDORA =
-  "inline-flex min-h-11 items-center gap-1.5 rounded-md px-esp3 text-sm font-semibold transition-colors duration-rapida ease-suave active:scale-press md:min-h-8 md:text-xs";
-
-type Filtros = {
-  tipo?: string;
-  estado?: string;
-  q?: string;
-  cliente?: string;
-  cobro?: string;
-  revision?: string;
-  vista?: string;
-  pagina?: string;
-};
+type Filtros = FiltrosDocumentos;
 
 function enlace(actual: Filtros, cambios: Partial<Filtros>) {
   const f = { ...actual, ...cambios };
@@ -193,7 +182,6 @@ export default async function PaginaDocumentos({
     sin_pdf: nSinPdf ?? 0,
     sin_vencimiento: nSinVencimiento ?? 0,
   };
-  const facturasSinVencimiento = resumenCobro.sinVencimiento.length;
 
   const filas = documentos ?? [];
   const total = count ?? 0;
@@ -238,7 +226,6 @@ export default async function PaginaDocumentos({
   if (revision) chips.push({ clave: "revision", texto: REVISION.find((r) => r.valor === revision)?.etiqueta ?? revision });
   if (q) chips.push({ clave: "q", texto: `"${q}"` });
   if (clienteId) chips.push({ clave: "cliente", texto: clienteFiltrado?.razon_social ?? `Cliente #${clienteId}` });
-  const hayFiltros = chips.length > 0;
 
   const totalCriticas90Global = resumenCobro.criticas90.length;
   const importeCriticas90Global = resumenCobro.sumaCriticas90;
@@ -396,186 +383,17 @@ export default async function PaginaDocumentos({
         </div>
       )}
 
-      {facturasSinVencimiento > 0 && revision !== "sin_vencimiento" && (
-        <div
-          role="region"
-          aria-label="Facturas pendientes sin fecha de vencimiento"
-          className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp3"
-        >
-          <Icono nombre="alerta" size={18} className="shrink-0 text-texto-aviso" />
-          <p className="min-w-0 flex-1 text-sm text-texto-primario">
-            <strong className="font-semibold">{facturasSinVencimiento}</strong> factura
-            {facturasSinVencimiento === 1 ? "" : "s"} pendiente{facturasSinVencimiento === 1 ? "" : "s"} de cobro sin
-            fecha de vencimiento: no cuentan como vencidas ni en «Vencidas 90+ días».
-          </p>
-          <Link href={enlace(actual, { revision: "sin_vencimiento", cobro: "pendiente", tipo: "factura", estado: "", pagina: "" })}>
-            <Boton variante="secundario" tamano="s">
-              Ver cuáles
-            </Boton>
-          </Link>
-        </div>
-      )}
-
       {borradoresVacios > 0 && <LimpiarBorradores cantidad={borradoresVacios} />}
 
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
-        <form action="/admin/documentos" className="flex items-center gap-esp2">
-          {tipo && <input type="hidden" name="tipo" value={tipo} />}
-          {estado && <input type="hidden" name="estado" value={estado} />}
-          {cobro && <input type="hidden" name="cobro" value={cobro} />}
-          {revision && <input type="hidden" name="revision" value={revision} />}
-          {clienteId && <input type="hidden" name="cliente" value={clienteId} />}
-          {vista === "tablero" && <input type="hidden" name="vista" value="tablero" />}
-          <div className="relative min-w-0 flex-1 md:max-w-sm">
-            <Icono
-              nombre="buscar"
-              size={15}
-              className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
-            />
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar por número o cliente…"
-              aria-label="Buscar documentos por número o cliente"
-              className="min-h-11 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
-            />
-          </div>
-          <Boton type="submit" variante="secundario">
-            Buscar
-          </Boton>
-        </form>
-
-        {/* Nivel 1: tipo de documento */}
-        <div className="flex flex-col gap-esp1">
-          <p className="text-etiqueta uppercase text-texto-secundario">Tipo de documento</p>
-          <div className="overflow-x-auto">
-            <PestanasEnlace
-              etiqueta="Tipo de documento"
-              className="min-w-[560px] max-w-[720px]"
-              opciones={[{ valor: "", etiqueta: "Todos" }, ...TIPOS].map((t) => ({
-                href: enlace(actual, {
-                  tipo: t.valor,
-                  cobro: t.valor === "" || t.valor === "factura" ? cobro : "",
-                  pagina: "",
-                }),
-                etiqueta: t.etiqueta,
-                activa: tipo === t.valor,
-              }))}
-            />
-          </div>
-        </div>
-
-        {/* Nivel 2: cobros y estado */}
-        <div className="flex flex-col gap-esp1">
-          <p className="text-etiqueta uppercase text-texto-secundario">Cobro y estado</p>
-          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Cobro y estado">
-            {COBROS.map((c) => {
-              const activo = cobro === c.valor;
-              return (
-                <Link
-                  key={c.valor}
-                  href={enlace(actual, {
-                    cobro: activo ? "" : c.valor,
-                    estado: "",
-                    tipo: activo ? tipo : "factura",
-                    pagina: "",
-                  })}
-                  aria-pressed={activo}
-                  className={`${PILDORA} border ${
-                    c.critico
-                      ? activo
-                        ? "border-borde-critico bg-fondo-critico font-semibold text-texto-inverso"
-                        : "border-borde-critico-sutil bg-fondo-critico-sutil font-medium text-texto-critico hover:border-borde-critico"
-                      : activo
-                        ? "border-borde-peligro bg-fondo-peligro font-medium text-texto-inverso"
-                        : "border-borde-peligro-sutil bg-fondo-peligro-sutil text-texto-peligro hover:opacity-90"
-                  }`}
-                >
-                  <span aria-hidden="true" className="h-1.5 w-1.5 rounded-completo bg-current" />
-                  {c.etiqueta}
-                </Link>
-              );
-            })}
-            <span aria-hidden="true" className="mx-esp1 hidden w-px self-stretch bg-borde-default sm:block" />
-            {ESTADOS.map((e) => {
-              const activo = estado === e.valor;
-              return (
-                <Link
-                  key={e.valor}
-                  href={enlace(actual, { estado: activo ? "" : e.valor, cobro: "", pagina: "" })}
-                  aria-pressed={activo}
-                  className={`${PILDORA} border ${
-                    activo
-                      ? "border-borde-marca bg-fondo-marca-sutil font-medium text-texto-marca"
-                      : "border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
-                  }`}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`h-1.5 w-1.5 rounded-completo ${activo ? "bg-current" : "bg-borde-fuerte"}`}
-                  />
-                  {e.etiqueta}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Nivel 3: pendientes de revisión (importación) */}
-        <div className="flex flex-col gap-esp1">
-          <p className="text-etiqueta uppercase text-texto-secundario">Revisión</p>
-          <div className="flex flex-wrap gap-esp2" role="group" aria-label="Revisión">
-            {REVISION.map((r) => {
-              const activo = revision === r.valor;
-              const n = conteoRevision[r.valor] ?? 0;
-              return (
-                <Link
-                  key={r.valor}
-                  href={enlace(actual, { revision: activo ? "" : r.valor, pagina: "" })}
-                  aria-pressed={activo}
-                  className={`${PILDORA} border ${
-                    activo
-                      ? "border-borde-marca bg-fondo-marca-sutil font-medium text-texto-marca"
-                      : n > 0
-                        ? "border-borde-aviso bg-fondo-aviso-sutil text-texto-aviso hover:opacity-90"
-                        : "border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil"
-                  }`}
-                >
-                  {r.etiqueta}
-                  <span className="tabular-nums">({n})</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Filtros activos */}
-        {hayFiltros && (
-          <div className="flex flex-wrap items-center gap-esp2 border-t border-borde-default pt-esp3 text-sm">
-            <span className="text-texto-terciario">Filtrando por:</span>
-            {chips.map((c) => (
-              <Link
-                key={c.clave}
-                href={enlace(actual, { [c.clave]: "", pagina: "" })}
-                aria-label={`Quitar filtro ${c.texto}`}
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-borde-campo bg-fondo-sutil pl-esp3 pr-esp2 text-texto-primario transition-colors duration-rapida ease-suave hover:bg-fondo-hover active:scale-press md:min-h-8"
-              >
-                <span className="max-w-[60vw] truncate">{c.texto}</span>
-                <span aria-hidden="true" className="text-base leading-none text-texto-terciario">
-                  ×
-                </span>
-              </Link>
-            ))}
-            <Link
-              href={vista === "tablero" ? "/admin/documentos?vista=tablero" : "/admin/documentos"}
-              className="inline-flex min-h-10 items-center px-esp2 font-medium text-texto-marca md:min-h-8"
-            >
-              Quitar todos
-            </Link>
-          </div>
-        )}
-      </div>
+      <BarraFiltrosDocumentos
+        actual={actual}
+        tipos={TIPOS}
+        cobros={COBROS}
+        estados={ESTADOS}
+        revisiones={REVISION}
+        conteoRevision={conteoRevision}
+        chips={chips}
+      />
 
       {(pdfsSinAsignar ?? []).length > 0 && (
         <details className="rounded-xl border border-borde-aviso bg-fondo-superficie px-esp4 py-esp3">
@@ -722,6 +540,37 @@ export default async function PaginaDocumentos({
               const cobroEstado = d.cobroDoc?.estado_cobro;
               const es90 = d.aging?.esCritica90 ?? false;
               const pendienteNum = Number(d.cobroDoc?.pendiente ?? 0);
+              const tieneCobroParcial =
+                !!cobroEstado && cobroEstado !== "cobrada" && Math.abs(pendienteNum - Number(d.total)) > 0.01;
+
+              // Estado primario único: en facturas/rectificativas emitidas manda el estado de cobro.
+              const tonoPrimario = cobroEstado
+                ? (TONO_POR_ESTADO[cobroEstado] ?? "neutro")
+                : (TONO_POR_ESTADO[d.estado] ?? "neutro");
+              const etiquetaPrimaria = cobroEstado
+                ? cobroEstado === "pendiente"
+                  ? "Pendiente"
+                  : d.aging && d.aging.diasVencido > 0
+                    ? `${ETIQUETA_COBRO[cobroEstado] ?? cobroEstado} · ${d.aging.diasVencido}d`
+                    : (ETIQUETA_COBRO[cobroEstado] ?? cobroEstado)
+                : (ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado);
+
+              // Avisos secundarios como metadatos discretos (no píldoras) para evitar saturación visual.
+              const avisosFila: string[] = [];
+              if (!es90) {
+                if (validezVencida(d.tipo, d.estado, d.valido_hasta)) avisosFila.push("Validez vencida");
+                if (d.revisar) avisosFila.push("Por revisar");
+                if (
+                  d.tipo === "factura" &&
+                  d.estado !== "borrador" &&
+                  !d.fecha_vencimiento &&
+                  cobroEstado &&
+                  cobroEstado !== "cobrada"
+                ) {
+                  avisosFila.push("Sin venc.");
+                }
+              }
+
               return (
                 <Link
                   key={d.id}
@@ -740,16 +589,18 @@ export default async function PaginaDocumentos({
                     <Icono nombre={es90 ? "alerta" : "documentos"} size={18} />
                   </div>
                   <div className="min-w-0 lg:flex-1">
-                    <p className="truncate text-micro font-normal uppercase tracking-wide text-texto-terciario lg:hidden">
-                      {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
-                    </p>
-                    <p className="truncate text-sm font-medium text-texto-primario">
+                    <p className="truncate text-sm font-semibold text-texto-primario">
                       {d.numero_completo ?? `${ETIQUETA_TIPO[d.tipo] ?? d.tipo} (borrador)`}
                       {d.version > 1 && <span className="font-normal text-texto-terciario"> · v{d.version}</span>}
                     </p>
                     <p className="truncate text-xs text-texto-terciario">
                       {d.nombreCliente}
-                      <span className="lg:hidden"> · {fechaMedia(d.fecha)}</span>
+                      <span className="lg:hidden">
+                        {" · "}
+                        {ETIQUETA_TIPO[d.tipo] ?? d.tipo}
+                        {" · "}
+                        {fechaMedia(d.fecha)}
+                      </span>
                     </p>
                   </div>
                   <span className="hidden w-[100px] text-xs text-texto-terciario lg:block">
@@ -780,45 +631,34 @@ export default async function PaginaDocumentos({
                   </span>
                   <div className="text-right lg:w-[115px]">
                     <span
-                      className={`tabular-nums block whitespace-nowrap text-sm font-medium ${
+                      className={`tabular-nums block whitespace-nowrap text-sm font-bold lg:font-medium ${
                         es90 ? "text-texto-critico" : "text-texto-primario"
                       }`}
                     >
                       {euros(Number(d.total))}
                     </span>
-                    {cobroEstado && cobroEstado !== "cobrada" && Math.abs(pendienteNum - Number(d.total)) > 0.01 && (
+                    {tieneCobroParcial && (
                       <span className="tabular-nums block text-micro text-texto-peligro">
                         Pend. {euros(pendienteNum)}
                       </span>
                     )}
                   </div>
-                  <div className="col-span-2 flex flex-wrap items-center gap-1 lg:col-span-1 lg:w-[175px] lg:flex-col lg:items-end">
+                  <div className="col-span-2 flex items-center justify-between gap-esp2 pt-0.5 lg:col-span-1 lg:w-[175px] lg:flex-col lg:items-end lg:gap-1 lg:pt-0">
                     {es90 ? (
                       <Insignia tono="critico" solido>
                         90+ días · {d.aging!.diasVencido}d
                       </Insignia>
                     ) : (
-                      <>
-                        <Insignia tono={TONO_POR_ESTADO[d.estado] ?? "neutro"}>
-                          {ETIQUETA_ESTADO_DOC[d.estado] ?? d.estado}
-                        </Insignia>
-                        {validezVencida(d.tipo, d.estado, d.valido_hasta) && (
-                          <Insignia tono="aviso">Validez vencida</Insignia>
-                        )}
-                        {d.revisar && <Insignia tono="aviso">Por revisar</Insignia>}
-                        {d.tipo === "factura" &&
-                          d.estado !== "borrador" &&
-                          !d.fecha_vencimiento &&
-                          cobroEstado &&
-                          cobroEstado !== "cobrada" && <Insignia tono="aviso">Sin vencimiento</Insignia>}
-                        {cobroEstado && cobroEstado !== "cobrada" && (
-                          <Insignia tono={TONO_POR_ESTADO[cobroEstado] ?? "neutro"}>
-                            {d.aging && d.aging.diasVencido > 0
-                              ? `${ETIQUETA_COBRO[cobroEstado] ?? cobroEstado} (${d.aging.diasVencido}d)`
-                              : (ETIQUETA_COBRO[cobroEstado] ?? cobroEstado)}
-                          </Insignia>
-                        )}
-                      </>
+                      <Insignia tono={tonoPrimario}>
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-completo bg-current" />
+                        {etiquetaPrimaria}
+                      </Insignia>
+                    )}
+                    {avisosFila.length > 0 && (
+                      <span className="inline-flex min-w-0 items-center gap-1 truncate text-micro font-medium text-texto-aviso">
+                        <Icono nombre="alerta" size={12} className="shrink-0" />
+                        <span className="truncate">{avisosFila.join(" · ")}</span>
+                      </span>
                     )}
                   </div>
                 </Link>
