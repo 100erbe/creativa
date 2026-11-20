@@ -74,78 +74,78 @@ function resolverCabeceraAdmin(pathname: string): ConfigCabeceraMovil {
 
   // 2. Secciones secundarias (accesibles desde el menú lateral derecho)
   if (pathname === "/admin/clientes") {
-    return { modo: "volver", titulo: "Clientes", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Clientes", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/catalogo") {
-    return { modo: "volver", titulo: "Catálogo", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Catálogo", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/gastos") {
-    return { modo: "volver", titulo: "Gastos", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Gastos", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/contabilidad") {
-    return { modo: "volver", titulo: "Contabilidad", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Contabilidad", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/ajustes") {
-    return { modo: "volver", titulo: "Ajustes", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Ajustes", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/ayuda") {
-    return { modo: "volver", titulo: "Ayuda", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Ayuda", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/cuenta") {
-    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: false, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: false, mostrarAvisos: true };
   }
   if (pathname === "/admin/avisos") {
-    return { modo: "volver", titulo: "Avisos", hrefVolver: "/admin/panel", usarHistorial: true, mostrarBusqueda: true, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Avisos", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: false };
   }
 
   // 3. Flujos de creación / edición / impresión (sin campana ni distracciones)
   if (pathname.startsWith("/admin/documentos/nuevo")) {
-    return { modo: "volver", titulo: "Nuevo documento", hrefVolver: "/admin/documentos", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Nuevo documento", hrefVolver: "/admin/documentos", etiquetaVolver: "Documentos", mostrarBusqueda: false, mostrarAvisos: false };
   }
   const matchDocImprimir = pathname.match(/^\/admin\/documentos\/(\d+)\/imprimir$/);
   if (matchDocImprimir) {
-    return { modo: "volver", titulo: "Imprimir", hrefVolver: `/admin/documentos/${matchDocImprimir[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Imprimir", hrefVolver: `/admin/documentos/${matchDocImprimir[1]}`, etiquetaVolver: "Documento", mostrarBusqueda: false, mostrarAvisos: false };
   }
   if (pathname.startsWith("/admin/campanas/nueva")) {
-    return { modo: "volver", titulo: "Nueva campaña", hrefVolver: "/admin/campanas", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Nueva campaña", hrefVolver: "/admin/campanas", etiquetaVolver: "Campañas", mostrarBusqueda: false, mostrarAvisos: false };
   }
   if (pathname.startsWith("/admin/clientes/nuevo")) {
-    return { modo: "volver", titulo: "Nuevo cliente", hrefVolver: "/admin/clientes", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Nuevo cliente", hrefVolver: "/admin/clientes", etiquetaVolver: "Clientes", mostrarBusqueda: false, mostrarAvisos: false };
   }
   const matchClienteEditar = pathname.match(/^\/admin\/clientes\/(\d+)\/editar$/);
   if (matchClienteEditar) {
-    return { modo: "volver", titulo: "Editar cliente", hrefVolver: `/admin/clientes/${matchClienteEditar[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Editar cliente", hrefVolver: `/admin/clientes/${matchClienteEditar[1]}`, etiquetaVolver: "Cliente", mostrarBusqueda: false, mostrarAvisos: false };
   }
   if (pathname.startsWith("/admin/gastos/nuevo")) {
-    return { modo: "volver", titulo: "Nuevo gasto", hrefVolver: "/admin/gastos", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Nuevo gasto", hrefVolver: "/admin/gastos", etiquetaVolver: "Gastos", mostrarBusqueda: false, mostrarAvisos: false };
   }
   const matchGastoEditar = pathname.match(/^\/admin\/gastos\/(\d+)\/editar$/);
   if (matchGastoEditar) {
-    return { modo: "volver", titulo: "Editar gasto", hrefVolver: `/admin/gastos/${matchGastoEditar[1]}`, mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Editar gasto", hrefVolver: `/admin/gastos/${matchGastoEditar[1]}`, etiquetaVolver: "Gasto", mostrarBusqueda: false, mostrarAvisos: false };
   }
   if (pathname.startsWith("/admin/avisos/nuevo")) {
-    return { modo: "volver", titulo: "Nuevo aviso", hrefVolver: "/admin/avisos", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Nuevo aviso", hrefVolver: "/admin/avisos", etiquetaVolver: "Avisos", mostrarBusqueda: false, mostrarAvisos: false };
   }
 
   // 4. Fichas de detalle y subpáginas
   if (/^\/admin\/documentos\/\d+$/.test(pathname)) {
-    return { modo: "volver", titulo: "Documento", hrefVolver: "/admin/documentos", mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Documento", hrefVolver: "/admin/documentos", etiquetaVolver: "Documentos", mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (/^\/admin\/campanas\/\d+$/.test(pathname)) {
-    return { modo: "volver", titulo: "Campaña", hrefVolver: "/admin/campanas", mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Campaña", hrefVolver: "/admin/campanas", etiquetaVolver: "Campañas", mostrarBusqueda: true, mostrarAvisos: true };
   }
   const matchEstadoCuenta = pathname.match(/^\/admin\/clientes\/(\d+)\/estado-cuenta$/);
   if (matchEstadoCuenta) {
-    return { modo: "volver", titulo: "Estado de cuenta", hrefVolver: `/admin/clientes/${matchEstadoCuenta[1]}`, mostrarBusqueda: false, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Estado de cuenta", hrefVolver: `/admin/clientes/${matchEstadoCuenta[1]}`, etiquetaVolver: "Cliente", mostrarBusqueda: false, mostrarAvisos: true };
   }
   if (/^\/admin\/clientes\/\d+$/.test(pathname)) {
-    return { modo: "volver", titulo: "Cliente", hrefVolver: "/admin/clientes", mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Cliente", hrefVolver: "/admin/clientes", etiquetaVolver: "Clientes", mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (/^\/admin\/gastos\/\d+$/.test(pathname)) {
-    return { modo: "volver", titulo: "Gasto", hrefVolver: "/admin/gastos", mostrarBusqueda: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Gasto", hrefVolver: "/admin/gastos", etiquetaVolver: "Gastos", mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (/^\/admin\/avisos\/\d+$/.test(pathname)) {
-    return { modo: "volver", titulo: "Aviso", hrefVolver: "/admin/avisos", mostrarBusqueda: false, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Aviso", hrefVolver: "/admin/avisos", etiquetaVolver: "Avisos", mostrarBusqueda: false, mostrarAvisos: false };
   }
   if (pathname.startsWith("/admin/ajustes/")) {
     const titulosAjustes: Record<string, { titulo: string; avisos: boolean }> = {
@@ -161,6 +161,7 @@ function resolverCabeceraAdmin(pathname: string): ConfigCabeceraMovil {
       modo: "volver",
       titulo: info?.titulo ?? "Ajustes",
       hrefVolver: "/admin/ajustes",
+      etiquetaVolver: "Ajustes",
       mostrarBusqueda: false,
       mostrarAvisos: info?.avisos ?? true,
     };

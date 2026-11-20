@@ -51,24 +51,24 @@ function resolverCabeceraEmpleado(pathname: string): ConfigCabeceraMovil {
 
   // 2. Flujos de creación / edición (sin campana para evitar distracciones)
   if (pathname === "/app/gastos/nuevo") {
-    return { modo: "volver", titulo: "Añadir gasto", hrefVolver: "/app/gastos", mostrarAvisos: false };
+    return { modo: "volver", titulo: "Añadir gasto", hrefVolver: "/app/gastos", etiquetaVolver: "Mis gastos", mostrarAvisos: false };
   }
   if (/^\/app\/gastos\/\d+\/editar$/.test(pathname)) {
-    return { modo: "volver", titulo: "Corregir gasto", hrefVolver: "/app/gastos", mostrarAvisos: false };
+    return { modo: "volver", titulo: "Corregir gasto", hrefVolver: "/app/gastos", etiquetaVolver: "Mis gastos", mostrarAvisos: false };
   }
 
   // 3. Fichas de detalle y secciones secundarias
   if (pathname.startsWith("/app/punto/")) {
-    return { modo: "volver", titulo: "Punto", hrefVolver: "/app/agenda", mostrarAvisos: true };
+    return { modo: "volver", titulo: "Punto", hrefVolver: "/app/agenda", etiquetaVolver: "Agenda", mostrarAvisos: true };
   }
   if (pathname === "/app/avisos") {
-    return { modo: "volver", titulo: "Avisos", hrefVolver: "/app/inicio", usarHistorial: true, mostrarAvisos: false };
+    return { modo: "volver", titulo: "Avisos", hrefVolver: "/app/inicio", usarHistorial: true, revelarTituloAlScroll: true, mostrarAvisos: false };
   }
   if (pathname.startsWith("/app/avisos/")) {
-    return { modo: "volver", titulo: "Aviso", hrefVolver: "/app/avisos", mostrarAvisos: false };
+    return { modo: "volver", titulo: "Aviso", hrefVolver: "/app/avisos", etiquetaVolver: "Avisos", mostrarAvisos: false };
   }
   if (pathname === "/app/cuenta") {
-    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/app/inicio", usarHistorial: true, mostrarAvisos: true };
+    return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/app/inicio", usarHistorial: true, revelarTituloAlScroll: true, mostrarAvisos: true };
   }
 
   return { modo: "logo", titulo: "Inicio", mostrarAvisos: true };
