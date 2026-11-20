@@ -57,17 +57,26 @@ export function TarjetaKpi({
   href?: string;
 }) {
   const clases = cn(
-    "flex min-w-0 flex-1 flex-col gap-esp1 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5",
+    "grid min-w-0 row-span-4 grid-cols-1 grid-rows-subgrid gap-y-0 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5",
     href &&
       "transition-[background-color,border-color,transform] duration-rapida ease-salida hover:border-borde-fuerte hover:bg-fondo-sutil active:scale-press",
   );
   const contenido = (
     <>
-      <p className="text-cuerpo text-texto-primario">{etiqueta}</p>
-      <CifraKpi valor={valor} className={tono === "critico" ? "text-texto-critico" : "text-texto-primario"} />
-      {significado && <p className="text-etiqueta text-texto-secundario">{significado}</p>}
-      {detalle && (
-        <p className={cn("tabular-nums mt-auto pt-esp2 text-etiqueta", colorDetalle ?? COLOR_NOTA[tono])}>{detalle}</p>
+      <p className="self-start text-cuerpo text-texto-primario">{etiqueta}</p>
+      <CifraKpi
+        valor={valor}
+        className={cn("mt-esp1", tono === "critico" ? "text-texto-critico" : "text-texto-primario")}
+      />
+      {significado ? (
+        <p className="mt-esp1 self-start text-etiqueta text-texto-secundario">{significado}</p>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+      {detalle ? (
+        <p className={cn("tabular-nums self-end pt-esp2 text-etiqueta", colorDetalle ?? COLOR_NOTA[tono])}>{detalle}</p>
+      ) : (
+        <span aria-hidden="true" />
       )}
     </>
   );

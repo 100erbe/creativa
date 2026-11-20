@@ -107,13 +107,13 @@ export function TarjetaKpiDinamica({
   return (
     <section
       aria-labelledby={idTitulo}
-      className="flex min-w-0 flex-col rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5"
+      className="grid min-w-0 row-span-6 grid-cols-1 grid-rows-subgrid gap-y-0 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5"
     >
-      <h2 id={idTitulo} className="text-cuerpo text-texto-primario">
+      <h2 id={idTitulo} className="self-start text-cuerpo text-texto-primario">
         {etiqueta}
       </h2>
       <CifraKpi valor={serie.valor} className="mt-1.5 text-texto-primario" />
-      <p className="mt-1 text-etiqueta text-texto-secundario">{significado}</p>
+      <p className="mt-1 self-start text-etiqueta text-texto-secundario">{significado}</p>
 
       <Pestanas
         etiqueta={`Periodo de ${etiqueta}`}
@@ -123,9 +123,11 @@ export function TarjetaKpiDinamica({
           setPeriodo(p);
           setActivo(null);
         }}
-        className="mt-esp2"
+        className="mt-esp2 self-start"
       />
 
+      {/* Gráfico + etiquetas de eje + alternativa textual agrupados en una sola fila del subgrid */}
+      <div>
       {/* Gráfico */}
       <div
         role="group"
@@ -244,15 +246,19 @@ export function TarjetaKpiDinamica({
         </tbody>
       </table>
       </div>
+      </div>
 
-      {nota &&
-        (nota.href ? (
-          <Link href={nota.href} className={cn("mt-esp4 self-start text-etiqueta hover:underline", colorNota)}>
+      {nota ? (
+        nota.href ? (
+          <Link href={nota.href} className={cn("mt-esp4 self-end justify-self-start text-etiqueta hover:underline", colorNota)}>
             {nota.texto}
           </Link>
         ) : (
-          <p className={cn("mt-esp4 text-etiqueta", colorNota)}>{nota.texto}</p>
-        ))}
+          <p className={cn("mt-esp4 self-end text-etiqueta", colorNota)}>{nota.texto}</p>
+        )
+      ) : (
+        <span aria-hidden="true" />
+      )}
     </section>
   );
 }

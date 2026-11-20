@@ -329,7 +329,7 @@ export default async function PaginaPanel() {
             titulo="Cobros y vencimientos"
             estado={nSinVenc > 0 ? <Insignia tono="aviso">Datos parciales</Insignia> : undefined}
           />
-          <div className="grid grid-cols-1 gap-esp4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-borde-default">
+          <div className="grid grid-cols-1 gap-esp4 sm:grid-cols-3 sm:gap-x-0 sm:gap-y-esp2 sm:divide-x sm:divide-borde-default">
             <Hecho etiqueta="Saldo pendiente" valor={euros(totalPendiente)} alcance={`${conSaldo.length} documento${conSaldo.length === 1 ? "" : "s"} con saldo`} />
             <Hecho
               etiqueta="Sin fecha de vencimiento"
@@ -424,17 +424,17 @@ function Hecho({
   tono?: "aviso" | "critico";
 }) {
   return (
-    <div className="flex flex-col gap-esp2 sm:px-esp6 sm:first:pl-0 sm:last:pr-0">
-      <p className="text-meta font-medium text-texto-secundario">{etiqueta}</p>
+    <div className="grid grid-cols-1 gap-esp2 sm:row-span-3 sm:grid-rows-subgrid sm:gap-y-esp2 sm:px-esp6 sm:first:pl-0 sm:last:pr-0">
+      <p className="self-start text-meta font-medium text-texto-secundario">{etiqueta}</p>
       <p
         className={cn(
-          "tabular-nums text-importe",
+          "tabular-nums self-baseline whitespace-nowrap text-importe",
           tono === "aviso" ? "text-texto-aviso" : tono === "critico" ? "text-texto-critico" : "text-texto-primario",
         )}
       >
         {valor}
       </p>
-      <p className="text-etiqueta text-texto-secundario">{alcance}</p>
+      <p className="self-start text-etiqueta text-texto-secundario">{alcance}</p>
     </div>
   );
 }
