@@ -15,7 +15,7 @@ type EnlaceEmpleado = {
   href: string;
   etiqueta: string;
   icono: Parameters<typeof Icono>[0]["nombre"];
-  badgeKey?: "atrasados" | "rechazados" | "noLeidos";
+  badgeKey?: "atrasados" | "rechazados";
 };
 
 const ENLACES_BARRA: EnlaceEmpleado[] = [
@@ -30,7 +30,10 @@ const ENLACES_CAJON: EnlaceEmpleado[] = [
   { href: "/app/agenda", etiqueta: "Agenda", icono: "calendario", badgeKey: "atrasados" },
   { href: "/app/mapa", etiqueta: "Mapa", icono: "ubicacion" },
   { href: "/app/gastos", etiqueta: "Mis gastos", icono: "gastos", badgeKey: "rechazados" },
-  { href: "/app/avisos", etiqueta: "Avisos", icono: "avisos", badgeKey: "noLeidos" },
+];
+
+const ENLACES_INFERIOR: EnlaceEmpleado[] = [
+  { href: "/app/ajustes", etiqueta: "Ajustes", icono: "ajustes" },
 ];
 
 /** Resuelve el estado contextual de la cabecera según la ruta activa del empleado. */
@@ -69,6 +72,9 @@ function resolverCabeceraEmpleado(pathname: string): ConfigCabeceraMovil {
   }
   if (pathname === "/app/cuenta") {
     return { modo: "volver", titulo: "Mi cuenta", hrefVolver: "/app/inicio", usarHistorial: true, revelarTituloAlScroll: true, mostrarAvisos: true };
+  }
+  if (pathname === "/app/ajustes") {
+    return { modo: "volver", titulo: "Ajustes", hrefVolver: "/app/inicio", usarHistorial: true, revelarTituloAlScroll: true, mostrarAvisos: true };
   }
 
   return { modo: "logo", titulo: "Inicio", mostrarAvisos: true };
@@ -118,7 +124,6 @@ export function CabeceraEmpleado({
   function obtenerConteo(key?: EnlaceEmpleado["badgeKey"]) {
     if (key === "atrasados") return atrasadosCount;
     if (key === "rechazados") return gastosRechazadosCount;
-    if (key === "noLeidos") return noLeidos;
     return 0;
   }
 
@@ -230,7 +235,9 @@ export function CabeceraEmpleado({
 
             <nav aria-label="Menú completo" className="flex flex-col gap-esp1 pt-esp2">
               {ENLACES_CAJON.map((enlace) => {
-                const activo = pathname.startsWith(enlace.href);
+                const activo =
+                  pathname.startsWith(enlace.href) ||
+                  (enlace.href === "/app/agenda" && pathname.startsWith("/app/punto/"));
                 const conteo = obtenerConteo(enlace.badgeKey);
                 const esCritico = enlace.badgeKey === "atrasados" || enlace.badgeKey === "rechazados";
                 return (
@@ -267,6 +274,31 @@ export function CabeceraEmpleado({
             </nav>
 
             <div className="flex-1" />
+            <nav aria-label="Ajustes" className="flex flex-col gap-esp1">
+              {ENLACES_INFERIOR.map((enlace) => {
+                const activo = pathname.startsWith(enlace.href);
+                return (
+                  <Link
+                    key={enlace.href}
+                    href={enlace.href}
+                    aria-current={activo ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-esp3 rounded-lg px-esp3 text-cuerpo transition-colors duration-rapida ease-suave",
+                      activo
+                        ? "bg-fondo-marca-sutil text-texto-marca"
+                        : "text-texto-primario hover:bg-fondo-sutil",
+                    )}
+                  >
+                    <Icono
+                      nombre={enlace.icono}
+                      size={20}
+                      className={activo ? "text-icono-marca" : "text-icono-default"}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{enlace.etiqueta}</span>
+                  </Link>
+                );
+              })}
+            </nav>
             <div className="h-px bg-borde-default" />
             <MenuCuenta
               nombre={nombre}

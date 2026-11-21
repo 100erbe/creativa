@@ -11,6 +11,7 @@
     --bg-sutil: #F7F8FC;
     --bg-hover: #F0F2F6;
     --bg-marca: #5A4BE7;
+    --bg-marca-hover: #4A3BD1;
     --bg-marca-sutil: #F0EDFF;
     --bg-exito-sutil: #E9F7F0;
     --bg-aviso-sutil: #FFF8EA;
@@ -35,8 +36,20 @@
     --border-fuerte: #DDE0E8;
     --border-campo: #73788A;
     --border-foco: #5A4BE7;
+    --border-marca: #D9D3FF;
     --border-critico: #8E2440;
     --border-critico-sutil: #EBB8C6;
+
+    --icono-marca: #5A4BE7;
+
+    /* Canales RGB del acento principal (permiten modificadores de opacidad en Tailwind, p. ej. bg-fondo-marca/60). */
+    --bg-marca-rgb: 90 75 231;
+    --bg-marca-hover-rgb: 74 59 209;
+    --bg-marca-sutil-rgb: 240 237 255;
+    --text-marca-rgb: 90 75 231;
+    --border-foco-rgb: 90 75 231;
+    --border-marca-rgb: 217 211 255;
+    --icono-marca-rgb: 90 75 231;
 
     --radius-sm: 4px;
     --radius-md: 8px;
@@ -54,12 +67,33 @@
     --motion-scale-press: 0.98;
   }
 
+  /* Variación de acento para la vista del miembro (/app/*): espejo de `marcaEmpleado` en src/design/tokens.ts.
+     `:root:has(...)` propaga el acento también a diálogos globales montados en RootLayout. */
+  :root:has([data-vista="empleado"]),
+  [data-vista="empleado"] {
+    --bg-marca: #0E7490;
+    --bg-marca-hover: #0B5E75;
+    --bg-marca-sutil: #E8F6FA;
+    --text-marca: #0E7490;
+    --border-foco: #0E7490;
+    --border-marca: #BDE4EF;
+    --icono-marca: #0E7490;
+
+    --bg-marca-rgb: 14 116 144;
+    --bg-marca-hover-rgb: 11 94 117;
+    --bg-marca-sutil-rgb: 232 246 250;
+    --text-marca-rgb: 14 116 144;
+    --border-foco-rgb: 14 116 144;
+    --border-marca-rgb: 189 228 239;
+    --icono-marca-rgb: 14 116 144;
+  }
+
   html {
     color-scheme: light;
   }
   /* Foco visible en cualquier elemento interactivo (WCAG 2.4.7 / 2.4.11) */
   :focus-visible {
-    outline: 2px solid theme("colors.borde.foco");
+    outline: 2px solid var(--border-foco);
     outline-offset: 2px;
     transition: outline-offset var(--motion-duration-fast) var(--motion-ease-out);
   }

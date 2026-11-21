@@ -207,7 +207,7 @@ export function BannerAvisos() {
       <span className="min-w-0 flex-1">
         Activa los avisos para recibir el trabajo de mañana y los cambios de plan.
       </span>
-      <Link href="/app/avisos" className="shrink-0 font-semibold text-texto-marca">
+      <Link href="/app/ajustes" className="shrink-0 font-semibold text-texto-marca">
         Activar
       </Link>
       <button onClick={posponer} aria-label="Recordármelo más tarde" className="shrink-0 text-texto-terciario">

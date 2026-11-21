@@ -8,7 +8,27 @@ const config: Config = {
     extend: {
       colors: {
         ...primitivas, // poco uso directo; preferir los semánticos
-        fondo, texto, borde, border: borde.default, icono, documento,
+        fondo: {
+          ...fondo,
+          marca: "rgb(var(--bg-marca-rgb) / <alpha-value>)",
+          "marca-hover": "rgb(var(--bg-marca-hover-rgb) / <alpha-value>)",
+          "marca-sutil": "rgb(var(--bg-marca-sutil-rgb) / <alpha-value>)",
+        },
+        texto: {
+          ...texto,
+          marca: "rgb(var(--text-marca-rgb) / <alpha-value>)",
+        },
+        borde: {
+          ...borde,
+          foco: "rgb(var(--border-foco-rgb) / <alpha-value>)",
+          marca: "rgb(var(--border-marca-rgb) / <alpha-value>)",
+        },
+        border: borde.default,
+        icono: {
+          ...icono,
+          marca: "rgb(var(--icono-marca-rgb) / <alpha-value>)",
+        },
+        documento,
       },
       fontSize: tamanoTexto,
       spacing: {

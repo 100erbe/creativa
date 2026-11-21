@@ -135,6 +135,21 @@ export const colorMapa = {
 
 export const colorMarca = fondo.marca;
 
+/**
+ * Variación del acento principal para la vista del miembro (/app/*):
+ * ottanio/cerúleo (#0E7490), misma familia fría y WCAG 2.2 AA en todos los fondos,
+ * sin solaparse con `info` (#3568C8) ni `exito` (#167B65). Espejo en globals.css (`[data-vista="empleado"]`).
+ */
+export const marcaEmpleado = {
+  fondo: "#0E7490",
+  "fondo-hover": "#0B5E75",
+  "fondo-sutil": "#E8F6FA",
+  texto: "#0E7490",
+  borde: "#BDE4EF",
+  foco: "#0E7490",
+  icono: "#0E7490",
+};
+
 type TamanoTexto = [string, { lineHeight: string; fontWeight?: string }];
 
 /**

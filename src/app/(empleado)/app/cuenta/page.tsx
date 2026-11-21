@@ -15,7 +15,7 @@ export default async function PaginaMiCuentaEmpleado() {
         <h1 className="text-2xl font-bold text-texto-primario">Mi cuenta</h1>
         <p className="text-cuerpo text-texto-secundario">Tus datos, tu foto y el acceso a la app.</p>
       </div>
-      <SeccionesCuenta usuario={usuario} enlaceAvisos="/app/avisos" />
+      <SeccionesCuenta usuario={usuario} enlaceAvisos="/app/ajustes" />
     </div>
   );
 }

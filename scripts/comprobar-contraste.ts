@@ -1,5 +1,5 @@
 // Comprueba WCAG 2.2 AA sobre los tokens: `npm run contraste`. Sale con código 1 si algún par falla.
-import { fondo, texto, borde, icono, documento, estadoDocumento, grafico } from "../src/design/tokens";
+import { fondo, texto, borde, icono, documento, estadoDocumento, grafico, marcaEmpleado } from "../src/design/tokens";
 
 const lum = (h: string) => {
   const [r = 0, g = 0, b = 0] = [1, 3, 5]
@@ -54,6 +54,16 @@ for (const [estado, { fondo: fe, icono: ie }] of Object.entries(estadoDocumento)
 pares.push(["texto-inverso (tooltip)", v(t, "inverso"), "grafico.tooltip", grafico.tooltip, 4.5]);
 // Las líneas de los gráficos son componentes gráficos: 3:1 sobre la tarjeta.
 for (const [k, c] of Object.entries(grafico.linea)) pares.push([`grafico.linea.${k}`, c, "fondo-superficie", v(f, "superficie"), 3]);
+// Variación de acento del miembro (/app/*): texto, botón primario, foco e icono sobre todos sus fondos.
+for (const b of ["lienzo", "superficie", "sutil"] as const) {
+  pares.push(["marcaEmpleado.texto", marcaEmpleado.texto, `fondo-${b}`, v(f, b), 4.5]);
+}
+pares.push(["marcaEmpleado.texto", marcaEmpleado.texto, "marcaEmpleado.fondo-sutil", marcaEmpleado["fondo-sutil"], 4.5]);
+pares.push(["texto-sobre-marca", v(t, "sobre-marca"), "marcaEmpleado.fondo", marcaEmpleado.fondo, 4.5]);
+pares.push(["texto-sobre-marca", v(t, "sobre-marca"), "marcaEmpleado.fondo-hover", marcaEmpleado["fondo-hover"], 4.5]);
+pares.push(["marcaEmpleado.foco", marcaEmpleado.foco, "fondo-superficie", v(f, "superficie"), 3]);
+pares.push(["marcaEmpleado.foco", marcaEmpleado.foco, "fondo-lienzo", v(f, "lienzo"), 3]);
+pares.push(["marcaEmpleado.icono", marcaEmpleado.icono, "marcaEmpleado.fondo-sutil", marcaEmpleado["fondo-sutil"], 3]);
 
 let fallos = 0;
 for (const [a, ah, b, bh, min] of pares) {

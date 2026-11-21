@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +10,11 @@ import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { urlAvatar } from "@/lib/avatar";
+import { marcaEmpleado } from "@/design/tokens";
+
+export const viewport: Viewport = {
+  themeColor: marcaEmpleado.fondo,
+};
 
 function hoyEnEspana() {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
@@ -47,7 +53,7 @@ export default async function LayoutEmpleado({
   const gastosRechazadosCount = resRechazados.error ? 0 : (resRechazados.count ?? 0);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-fondo-lienzo">
+    <div data-vista="empleado" className="flex min-h-dvh flex-col bg-fondo-lienzo">
       <a
         href="#contenido-empleado"
         className="sr-only focus:not-sr-only focus:fixed focus:left-esp4 focus:top-esp4 focus:z-[300] focus:rounded-md focus:bg-fondo-marca focus:px-esp4 focus:py-esp2 focus:text-sm focus:font-medium focus:text-texto-sobre-marca focus:shadow-lg"
