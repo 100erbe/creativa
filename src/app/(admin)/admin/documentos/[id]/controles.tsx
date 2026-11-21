@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { METODOS_COBRO, type MetodoCobro } from "@/lib/documentos";
+import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
+import {
+  etiquetaDiasVencimiento,
+  METODOS_COBRO,
+  resolverVencimientoDefecto,
+  type MetodoCobro,
+} from "@/lib/documentos";
 import {
   emitirDocumento,
   convertirDocumento,
@@ -44,6 +50,12 @@ export function ProveedorCondiciones({ children }: { children: React.ReactNode }
   return (
     <ContextoCondiciones.Provider value={{ guardarPendiente, registrar }}>{children}</ContextoCondiciones.Provider>
   );
+}
+
+/** Botón «Salir» en el paso 4 (borrador): si hay cambios en «Condiciones», los guarda al elegir conservar. */
+export function BotonSalirConCondiciones({ documentoId }: { documentoId: number }) {
+  const guardarPendiente = useContext(ContextoCondiciones)?.guardarPendiente ?? null;
+  return <BotonSalirBorrador documentoId={documentoId} antesDeGuardar={guardarPendiente} />;
 }
 
 /** Plazos que ofrece la forma de pago aplazada (p. ej. 30, 60, 90 días); el selector de fecha sigue disponible. */
@@ -643,6 +655,8 @@ export function CondicionesDocumento({
   tipo,
   inicial,
   formasPago,
+  vencimientoClienteDias = null,
+  vencimientoGeneralDias = 30,
 }: {
   documentoId: number;
   tipo: string;
@@ -658,6 +672,8 @@ export function CondicionesDocumento({
     notasCliente: string | null;
   };
   formasPago: { id: number; nombre: string; dias_vencimiento: number; plazos_dias: number[] }[];
+  vencimientoClienteDias?: number | null;
+  vencimientoGeneralDias?: number;
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [guardado, setGuardado] = useState(false);
@@ -676,8 +692,20 @@ export function CondicionesDocumento({
     "rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 py-esp2 text-base text-texto-primario outline-none focus:border-borde-foco md:text-sm";
   const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
   const esPresupuesto = tipo === "presupuesto";
+  const formaSeleccionada = formasPago.find((f) => String(f.id) === formaPagoId);
   // Plazos a elegir: solo si la forma de pago es aplazada (y no en presupuestos).
-  const plazosForma = esPresupuesto ? [] : (formasPago.find((f) => String(f.id) === formaPagoId)?.plazos_dias ?? []);
+  const plazosForma = esPresupuesto ? [] : (formaSeleccionada?.plazos_dias ?? []);
+  const defectoVencimiento = resolverVencimientoDefecto({
+    diasCliente: vencimientoClienteDias,
+    diasFormaPago: formaSeleccionada?.dias_vencimiento ?? null,
+    diasGeneral: vencimientoGeneralDias,
+  });
+  const textoOrigenVencimiento =
+    defectoVencimiento.origen === "cliente"
+      ? "ficha del cliente"
+      : defectoVencimiento.origen === "forma_pago"
+        ? "forma de pago"
+        : "ajuste general";
 
   const datos = {
     fechaVencimiento,
@@ -772,8 +800,12 @@ export function CondicionesDocumento({
                 if (dias) setFechaVencimiento("");
               }}
             />
-          ) : (
+          ) : esPresupuesto ? (
             <span className="pb-1 text-xs text-texto-terciario">Vacío = se calcula al emitir.</span>
+          ) : (
+            <span className="pb-1 text-xs text-texto-terciario">
+              Vacío = {etiquetaDiasVencimiento(defectoVencimiento.dias).toLowerCase()} ({textoOrigenVencimiento}).
+            </span>
           )}
         </div>
         <label className={etiqueta}>

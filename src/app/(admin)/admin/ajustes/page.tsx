@@ -6,7 +6,7 @@ const SECCIONES = [
   {
     href: "/admin/ajustes/empresa",
     titulo: "Datos de la empresa",
-    texto: "Nombre, NIF, dirección y contacto que salen en las facturas y presupuestos. Días de validez de un presupuesto.",
+    texto: "Nombre, NIF, dirección y contacto que salen en las facturas y presupuestos. Validez de presupuestos y vencimiento por defecto.",
     icono: "documentos",
   },
   {

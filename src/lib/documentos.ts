@@ -9,6 +9,30 @@ export function sumarDias(fecha: string, dias: number) {
   return d.toISOString().slice(0, 10);
 }
 
+/** Opciones rápidas de vencimiento en días para la ficha del cliente. */
+export const PLAZOS_VENCIMIENTO_PRESET = [0, 15, 30, 60, 90] as const;
+
+export type OrigenVencimiento = "cliente" | "forma_pago" | "general";
+
+/**
+ * Resuelve el vencimiento por defecto cuando el borrador no fija plazo ni fecha manual.
+ * Misma prioridad que `emitir_documento` en SQL: ficha del cliente > forma de pago > ajuste general.
+ */
+export function resolverVencimientoDefecto(args: {
+  diasCliente: number | null | undefined;
+  diasFormaPago: number | null | undefined;
+  diasGeneral: number;
+}): { dias: number; origen: OrigenVencimiento } {
+  if (args.diasCliente != null) return { dias: args.diasCliente, origen: "cliente" };
+  if (args.diasFormaPago != null) return { dias: args.diasFormaPago, origen: "forma_pago" };
+  return { dias: args.diasGeneral, origen: "general" };
+}
+
+export function etiquetaDiasVencimiento(dias: number): string {
+  if (dias === 0) return "Al contado (0 días)";
+  return `${dias} ${dias === 1 ? "día" : "días"}`;
+}
+
 /**
  * Texto de pago de un documento: la plantilla de la forma de pago, con «{plazo}» sustituido por
  * «a N días fecha factura» (plazo elegido) o «antes del dd/mm/aaaa» (fecha puesta a mano).

@@ -52,6 +52,7 @@ export type ProductoAdmin = {
   admiteMedidaLibre: boolean;
   permiteFabricacion: boolean;
   permiteInstalacion: boolean;
+  instalableEnCampana: boolean;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
   pedidoMinimo: number | null;
@@ -306,7 +307,7 @@ export function VistaCatalogo({
           <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
             {items.map((p) => (
               <FilaProducto
-                key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.admiteMedidaLibre}-${p.formatos.length}`}
+                key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.instalableEnCampana}-${p.admiteMedidaLibre}-${p.formatos.length}`}
                 producto={p}
                 expandido={expandidoId === p.id}
                 onAlternar={() => setExpandidoId(expandidoId === p.id ? null : p.id)}
@@ -403,6 +404,7 @@ function FilaProducto({
                 : p.permiteFabricacion
                   ? " · Solo fab."
                   : " · Solo inst."}
+              {!p.instalableEnCampana ? " · No instalable en campañas" : ""}
               {p.formatos.length > 0 ? ` · ${p.formatos.length} formato${p.formatos.length === 1 ? "" : "s"}` : ""}
               {p.descripcionFactura ? ` · ${p.descripcionFactura}` : ""}
             </p>
@@ -464,6 +466,7 @@ function FilaProducto({
                     admiteMedidaLibre: p.admiteMedidaLibre,
                     permiteFabricacion: p.permiteFabricacion,
                     permiteInstalacion: p.permiteInstalacion,
+                    instalableEnCampana: p.instalableEnCampana,
                     precioFabricacion: nFab,
                     precioInstalacion: nInst,
                     pedidoMinimo: p.pedidoMinimo,
@@ -820,6 +823,14 @@ function ModalProducto({
   const [unidadVenta, setUnidadVenta] = useState(p?.unidadVenta ?? "ud");
   const [permiteFabricacion, setPermiteFabricacion] = useState(p?.permiteFabricacion ?? true);
   const [permiteInstalacion, setPermiteInstalacion] = useState(p?.permiteInstalacion ?? true);
+  const esNoInstalablePorDefecto = (catId: string, unidad: string) => {
+    const cat = categorias.find((c) => String(c.id) === catId);
+    return cat?.codigo === "SRV" || unidad === "km" || unidad === "servicio";
+  };
+  const [instalableEnCampana, setInstalableEnCampana] = useState(
+    p?.instalableEnCampana ?? !esNoInstalablePorDefecto(String(categoriaPorDefectoId), "ud"),
+  );
+  const [instalableManual, setInstalableManual] = useState(Boolean(p));
   const [admiteMedidaLibre, setAdmiteMedidaLibre] = useState(p?.admiteMedidaLibre ?? false);
   const [precioFab, setPrecioFab] = useState(aTexto(p?.precioFabricacion ?? null));
   const [precioInst, setPrecioInst] = useState(aTexto(p?.precioInstalacion ?? null));
@@ -869,6 +880,7 @@ function ModalProducto({
                 admiteMedidaLibre: esSuperficie ? admiteMedidaLibre : false,
                 permiteFabricacion,
                 permiteInstalacion,
+                instalableEnCampana,
                 precioFabricacion: nFab,
                 precioInstalacion: nInst,
                 pedidoMinimo: nMin,
@@ -915,7 +927,17 @@ function ModalProducto({
 
           <label className={etiquetaMini}>
             Categoría *
-            <select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)} className={CAMPO}>
+            <select
+              value={categoriaId}
+              onChange={(e) => {
+                const nextCat = e.target.value;
+                setCategoriaId(nextCat);
+                if (!instalableManual) {
+                  setInstalableEnCampana(!esNoInstalablePorDefecto(nextCat, unidadVenta));
+                }
+              }}
+              className={CAMPO}
+            >
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
@@ -932,6 +954,9 @@ function ModalProducto({
                 const u = e.target.value;
                 setUnidadVenta(u);
                 if (u !== "m2" && u !== "ml") setAdmiteMedidaLibre(false);
+                if (!instalableManual) {
+                  setInstalableEnCampana(!esNoInstalablePorDefecto(categoriaId, u));
+                }
               }}
               className={CAMPO}
             >
@@ -991,6 +1016,19 @@ function ModalProducto({
               Permite instalación / servicio
             </label>
           </div>
+
+          <label className="inline-flex cursor-pointer items-center gap-esp2 text-sm text-texto-primario">
+            <input
+              type="checkbox"
+              checked={instalableEnCampana}
+              onChange={(e) => {
+                setInstalableEnCampana(e.target.checked);
+                setInstalableManual(true);
+              }}
+              className="h-4 w-4"
+            />
+            Artículo instalable en campañas (disponible al asignar puntos en el mapa)
+          </label>
 
           <div className="grid grid-cols-1 gap-esp3 sm:grid-cols-3">
             <label className={etiquetaMini}>

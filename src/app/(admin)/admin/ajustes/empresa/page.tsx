@@ -47,6 +47,7 @@ export default async function PaginaEmpresa() {
             email: e.email ?? "",
             lema: e.lema ?? "",
             validez_presupuesto_dias: e.validez_presupuesto_dias,
+            vencimiento_defecto_dias: e.vencimiento_defecto_dias,
           }}
         />
       ) : (

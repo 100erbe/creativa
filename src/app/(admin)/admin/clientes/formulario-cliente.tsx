@@ -8,6 +8,7 @@ import {
   TIPOS_CLIENTE,
   TIPOS_DOCUMENTO_ID,
 } from "@/lib/clientes";
+import { etiquetaDiasVencimiento, PLAZOS_VENCIMIENTO_PRESET } from "@/lib/documentos";
 import { guardarCliente, type EstadoFormulario } from "./acciones";
 
 export type DatosCliente = {
@@ -30,6 +31,7 @@ export type DatosCliente = {
   regimen_iva?: string;
   motivo_exencion?: string | null;
   forma_pago_id?: number | null;
+  dias_vencimiento?: number | null;
   cuenta_cobro_id?: number | null;
   descuento_habitual?: number | null;
   notas?: string | null;
@@ -85,14 +87,26 @@ export function FormularioCliente({
   grupos,
   formasPago,
   cuentas,
+  vencimientoGeneralDias = 30,
 }: {
   inicial?: DatosCliente;
   grupos: Opcion[];
   formasPago: Opcion[];
   cuentas: Opcion[];
+  vencimientoGeneralDias?: number;
 }) {
   const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(guardarCliente, {});
   const [regimen, setRegimen] = useState(inicial?.regimen_iva ?? "general");
+  const diasInicial = inicial?.dias_vencimiento ?? null;
+  const esPresetInicial =
+    diasInicial != null && (PLAZOS_VENCIMIENTO_PRESET as readonly number[]).includes(diasInicial);
+  const [modoVencimiento, setModoVencimiento] = useState<string>(
+    diasInicial == null ? "" : esPresetInicial ? String(diasInicial) : "personalizado",
+  );
+  const [diasPersonalizado, setDiasPersonalizado] = useState<string>(
+    diasInicial != null && !esPresetInicial ? String(diasInicial) : "",
+  );
+  const valorDiasVencimiento = modoVencimiento === "personalizado" ? diasPersonalizado : modoVencimiento;
   const editando = inicial?.id != null;
   const necesitaMotivo = regimen === "exento" || regimen === "intracomunitario";
 
@@ -230,6 +244,39 @@ export function FormularioCliente({
               </option>
             ))}
           </select>
+        </Campo>
+        <Campo
+          etiqueta="Vencimiento por defecto"
+          ayuda="Se aplica a todos los documentos de este cliente si no se indica otro al emitir."
+        >
+          <input type="hidden" name="dias_vencimiento" value={valorDiasVencimiento} />
+          <div className="flex gap-esp2">
+            <select
+              aria-label="Vencimiento por defecto"
+              value={modoVencimiento}
+              onChange={(e) => setModoVencimiento(e.target.value)}
+              className={entrada}
+            >
+              <option value="">Usar ajuste general ({etiquetaDiasVencimiento(vencimientoGeneralDias)})</option>
+              {PLAZOS_VENCIMIENTO_PRESET.map((d) => (
+                <option key={d} value={String(d)}>
+                  {etiquetaDiasVencimiento(d)}
+                </option>
+              ))}
+              <option value="personalizado">Personalizado (otros días)…</option>
+            </select>
+            {modoVencimiento === "personalizado" && (
+              <input
+                aria-label="Días de vencimiento personalizados"
+                value={diasPersonalizado}
+                onChange={(e) => setDiasPersonalizado(e.target.value)}
+                inputMode="numeric"
+                placeholder="Días"
+                required
+                className={`${entrada} w-24 shrink-0 tabular-nums`}
+              />
+            )}
+          </div>
         </Campo>
         <Campo etiqueta="Cuenta de cobro">
           <select name="cuenta_cobro_id" defaultValue={inicial?.cuenta_cobro_id ?? ""} className={entrada}>

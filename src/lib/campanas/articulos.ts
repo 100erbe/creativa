@@ -19,10 +19,59 @@ export type ArticuloCampana = {
   documento: string;
 };
 
+/** Unidades de líneas libres (sin producto del catálogo) que representan servicios o desplazamientos no instalables. */
+const UNIDADES_NO_INSTALABLES = new Set(["km", "servicio"]);
+
 /**
- * Los artículos que se pueden instalar en una campaña: las líneas de los presupuestos, albaranes y facturas
+ * Determina si una línea de documento corresponde a un artículo instalable/repartible en puntos de campaña.
+ * - Si viene del catálogo, manda `productos.instalable_en_campana` (false para kilometraje, portes, comisiones y otros servicios).
+ * - Si es un concepto libre sin producto del catálogo, se excluyen unidades de servicio o desplazamiento (`km`, `servicio`).
+ */
+export function esLineaInstalableEnCampana(linea: {
+  unidad: string;
+  producto: { instalable_en_campana: boolean } | null;
+}): boolean {
+  if (linea.producto) {
+    return linea.producto.instalable_en_campana;
+  }
+  return !UNIDADES_NO_INSTALABLES.has(linea.unidad);
+}
+
+/**
+ * Los artículos instalables de un documento concreto (usado en el paso 3 del asistente de documentos).
+ * Excluye conceptos no instalables como kilometraje, portes, montaje como servicio o comisiones.
+ */
+export async function articulosDeDocumento(
+  supabase: Cliente,
+  documentoId: number,
+): Promise<Omit<ArticuloCampana, "documento">[]> {
+  const { data: lineas } = await supabase
+    .from("lineas_documento")
+    .select("id, descripcion, articulo, artista, piezas, unidad, productos(nombre, instalable_en_campana)")
+    .eq("documento_id", documentoId)
+    .order("orden");
+
+  return (lineas ?? []).flatMap((l) => {
+    const producto = (Array.isArray(l.productos) ? l.productos[0] : l.productos) ?? null;
+    if (!esLineaInstalableEnCampana({ unidad: l.unidad, producto })) return [];
+    return [
+      {
+        id: l.id,
+        descripcion: l.descripcion,
+        nombre: producto?.nombre ? `${producto.nombre}${l.articulo ? ` · ${l.articulo}` : ""}` : l.descripcion,
+        artista: l.artista,
+        piezas: Number(l.piezas),
+        unidad: l.unidad,
+        producto: producto?.nombre ?? l.descripcion,
+      },
+    ];
+  });
+}
+
+/**
+ * Los artículos que se pueden instalar en una campaña: las líneas instalables de los presupuestos, albaranes y facturas
  * vinculados a ella. Ofrecer cualquier otro soporte no tiene sentido: no estará en lo que se factura.
- * Se excluyen las rectificativas (restan) y los documentos anulados.
+ * Se excluyen las rectificativas (restan), los documentos anulados y los conceptos no instalables (kilometraje, servicios…).
  */
 export async function articulosDeCampana(supabase: Cliente, campanaId: number): Promise<ArticuloCampana[]> {
   const [{ data: campana }, { data: vinculados }] = await Promise.all([
@@ -45,23 +94,26 @@ export async function articulosDeCampana(supabase: Cliente, campanaId: number): 
 
   const { data: lineas } = await supabase
     .from("lineas_documento")
-    .select("id, documento_id, descripcion, articulo, artista, piezas, unidad, productos(nombre)")
+    .select("id, documento_id, descripcion, articulo, artista, piezas, unidad, productos(nombre, instalable_en_campana)")
     .in("documento_id", [...validos.keys()])
     .order("documento_id")
     .order("orden");
 
-  return (lineas ?? []).map((l) => {
+  return (lineas ?? []).flatMap((l) => {
     const documento = validos.get(l.documento_id);
-    const producto = Array.isArray(l.productos) ? l.productos[0] : l.productos;
-    return {
-      id: l.id,
-      descripcion: l.descripcion,
-      nombre: producto?.nombre ? `${producto.nombre}${l.articulo ? ` · ${l.articulo}` : ""}` : l.descripcion,
-      artista: l.artista,
-      piezas: Number(l.piezas),
-      unidad: l.unidad,
-      producto: producto?.nombre ?? l.descripcion,
-      documento: documento?.numero_completo ?? `${ETIQUETA_TIPO[documento?.tipo ?? ""] ?? "Documento"} (borrador)`,
-    };
+    const producto = (Array.isArray(l.productos) ? l.productos[0] : l.productos) ?? null;
+    if (!esLineaInstalableEnCampana({ unidad: l.unidad, producto })) return [];
+    return [
+      {
+        id: l.id,
+        descripcion: l.descripcion,
+        nombre: producto?.nombre ? `${producto.nombre}${l.articulo ? ` · ${l.articulo}` : ""}` : l.descripcion,
+        artista: l.artista,
+        piezas: Number(l.piezas),
+        unidad: l.unidad,
+        producto: producto?.nombre ?? l.descripcion,
+        documento: documento?.numero_completo ?? `${ETIQUETA_TIPO[documento?.tipo ?? ""] ?? "Documento"} (borrador)`,
+      },
+    ];
   });
 }

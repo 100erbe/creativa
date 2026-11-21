@@ -19,6 +19,7 @@ const esquema = z.object({
   email: z.union([z.literal(""), z.string().trim().email("El email no es válido.")]),
   lema: z.string().trim(),
   validez_presupuesto_dias: z.number().int("Los días de validez son un número entero.").min(1, "Mínimo 1 día.").max(365, "Máximo 365 días."),
+  vencimiento_defecto_dias: z.number().int("Los días de vencimiento son un número entero.").min(0, "Mínimo 0 días.").max(365, "Máximo 365 días."),
 });
 
 export type DatosEmpresa = z.input<typeof esquema>;
@@ -46,9 +47,12 @@ export const guardarEmpresa = accion(async (datos: DatosEmpresa) => {
       email: d.email || null,
       lema: d.lema || null,
       validez_presupuesto_dias: d.validez_presupuesto_dias,
+      vencimiento_defecto_dias: d.vencimiento_defecto_dias,
     })
     .eq("id", 1);
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/ajustes/empresa");
+  revalidatePath("/admin/clientes");
+  revalidatePath("/admin/documentos");
 });

@@ -60,6 +60,7 @@ function refrescar() {
   revalidatePath("/admin/catalogo");
   revalidatePath("/admin/ajustes/catalogo");
   revalidatePath("/admin/documentos/nuevo");
+  revalidatePath("/admin/campanas");
 }
 
 /** Crea o edita una categoría del catálogo. */
@@ -134,6 +135,7 @@ export type DatosProducto = {
   admiteMedidaLibre: boolean;
   permiteFabricacion: boolean;
   permiteInstalacion: boolean;
+  instalableEnCampana?: boolean;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
   pedidoMinimo: number | null;
@@ -169,6 +171,24 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
   const pedidoMinimo = unidad === "m2" ? d.pedidoMinimo : null;
   const codigoManual = d.codigo?.trim().toUpperCase().replace(/\s+/g, "-") || "";
 
+  const supabase = await createClient();
+
+  let catCodigo: string | null = null;
+  if (d.instalableEnCampana === undefined || (id == null && !codigoManual)) {
+    const { data: cat } = await supabase
+      .from("categorias")
+      .select("codigo")
+      .eq("id", d.categoriaId)
+      .maybeSingle();
+    if (!cat) throw new Error("La categoría seleccionada no existe.");
+    catCodigo = cat.codigo;
+  }
+
+  const instalableEnCampana =
+    d.instalableEnCampana !== undefined
+      ? Boolean(d.instalableEnCampana)
+      : catCodigo !== "SRV" && unidad !== "km" && unidad !== "servicio";
+
   const campos = {
     categoria_id: d.categoriaId,
     nombre,
@@ -178,6 +198,7 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
     admite_medida_libre: admiteMedidaLibre,
     permite_fabricacion: d.permiteFabricacion,
     permite_instalacion: d.permiteInstalacion,
+    instalable_en_campana: instalableEnCampana,
     precio_fabricacion: d.precioFabricacion,
     precio_instalacion: d.precioInstalacion,
     pedido_minimo: pedidoMinimo,
@@ -185,8 +206,6 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
     activo: d.activo,
     notas: d.notas?.trim() || null,
   };
-
-  const supabase = await createClient();
 
   if (id != null) {
     const { error } = await supabase
@@ -204,16 +223,7 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
     return id;
   }
 
-  let base = codigoManual;
-  if (!base) {
-    const { data: cat } = await supabase
-      .from("categorias")
-      .select("codigo")
-      .eq("id", d.categoriaId)
-      .maybeSingle();
-    if (!cat) throw new Error("La categoría seleccionada no existe.");
-    base = codigoBaseProducto(cat.codigo, nombre);
-  }
+  const base = codigoManual || codigoBaseProducto(catCodigo ?? "ART", nombre);
 
   const maxIntentos = codigoManual ? 1 : 20;
   for (let i = 0; i < maxIntentos; i++) {

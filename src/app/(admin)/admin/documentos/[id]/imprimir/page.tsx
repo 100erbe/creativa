@@ -1,4 +1,4 @@
-import { METODOS_COBRO, sumarDias, textoFormaPago } from "@/lib/documentos";
+import { METODOS_COBRO, resolverVencimientoDefecto, sumarDias, textoFormaPago } from "@/lib/documentos";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -64,7 +64,7 @@ export default async function PaginaImprimirDocumento({
     supabase
       .from("documentos")
       .select(
-        "*, clientes(razon_social, numero_documento, tipo_documento, direccion, codigo_postal, municipio, provincia)",
+        "*, clientes(razon_social, numero_documento, tipo_documento, direccion, codigo_postal, municipio, provincia, dias_vencimiento)",
       )
       .eq("id", documentoId)
       .maybeSingle(),
@@ -98,19 +98,31 @@ export default async function PaginaImprimirDocumento({
       : null,
   ]);
 
-  // Un borrador aún no tiene el texto de pago (se fija al emitir): se muestra cómo quedará.
+  const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
+
+  // Un borrador aún no tiene el texto de pago ni el vencimiento congelados (se fijan al emitir): se muestra cómo quedarán.
   let textoPago = doc.texto_forma_pago;
-  if (!textoPago && doc.estado === "borrador" && doc.forma_pago_id) {
-    const { data: forma } = await supabase
-      .from("formas_pago")
-      .select("texto_factura, dias_vencimiento")
-      .eq("id", doc.forma_pago_id)
-      .maybeSingle();
-    if (forma?.texto_factura) {
-      const vencimiento = doc.plazo_dias
-        ? sumarDias(doc.fecha, doc.plazo_dias)
-        : (doc.fecha_vencimiento ?? sumarDias(doc.fecha, forma.dias_vencimiento));
-      textoPago = textoFormaPago(forma.texto_factura, doc.plazo_dias, vencimiento);
+  let fechaVencimientoPreview = doc.fecha_vencimiento;
+  if (doc.estado === "borrador") {
+    const forma = doc.forma_pago_id
+      ? (
+          await supabase
+            .from("formas_pago")
+            .select("texto_factura, dias_vencimiento")
+            .eq("id", doc.forma_pago_id)
+            .maybeSingle()
+        ).data
+      : null;
+    const defecto = resolverVencimientoDefecto({
+      diasCliente: cliente?.dias_vencimiento,
+      diasFormaPago: forma?.dias_vencimiento ?? null,
+      diasGeneral: empresa?.vencimiento_defecto_dias ?? 30,
+    });
+    fechaVencimientoPreview = doc.plazo_dias
+      ? sumarDias(doc.fecha, doc.plazo_dias)
+      : (doc.fecha_vencimiento ?? sumarDias(doc.fecha, defecto.dias));
+    if (!textoPago && forma?.texto_factura) {
+      textoPago = textoFormaPago(forma.texto_factura, doc.plazo_dias, fechaVencimientoPreview);
     }
   }
 
@@ -133,7 +145,6 @@ export default async function PaginaImprimirDocumento({
         }
       : null;
 
-  const cliente = Array.isArray(doc.clientes) ? doc.clientes[0] : doc.clientes;
   // Un documento emitido lleva los datos del cliente congelados; un borrador, los de la ficha.
   const numeroDocumentoCliente = doc.cliente_documento ?? cliente?.numero_documento ?? null;
 
@@ -143,7 +154,7 @@ export default async function PaginaImprimirDocumento({
     numero: doc.numero_completo,
     fecha: doc.fecha,
     fechaOperacion: doc.fecha_operacion,
-    fechaVencimiento: doc.plazo_dias && doc.estado === "borrador" ? sumarDias(doc.fecha, doc.plazo_dias) : doc.fecha_vencimiento,
+    fechaVencimiento: fechaVencimientoPreview,
     validoHasta: doc.valido_hasta,
     empresa: {
       nombreComercial: empresa?.nombre_comercial ?? null,

@@ -26,7 +26,7 @@ export default async function PaginaCatalogo({
     supabase
       .from("productos")
       .select(
-        "id, codigo, categoria_id, nombre, descripcion_factura, material, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, activo, notas, categorias(nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
+        "id, codigo, categoria_id, nombre, descripcion_factura, material, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, instalable_en_campana, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, activo, notas, categorias(nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
       )
       .order("codigo"),
   ]);
@@ -49,6 +49,7 @@ export default async function PaginaCatalogo({
         admiteMedidaLibre: p.admite_medida_libre,
         permiteFabricacion: p.permite_fabricacion,
         permiteInstalacion: p.permite_instalacion,
+        instalableEnCampana: p.instalable_en_campana,
         precioFabricacion: p.precio_fabricacion == null ? null : Number(p.precio_fabricacion),
         precioInstalacion: p.precio_instalacion == null ? null : Number(p.precio_instalacion),
         pedidoMinimo: p.pedido_minimo == null ? null : Number(p.pedido_minimo),

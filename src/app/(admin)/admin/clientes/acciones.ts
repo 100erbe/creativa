@@ -30,6 +30,12 @@ const esquema = z
     regimen_iva: z.enum(VALORES_REGIMEN_IVA),
     motivo_exencion: z.string().nullable(),
     forma_pago_id: z.number().int().nullable(),
+    dias_vencimiento: z
+      .number()
+      .int("Los días de vencimiento son un número entero.")
+      .min(0, "El vencimiento va de 0 a 365 días.")
+      .max(365, "El vencimiento va de 0 a 365 días.")
+      .nullable(),
     cuenta_cobro_id: z.number().int().nullable(),
     descuento_habitual: z.number().min(0, "El descuento va de 0 a 100.").max(100, "El descuento va de 0 a 100."),
     notas: z.string().nullable(),
@@ -67,6 +73,7 @@ function leer(formData: FormData) {
     regimen_iva: t("regimen_iva") ?? "general",
     motivo_exencion: t("motivo_exencion"),
     forma_pago_id: n("forma_pago_id"),
+    dias_vencimiento: n("dias_vencimiento"),
     cuenta_cobro_id: n("cuenta_cobro_id"),
     descuento_habitual: n("descuento_habitual") ?? 0,
     notas: t("notas"),

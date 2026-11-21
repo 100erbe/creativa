@@ -20,9 +20,10 @@ type Datos = {
   email: string;
   lema: string;
   validez_presupuesto_dias: number;
+  vencimiento_defecto_dias: number;
 };
 
-const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
+const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias" | "vencimiento_defecto_dias">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
   { campo: "nombre_comercial", etiqueta: "Nombre comercial *" },
   { campo: "razon_social", etiqueta: "Razón social *" },
   { campo: "nif", etiqueta: "NIF *" },
@@ -40,6 +41,7 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
   const router = useRouter();
   const [datos, setDatos] = useState(inicial);
   const [dias, setDias] = useState(String(inicial.validez_presupuesto_dias));
+  const [vencimientoDefecto, setVencimientoDefecto] = useState(String(inicial.vencimiento_defecto_dias));
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
   const [pendiente, iniciar] = useTransition();
@@ -53,7 +55,13 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
         setGuardado(false);
         iniciar(async () => {
           try {
-            await desenvolver(guardarEmpresa({ ...datos, validez_presupuesto_dias: Number(dias) }));
+            await desenvolver(
+              guardarEmpresa({
+                ...datos,
+                validez_presupuesto_dias: Number(dias),
+                vencimiento_defecto_dias: Number(vencimientoDefecto),
+              }),
+            );
             setGuardado(true);
             router.refresh();
           } catch (err) {
@@ -78,6 +86,18 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
           <span className="text-xs font-medium text-texto-secundario">Validez de un presupuesto (días)</span>
           <input value={dias} onChange={(e) => setDias(e.target.value)} inputMode="numeric" className={CAMPO} />
           <span className="text-xs text-texto-terciario">Se usa al emitir si no pones «Válido hasta».</span>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-texto-secundario">Vencimiento por defecto (días)</span>
+          <input
+            value={vencimientoDefecto}
+            onChange={(e) => setVencimientoDefecto(e.target.value)}
+            inputMode="numeric"
+            className={CAMPO}
+          />
+          <span className="text-xs text-texto-terciario">
+            Se aplica al emitir si ni el documento, ni el cliente ni la forma de pago fijan otro (0 = al contado).
+          </span>
         </label>
       </div>
       {error && <p className="text-sm text-texto-peligro">{error}</p>}

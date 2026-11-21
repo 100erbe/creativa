@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
+import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
@@ -90,13 +91,16 @@ export function PasoCliente({
 
   return (
     <div className="flex max-w-2xl flex-col gap-esp5">
-      <div>
-        <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
-        <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">
-          {documento
-            ? `Tipo y cliente ${femenino ? "de la" : "del"} ${etiquetaTipo.toLowerCase()}`
-            : `${femenino ? "Nueva" : "Nuevo"} ${etiquetaTipo.toLowerCase()}`}
-        </h1>
+      <div className="flex flex-wrap items-center gap-esp3">
+        <div className="flex-1">
+          <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
+          <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">
+            {documento
+              ? `Tipo y cliente ${femenino ? "de la" : "del"} ${etiquetaTipo.toLowerCase()}`
+              : `${femenino ? "Nueva" : "Nuevo"} ${etiquetaTipo.toLowerCase()}`}
+          </h1>
+        </div>
+        <BotonSalirBorrador documentoId={documento?.id} />
       </div>
       <PasosDocumento actual={1} documentoId={documento?.id} />
 

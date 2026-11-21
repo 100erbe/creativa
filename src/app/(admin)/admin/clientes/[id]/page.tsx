@@ -7,7 +7,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { clasificarAgingCobro } from "@/lib/documentos";
+import { clasificarAgingCobro, etiquetaDiasVencimiento } from "@/lib/documentos";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -55,6 +55,7 @@ export default async function PaginaCliente({
     gmail,
     { data: reclamaciones },
     { data: facturasConLineas },
+    { data: empresa },
   ] = await Promise.all([
     cliente.grupo_id
       ? supabase.from("grupos_empresariales").select("nombre").eq("id", cliente.grupo_id).maybeSingle()
@@ -114,6 +115,7 @@ export default async function PaginaCliente({
       .neq("estado", "anulado")
       .order("fecha", { ascending: false })
       .order("id", { ascending: false }),
+    supabase.from("empresa").select("vencimiento_defecto_dias").eq("id", 1).maybeSingle(),
   ]);
   const productosVendidos: ProductoVendidoItem[] = (facturasConLineas ?? []).flatMap((doc) =>
     [...(doc.lineas_documento ?? [])]
@@ -411,6 +413,14 @@ export default async function PaginaCliente({
                 valor={`${ETIQUETA_REGIMEN[cliente.regimen_iva] ?? cliente.regimen_iva}${cliente.motivo_exencion ? ` — ${cliente.motivo_exencion}` : ""}`}
               />
               <Dato etiqueta="Forma de pago" valor={formaPago?.nombre ?? null} />
+              <Dato
+                etiqueta="Vencimiento por defecto"
+                valor={
+                  cliente.dias_vencimiento != null
+                    ? etiquetaDiasVencimiento(cliente.dias_vencimiento)
+                    : `${etiquetaDiasVencimiento(empresa?.vencimiento_defecto_dias ?? 30)} (general)`
+                }
+              />
               <Dato
                 etiqueta="Cuenta de cobro"
                 valor={cuenta ? `${cuenta.banco} · ${cuenta.iban}` : null}

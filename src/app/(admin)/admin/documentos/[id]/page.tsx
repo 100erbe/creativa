@@ -10,7 +10,14 @@ import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, clasificarAgingCobr
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
-import { AccionesDocumento, CondicionesDocumento, Cobros, ProveedorCondiciones, RevisionDocumento } from "./controles";
+import {
+  AccionesDocumento,
+  BotonSalirConCondiciones,
+  CondicionesDocumento,
+  Cobros,
+  ProveedorCondiciones,
+  RevisionDocumento,
+} from "./controles";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +43,7 @@ export default async function PaginaDocumento({
   const resultados = await Promise.all([
     supabase
       .from("documentos")
-      .select("*, clientes(razon_social, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion)")
+      .select("*, clientes(razon_social, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion, dias_vencimiento)")
       .eq("id", documentoId)
       .maybeSingle(),
     supabase
@@ -105,9 +112,12 @@ export default async function PaginaDocumento({
     : null;
 
   const esBorrador = doc.estado === "borrador";
-  const { data: formasPago } = esBorrador
-    ? await supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre")
-    : { data: [] };
+  const [{ data: formasPago }, { data: empresaBorrador }] = esBorrador
+    ? await Promise.all([
+        supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre"),
+        supabase.from("empresa").select("vencimiento_defecto_dias").eq("id", 1).maybeSingle(),
+      ])
+    : [{ data: [] }, { data: null }];
   // Facturas y rectificativas emitidas llevan cobros (en la rectificativa, devoluciones o compensaciones).
   const cobrable = (doc.tipo === "factura" || doc.tipo === "rectificativa") && !esBorrador;
   const esRectificativa = doc.tipo === "rectificativa";
@@ -228,6 +238,7 @@ export default async function PaginaDocumento({
         : (ETIQUETA_TIPO[tipo] ?? tipo);
 
   return (
+    <ProveedorCondiciones>
     <div className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}>
       <div className="flex flex-col gap-esp2">
         <Link
@@ -285,6 +296,7 @@ export default async function PaginaDocumento({
           <Insignia tono={TONO_POR_ESTADO[doc.estado] ?? "neutro"}>
             {ETIQUETA_ESTADO_DOC[doc.estado] ?? doc.estado}
           </Insignia>
+          {esBorrador && <BotonSalirConCondiciones documentoId={doc.id} />}
           <BotonAvisos />
         </div>
 
@@ -494,7 +506,6 @@ export default async function PaginaDocumento({
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <ProveedorCondiciones>
           <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
             <h2 className="text-titulo-panel text-texto-primario">Resumen</h2>
             <Fila etiqueta="Suma de líneas" valor={euros(Number(doc.suma_lineas))} />
@@ -582,6 +593,8 @@ export default async function PaginaDocumento({
                 documentoId={doc.id}
                 tipo={doc.tipo}
                 formasPago={formasPago ?? []}
+                vencimientoClienteDias={cliente?.dias_vencimiento ?? null}
+                vencimientoGeneralDias={empresaBorrador?.vencimiento_defecto_dias ?? 30}
                 inicial={{
                   fechaVencimiento: doc.fecha_vencimiento,
                   plazoDias: doc.plazo_dias,
@@ -650,7 +663,6 @@ export default async function PaginaDocumento({
               />
             </div>
           )}
-          </ProveedorCondiciones>
         </div>
       </div>
 
@@ -670,6 +682,7 @@ export default async function PaginaDocumento({
         </div>
       )}
     </div>
+    </ProveedorCondiciones>
   );
 }
 
