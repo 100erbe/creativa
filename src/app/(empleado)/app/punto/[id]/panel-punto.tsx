@@ -10,6 +10,7 @@ import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_FICHA } from "@/components/mapa/config-mapa";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
+import type { GeometriaZona, TipoUbicacion } from "@/lib/mapa/zonas";
 import { leerExifFoto } from "@/lib/exif-foto";
 import { subirOEncolarFotoPunto, type DatosFotoSubida } from "@/lib/subir-foto-punto";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
@@ -35,6 +36,9 @@ type Punto = {
   direccion: string | null;
   latitud: number;
   longitud: number;
+  tipo_ubicacion?: TipoUbicacion;
+  radio_metros?: number | null;
+  geometria?: GeometriaZona | null;
   estado: string;
   notas: string | null;
   incidencia: string | null;
@@ -416,8 +420,29 @@ export function PanelPunto({
               latitud: punto.latitud,
               longitud: punto.longitud,
               estado: punto.estado,
+              direccion: punto.direccion,
+              tipo_ubicacion: punto.tipo_ubicacion,
+              radio_metros: punto.radio_metros,
+              geometria: punto.geometria,
             },
           ]}
+          fotos={fotos.flatMap((f) =>
+            f.url && f.latitud != null && f.longitud != null
+              ? [
+                  {
+                    id: f.id,
+                    puntoId: punto.id,
+                    puntoNombre: punto.nombre,
+                    url: f.url,
+                    latitud: Number(f.latitud),
+                    longitud: Number(f.longitud),
+                    tomadaEn: f.tomada_en,
+                    tipo: f.tipo,
+                    origenUbicacion: f.origen_ubicacion,
+                  },
+                ]
+              : [],
+          )}
           altura={ALTURA_MAPA_FICHA}
         />
       </SafeMapContainer>

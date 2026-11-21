@@ -1,12 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
+import { Circle, GeoJSON, MapContainer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CapaBase } from "./capa-base";
-import { colorMapa } from "@/design/tokens";
+import { ModalFotoMapa } from "./modal-foto-mapa";
+import { colorMapa, fondo } from "@/design/tokens";
 import { useSafeMap } from "@/components/shared/SafeMapContainer";
+import {
+  boundsDeCirculo,
+  boundsDeGeometria,
+  esGeometriaZona,
+  etiquetaTipoUbicacion,
+  type FotoMapa,
+  type GeometriaZona,
+  type TipoUbicacion,
+} from "@/lib/mapa/zonas";
 
 // Mapa con OpenStreetMap (gratuito, sin clave de API) a través de Leaflet.
 // No usamos los iconos PNG por defecto de Leaflet (dan problemas de rutas
@@ -20,33 +30,102 @@ export type PuntoMapa = {
   longitud: number;
   estado?: string;
   detalle?: string;
+  direccion?: string | null;
+  tipo_ubicacion?: TipoUbicacion;
+  radio_metros?: number | null;
+  geometria?: GeometriaZona | null;
 };
 
 // Los colores salen de src/design/tokens.ts (el HTML de un icono de Leaflet no pasa por Tailwind).
 const COLOR_POR_ESTADO: Record<string, string> = colorMapa.estado;
 const COLOR_DEFECTO = colorMapa.defecto;
 
-function iconoPunto(color: string) {
+function iconoPunto(color: string, tamano = 16) {
   return L.divIcon({
     className: "",
-    html: `<span style="display:block;width:16px;height:16px;border-radius:50%;background:${color};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-    popupAnchor: [0, -8],
+    html: `<span style="display:block;width:${tamano}px;height:${tamano}px;border-radius:50%;background:${color};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
+    iconSize: [tamano, tamano],
+    iconAnchor: [tamano / 2, tamano / 2],
+    popupAnchor: [0, -tamano / 2],
   });
 }
 
-/** Con varios puntos, el mapa se encuadra para que se vean todos (antes se usaba un zoom fijo). */
-function Encuadrar({ puntos }: { puntos: PuntoMapa[] }) {
+/** Puntito discreto para cada foto realizada con GPS/EXIF: más pequeño y menos llamativo que un punto de campaña. */
+const ICONO_FOTO = L.divIcon({
+  className: "",
+  html: `<span style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;cursor:pointer"><span style="display:block;width:9px;height:9px;border-radius:50%;background:${fondo.inverso};opacity:0.78;border:1.5px solid ${colorMapa.contorno};box-shadow:0 1px 2px ${colorMapa.sombra}"></span></span>`,
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
+});
+
+/** Encuadra el mapa con el máximo zoom posible manteniendo visibles todos los puntos, zonas y fotos. */
+function Encuadrar({ puntos, fotos }: { puntos: PuntoMapa[]; fotos: FotoMapa[] }) {
   const mapa = useMap();
+  const puntosRef = useRef(puntos);
+  puntosRef.current = puntos;
+  const fotosRef = useRef(fotos);
+  fotosRef.current = fotos;
+  const ultimoTamanoRef = useRef({ w: 0, h: 0 });
+
+  const clave = [
+    ...puntos.map((p) => `${p.id}:${p.latitud},${p.longitud},${p.tipo_ubicacion ?? "punto"},${p.radio_metros ?? ""}`),
+    ...fotos.map((f) => `${f.latitud},${f.longitud}`),
+  ].join("|");
+
   useEffect(() => {
-    if (puntos.length < 2) return;
-    mapa.fitBounds(L.latLngBounds(puntos.map((p) => [p.latitud, p.longitud] as [number, number])), {
-      padding: [40, 40],
-      maxZoom: 17,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [puntos.map((p) => `${p.latitud},${p.longitud}`).join("|")]);
+    const encuadrar = (forzar = false) => {
+      const contenedor = mapa.getContainer();
+      const w = contenedor.clientWidth;
+      const h = contenedor.clientHeight;
+      if (w === 0 || h === 0) return;
+
+      const prev = ultimoTamanoRef.current;
+      const cambioTamano = Math.abs(w - prev.w) > 20 || Math.abs(h - prev.h) > 20;
+      if (!forzar && !cambioTamano) return;
+
+      mapa.invalidateSize({ animate: false });
+      const esquinas: [number, number][] = [];
+      for (const p of puntosRef.current) {
+        if (p.tipo_ubicacion === "poligono" && esGeometriaZona(p.geometria)) {
+          const b = boundsDeGeometria(p.geometria);
+          if (b) esquinas.push(b[0], b[1]);
+          else esquinas.push([p.latitud, p.longitud]);
+        } else if (p.tipo_ubicacion === "radio" && p.radio_metros) {
+          const b = boundsDeCirculo(p.latitud, p.longitud, p.radio_metros);
+          esquinas.push(b[0], b[1]);
+        } else {
+          esquinas.push([p.latitud, p.longitud]);
+        }
+      }
+      for (const f of fotosRef.current) {
+        esquinas.push([f.latitud, f.longitud]);
+      }
+
+      if (esquinas.length >= 2) {
+        mapa.fitBounds(L.latLngBounds(esquinas), {
+          padding: [28, 28],
+          maxZoom: 18,
+          animate: false,
+        });
+      } else if (esquinas.length === 1) {
+        mapa.setView(esquinas[0]!, 17, { animate: false });
+      }
+      ultimoTamanoRef.current = { w, h };
+    };
+
+    encuadrar(true);
+    const t = setTimeout(() => encuadrar(true), 120);
+    const contenedor = mapa.getContainer();
+    if (typeof ResizeObserver === "undefined") {
+      return () => clearTimeout(t);
+    }
+    const observer = new ResizeObserver(() => encuadrar(false));
+    observer.observe(contenedor);
+    return () => {
+      clearTimeout(t);
+      observer.disconnect();
+    };
+  }, [mapa, clave]);
   return null;
 }
 
@@ -177,16 +256,21 @@ function PulsacionLarga({ onAnadirPunto }: { onAnadirPunto: (p: PosicionMapa) =>
 
 export function MapaLeaflet({
   puntos,
+  fotos = [],
   altura = "clamp(280px, 45vh, 520px)",
   onAnadirPunto,
 }: {
   puntos: PuntoMapa[];
+  /** Fotos realizadas con coordenadas (GPS/EXIF): se muestran como puntitos discretos clicables. */
+  fotos?: FotoMapa[];
   /** Si viene, la pulsación larga / clic derecho ofrece añadir un punto en esa posición. */
   onAnadirPunto?: (p: PosicionMapa) => void;
   /** Número de píxeles o cualquier medida CSS (p. ej. "clamp(380px, 66vh, 720px)"). */
   altura?: number | string;
 }) {
-  if (puntos.length === 0) {
+  const [fotoActiva, setFotoActiva] = useState<FotoMapa | null>(null);
+
+  if (puntos.length === 0 && fotos.length === 0) {
     return (
       <div
         style={{ height: altura }}
@@ -197,50 +281,120 @@ export function MapaLeaflet({
     );
   }
 
-  const unico = puntos[0];
+  const baseCentro = puntos.length > 0 ? puntos : fotos;
+  const unico = baseCentro[0];
   const centro: [number, number] =
-    puntos.length === 1 && unico
+    baseCentro.length === 1 && unico
       ? [unico.latitud, unico.longitud]
       : [
-          puntos.reduce((suma, p) => suma + p.latitud, 0) / puntos.length,
-          puntos.reduce((suma, p) => suma + p.longitud, 0) / puntos.length,
+          baseCentro.reduce((suma, p) => suma + p.latitud, 0) / baseCentro.length,
+          baseCentro.reduce((suma, p) => suma + p.longitud, 0) / baseCentro.length,
         ];
 
   return (
-    <div
-      style={{ height: altura }}
-      className="overflow-hidden rounded-lg border border-borde-default"
-    >
-      <MapContainer
-        center={centro}
-        zoom={puntos.length === 1 ? 16 : 12}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
+    <>
+      <div
+        style={{ height: altura }}
+        className="overflow-hidden rounded-lg border border-borde-default"
       >
-        <AutoResize />
-        <Encuadrar puntos={puntos} />
-        <CapaBase />
-        {onAnadirPunto && <PulsacionLarga onAnadirPunto={onAnadirPunto} />}
-        {puntos.map((p) => (
-          <Marker
-            key={p.id}
-            position={[p.latitud, p.longitud]}
-            icon={iconoPunto(
-              (p.estado && COLOR_POR_ESTADO[p.estado]) || COLOR_DEFECTO,
-            )}
-          >
-            <Popup>
-              <strong>{p.nombre}</strong>
-              {p.detalle ? (
-                <>
-                  <br />
-                  {p.detalle}
-                </>
-              ) : null}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+        <MapContainer
+          center={centro}
+          zoom={puntos.length === 1 ? 17 : 12}
+          zoomSnap={0.25}
+          scrollWheelZoom={false}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <AutoResize />
+          <Encuadrar puntos={puntos} fotos={fotos} />
+          <CapaBase />
+          {onAnadirPunto && <PulsacionLarga onAnadirPunto={onAnadirPunto} />}
+
+          {puntos.map((p) => {
+            const color = (p.estado && COLOR_POR_ESTADO[p.estado]) || COLOR_DEFECTO;
+            const etiquetaZona = etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion);
+            const contenidoPopup = (
+              <Popup>
+                <strong>{p.nombre}</strong>
+                {etiquetaZona ? (
+                  <>
+                    <br />
+                    <span>{etiquetaZona}</span>
+                  </>
+                ) : null}
+                {p.detalle ? (
+                  <>
+                    <br />
+                    {p.detalle}
+                  </>
+                ) : null}
+              </Popup>
+            );
+
+            if (p.tipo_ubicacion === "poligono" && esGeometriaZona(p.geometria)) {
+              return (
+                <GeoJSON
+                  key={`poly-${p.id}`}
+                  data={p.geometria}
+                  style={{
+                    color,
+                    weight: 2,
+                    fillColor: color,
+                    fillOpacity: 0.14,
+                  }}
+                >
+                  {contenidoPopup}
+                </GeoJSON>
+              );
+            }
+
+            if (p.tipo_ubicacion === "radio" && p.radio_metros) {
+              return (
+                <Circle
+                  key={`radio-${p.id}-${p.radio_metros}`}
+                  center={[p.latitud, p.longitud]}
+                  radius={p.radio_metros}
+                  pathOptions={{
+                    color,
+                    weight: 2,
+                    dashArray: "6 4",
+                    fillColor: color,
+                    fillOpacity: 0.14,
+                  }}
+                >
+                  {contenidoPopup}
+                </Circle>
+              );
+            }
+
+            return (
+              <Marker
+                key={p.id}
+                position={[p.latitud, p.longitud]}
+                icon={iconoPunto(color)}
+                zIndexOffset={100}
+              >
+                {contenidoPopup}
+              </Marker>
+            );
+          })}
+
+          {fotos.map((f, idx) => (
+            <Marker
+              key={`foto-${f.id ?? f.url}-${idx}`}
+              position={[f.latitud, f.longitud]}
+              icon={ICONO_FOTO}
+              zIndexOffset={-50}
+              eventHandlers={{
+                click() {
+                  setFotoActiva(f);
+                },
+              }}
+            />
+          ))}
+        </MapContainer>
+      </div>
+
+      <ModalFotoMapa foto={fotoActiva} onCerrar={() => setFotoActiva(null)} />
+    </>
   );
 }

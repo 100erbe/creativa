@@ -7,9 +7,55 @@ import { SafeMapContainer } from "@/components/shared/SafeMapContainer";
 import { ALTURA_MAPA_MEDIA } from "@/components/mapa/config-mapa";
 import { Logo } from "@/components/ui/logo";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
+import { hoyEnEspana } from "@/lib/estado-cuenta";
 import { fechaMedia } from "@/lib/formato";
+import {
+  esGeometriaZona,
+  esTipoUbicacion,
+  etiquetaTipoUbicacion,
+  type FotoMapa,
+  type TipoUbicacion,
+} from "@/lib/mapa/zonas";
 
 export const dynamic = "force-dynamic";
+
+function mensajeCabeceraCliente(datos: {
+  estado: string | null;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  puntosTotales: number;
+  puntosCompletados: number;
+}): { texto: string; colorPunto: string } | null {
+  if (datos.estado === "cancelada") return null;
+
+  const hoy = hoyEnEspana();
+  const terminadaPorFecha =
+    Boolean(datos.fechaFin && hoy > datos.fechaFin) &&
+    (datos.puntosTotales === 0 || datos.puntosCompletados >= datos.puntosTotales);
+
+  if (datos.estado === "finalizada" || terminadaPorFecha) {
+    return {
+      texto: "Ha sido un placer hacer brillar su campaña",
+      colorPunto: "bg-texto-exito",
+    };
+  }
+
+  const antesDeInicio =
+    Boolean(datos.fechaInicio && hoy < datos.fechaInicio) &&
+    datos.puntosCompletados === 0;
+
+  if ((datos.estado === "planificada" && datos.puntosCompletados === 0) || antesDeInicio) {
+    return {
+      texto: "Estamos preparando su campaña con todo detalle",
+      colorPunto: "bg-fondo-marca",
+    };
+  }
+
+  return {
+    texto: "Estamos en marcha, dando vida a su campaña",
+    colorPunto: "bg-texto-exito",
+  };
+}
 
 export default async function PaginaPublicaCliente({
   params,
@@ -22,7 +68,7 @@ export default async function PaginaPublicaCliente({
   // Estas dos llamadas usan funciones SECURITY DEFINER (ver
   // schema_campanas.sql): funcionan sin sesión, llamadas con el rol anon.
   const [{ data: filas }, { data: fotos }] = await Promise.all([
-    supabase.rpc("obtener_campana_publica", { p_token: token }),
+    supabase.rpc("obtener_campana_publica_v2", { p_token: token }),
     supabase.rpc("obtener_fotos_publicas", { p_token: token }),
   ]);
 
@@ -47,13 +93,44 @@ export default async function PaginaPublicaCliente({
     ["instalado", "verificado", "retirado"].includes(p.punto_estado ?? ""),
   ).length;
   const totalFotos = (fotos ?? []).length;
+  const fotosParaMapa: FotoMapa[] = (fotos ?? []).flatMap((f) => {
+    if (f.latitud == null || f.longitud == null) return [];
+    return [
+      {
+        id: f.url_foto,
+        puntoId: f.punto_id,
+        puntoNombre: f.punto_nombre ?? undefined,
+        url: `/c/${encodeURIComponent(token)}/foto?ruta=${encodeURIComponent(f.url_foto)}`,
+        latitud: Number(f.latitud),
+        longitud: Number(f.longitud),
+        tomadaEn: f.tomada_en,
+        tipo: f.tipo,
+        origenUbicacion: f.origen_ubicacion,
+      },
+    ];
+  });
   const primerPunto = filas.find(
     (p) => p.punto_id !== null && p.latitud !== null && p.longitud !== null,
   );
+  const mensajeCliente = mensajeCabeceraCliente({
+    estado: cabecera.campana_estado,
+    fechaInicio: cabecera.fecha_inicio,
+    fechaFin: cabecera.fecha_fin,
+    puntosTotales,
+    puntosCompletados,
+  });
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-esp5 bg-fondo-lienzo px-esp4 py-esp6 sm:py-esp8">
-      <Logo alto={40} className="self-start" />
+      <header className="flex flex-wrap items-center justify-between gap-x-esp4 gap-y-esp2">
+        <Logo alto={40} className="shrink-0" />
+        {mensajeCliente && (
+          <p className="inline-flex items-center gap-esp2 rounded-completo border border-borde-default bg-fondo-superficie px-esp3 py-1.5 text-xs font-medium text-texto-secundario">
+            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-completo ${mensajeCliente.colorPunto}`} />
+            <span>{mensajeCliente.texto}</span>
+          </p>
+        )}
+      </header>
 
       <section className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 sm:p-esp5">
         <div className="flex flex-wrap items-start justify-between gap-esp2">
@@ -112,10 +189,15 @@ export default async function PaginaPublicaCliente({
             .map((p) => ({
               id: p.punto_id!,
               nombre: p.punto_nombre ?? "Punto",
-              latitud: p.latitud!,
-              longitud: p.longitud!,
+              latitud: Number(p.latitud!),
+              longitud: Number(p.longitud!),
               estado: p.punto_estado ?? undefined,
+              direccion: p.direccion,
+              tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
+              radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),
+              geometria: esGeometriaZona(p.geometria) ? p.geometria : null,
             }))}
+          fotos={fotosParaMapa}
           altura={ALTURA_MAPA_MEDIA}
         />
       </SafeMapContainer>
@@ -128,7 +210,14 @@ export default async function PaginaPublicaCliente({
           >
             <div className="flex items-start gap-esp3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-texto-primario">{p.punto_nombre}</p>
+                <div className="flex flex-wrap items-center gap-esp2">
+                  <p className="font-medium text-texto-primario">{p.punto_nombre}</p>
+                  {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion) && (
+                    <span className="rounded bg-fondo-marca-sutil px-1.5 py-0.5 text-micro font-medium text-texto-marca">
+                      {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion)}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-texto-terciario">
                   {ETIQUETA_SOPORTE[p.tipo_soporte] ?? p.tipo_soporte}
                   {p.direccion ? ` · ${p.direccion}` : ""}

@@ -11,6 +11,13 @@ import { documentosAsociadosACampanas } from "@/lib/campanas/documentos";
 import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO, ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
+import {
+  esGeometriaZona,
+  esTipoUbicacion,
+  etiquetaTipoUbicacion,
+  type FotoMapa,
+  type TipoUbicacion,
+} from "@/lib/mapa/zonas";
 import { BotonEliminarCampana } from "../boton-eliminar-campana";
 import { ProveedorAnadirPunto, TarjetaPuntoCampana, ZonaMapaCampana, type PuntoCampanaData } from "./anadir-punto";
 import { AvisoFinalizar, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
@@ -50,7 +57,7 @@ export default async function PaginaCampana({
     supabase
       .from("puntos_campana")
       .select(
-        "id, nombre, tipo_soporte, linea_id, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia",
+        "id, nombre, tipo_soporte, linea_id, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas, incidencia",
       )
       .eq("campana_id", campanaId)
       .order("id"),
@@ -123,6 +130,24 @@ export default async function PaginaCampana({
     repartidas: repartidas.get(a.id) ?? 0,
   }));
   const fotosPorPunto = new Set((fotos ?? []).map((f) => f.punto_id));
+  const nombrePuntoPorId = new Map((puntos ?? []).map((p) => [p.id, nombreVisiblePunto(p.nombre)]));
+  const fotosParaMapa: FotoMapa[] = (fotos ?? []).flatMap((f) => {
+    const url = urlPorRuta.get(f.url_foto);
+    if (!url || f.latitud == null || f.longitud == null) return [];
+    return [
+      {
+        id: f.id,
+        puntoId: f.punto_id,
+        puntoNombre: nombrePuntoPorId.get(f.punto_id),
+        url,
+        latitud: Number(f.latitud),
+        longitud: Number(f.longitud),
+        tomadaEn: f.tomada_en,
+        tipo: f.tipo,
+        origenUbicacion: f.origen_ubicacion,
+      },
+    ];
+  });
   const puntosParaMapa: PuntoCampanaData[] = (puntos ?? []).map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -132,6 +157,9 @@ export default async function PaginaCampana({
     direccion: p.direccion,
     latitud: Number(p.latitud),
     longitud: Number(p.longitud),
+    tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
+    radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),
+    geometria: esGeometriaZona(p.geometria) ? p.geometria : null,
     fecha_colocacion_prevista: p.fecha_colocacion_prevista,
     fecha_retirada_prevista: p.fecha_retirada_prevista,
     estado: p.estado,
@@ -285,6 +313,7 @@ export default async function PaginaCampana({
         articulos={articulosPunto}
         fechasCampana={fechasCampana}
         puntos={puntosParaMapa}
+        fotos={fotosParaMapa}
       >
       {/* Bloque 2: Mapa panorámico */}
       <ZonaMapaCampana titulo={`Mapa · ${campana.nombre}`} />
@@ -342,6 +371,11 @@ export default async function PaginaCampana({
                         <div className="flex items-start justify-between gap-esp2">
                           <p className="text-sm font-medium text-texto-primario">
                             {nombreVisiblePunto(p.nombre)}{" "}
+                            {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion) && (
+                              <span className="mr-1 inline-flex rounded bg-fondo-marca-sutil px-1.5 py-0.5 align-middle text-micro font-medium text-texto-marca">
+                                {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion)}
+                              </span>
+                            )}
                             <span className="font-normal text-texto-terciario">
                               · {etiquetaResumen}
                               {p.piezas != null ? ` · ${num(Number(p.piezas))} ud` : ""}

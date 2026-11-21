@@ -1,6 +1,7 @@
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { esGeometriaZona, esTipoUbicacion, type TipoUbicacion } from "@/lib/mapa/zonas";
 import { MapaAgenda } from "./mapa-agenda";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,9 @@ export default async function PaginaMapa() {
             direccion: p.direccion,
             fecha_programada: p.fecha_programada,
             rol_asignacion: p.rol_asignacion,
+            tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
+            radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),
+            geometria: esGeometriaZona(p.geometria) ? p.geometria : null,
           },
         ]
       : [],

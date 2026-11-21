@@ -11,6 +11,7 @@ import { TarjetaDeslizablePunto } from "@/components/mapa/tarjeta-deslizable-pun
 import { desenvolver } from "@/lib/accion";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
+import type { FotoMapa } from "@/lib/mapa/zonas";
 import { anadirPuntoCampana, eliminarPuntoCampana, guardarPunto, moverPuntoCampana } from "./acciones";
 
 export type ArticuloPunto = ArticuloModalData & {
@@ -34,6 +35,7 @@ type EstadoPunto = {
     articulos: ArticuloPunto[];
     fechasCampana: { inicio: string | null; fin: string | null };
     puntos: PuntoCampanaData[];
+    fotos: FotoMapa[];
   };
 };
 
@@ -54,12 +56,14 @@ export function ProveedorAnadirPunto({
   articulos,
   fechasCampana,
   puntos,
+  fotos = [],
   children,
 }: {
   campanaId: number;
   articulos: ArticuloPunto[];
   fechasCampana: { inicio: string | null; fin: string | null };
   puntos: PuntoCampanaData[];
+  fotos?: FotoMapa[];
   children: React.ReactNode;
 }) {
   const [puntoModal, setPuntoModal] = useState<PuntoCampanaData | null>(null);
@@ -96,9 +100,9 @@ export function ProveedorAnadirPunto({
       swipeAbiertoId,
       abrirSwipe,
       cerrarSwipe,
-      datos: { campanaId, articulos, fechasCampana, puntos },
+      datos: { campanaId, articulos, fechasCampana, puntos, fotos },
     }),
-    [editar, editarPorId, swipeAbiertoId, abrirSwipe, cerrarSwipe, campanaId, articulos, fechasCampana, puntos],
+    [editar, editarPorId, swipeAbiertoId, abrirSwipe, cerrarSwipe, campanaId, articulos, fechasCampana, puntos, fotos],
   );
 
   return (
@@ -122,6 +126,7 @@ export function ProveedorAnadirPunto({
                 fechaColocacion: datos.fecha_colocacion_prevista,
                 fechaRetirada: datos.fecha_retirada_prevista,
                 instrucciones: datos.notas,
+                radioMetros: datos.radioMetros,
               }),
             )
           }
@@ -143,7 +148,7 @@ export function ProveedorAnadirPunto({
  */
 export function ZonaMapaCampana({ titulo }: { titulo: string }) {
   const { editar, datos } = useAnadirPunto();
-  const { campanaId, fechasCampana, puntos } = datos;
+  const { campanaId, fechasCampana, puntos, fotos } = datos;
 
   return (
     <MapaInteractivoCampana
@@ -152,7 +157,8 @@ export function ZonaMapaCampana({ titulo }: { titulo: string }) {
         ...p,
         detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
       }))}
-      onCrearPunto={async ({ pos, direccionInicial }) => {
+      fotos={fotos}
+      onCrearPunto={async ({ pos, direccionInicial, tipoUbicacion, radioMetros, geometria }) => {
         const creado = await desenvolver(
           anadirPuntoCampana(campanaId, {
             direccion: direccionInicial,
@@ -160,6 +166,9 @@ export function ZonaMapaCampana({ titulo }: { titulo: string }) {
             longitud: pos.longitud,
             fechaColocacion: fechasCampana.inicio ?? "",
             fechaRetirada: fechasCampana.fin ?? "",
+            tipoUbicacion,
+            radioMetros,
+            geometria,
           }),
         );
         return {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
+import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MapaInteractivoCampana } from "@/components/mapa/mapa-interactivo-campana";
@@ -16,6 +17,7 @@ import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
 import { formatoPiezas, nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
+import { etiquetaTipoUbicacion, type GeometriaZona, type TipoUbicacion } from "@/lib/mapa/zonas";
 import type { Cabecera } from "./paso-lineas";
 import { actualizarPunto, anadirPunto, crearCampana, eliminarPunto, moverPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
@@ -32,6 +34,9 @@ type Punto = {
   direccion: string | null;
   latitud: number;
   longitud: number;
+  tipo_ubicacion?: TipoUbicacion;
+  radio_metros?: number | null;
+  geometria?: GeometriaZona | null;
   fecha_colocacion_prevista: string | null;
   fecha_retirada_prevista: string | null;
   estado: string;
@@ -68,9 +73,7 @@ export function PasoCampana({
           <p className="text-xs text-texto-terciario">Documentos / Nuevo</p>
           <h1 className="text-2xl font-bold text-texto-primario md:text-titulo-pagina">{etiquetaTipo} en borrador</h1>
         </div>
-        <Link href="/admin/documentos">
-          <Boton variante="secundario">Guardar y salir</Boton>
-        </Link>
+        <BotonSalirBorrador documentoId={documento.id} />
       </div>
 
       <PasosDocumento actual={3} documentoId={documento.id} />
@@ -276,7 +279,7 @@ function CampanaVinculada({
             ...p,
             detalle: ETIQUETA_SOPORTE[p.tipo_soporte],
           }))}
-          onCrearPunto={async ({ pos, direccionInicial }) => {
+          onCrearPunto={async ({ pos, direccionInicial, tipoUbicacion, radioMetros, geometria }) => {
             const creado = await desenvolver(
               anadirPunto(documento.id, campana.id, {
                 lineaId: articulos.length === 1 ? articulos[0]!.id : null,
@@ -284,6 +287,9 @@ function CampanaVinculada({
                 direccion: direccionInicial,
                 latitud: pos.latitud,
                 longitud: pos.longitud,
+                tipo_ubicacion: tipoUbicacion,
+                radio_metros: radioMetros,
+                geometria,
                 fecha_colocacion_prevista: campana.fecha_inicio ?? "",
                 fecha_retirada_prevista: campana.fecha_fin ?? "",
                 notas: "",
@@ -372,6 +378,11 @@ function CampanaVinculada({
                     <div className="flex flex-wrap items-center gap-esp2">
                       <p className="text-sm font-medium text-texto-primario">
                         {nombreVisiblePunto(p.nombre)}{" "}
+                        {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion) && (
+                          <span className="mr-1 inline-flex rounded bg-fondo-marca-sutil px-1.5 py-0.5 align-middle text-micro font-medium text-texto-marca">
+                            {etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion)}
+                          </span>
+                        )}
                         <span className="font-normal text-texto-terciario">
                           · {etiquetaResumen}
                           {p.piezas != null ? ` · ${formatoPiezas(p.piezas)} ud` : ""}
@@ -414,6 +425,7 @@ function CampanaVinculada({
                 fecha_colocacion_prevista: datos.fecha_colocacion_prevista,
                 fecha_retirada_prevista: datos.fecha_retirada_prevista,
                 notas: datos.notas,
+                radio_metros: datos.radioMetros,
               }),
             )
           }

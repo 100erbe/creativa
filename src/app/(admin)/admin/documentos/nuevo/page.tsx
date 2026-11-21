@@ -1,8 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
+import { articulosDeDocumento } from "@/lib/campanas/articulos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { hoyEnEspana } from "@/lib/estado-cuenta";
 import { PasoCliente } from "./paso-cliente";
-import { PasoLineas, type ProductoCatalogo } from "./paso-lineas";
+import { PasoLineas, type ProductoCatalogo, type SituacionCliente } from "./paso-lineas";
 import { PasoCampana } from "./paso-campana";
 import type { TipoNuevoDocumento } from "./acciones";
+import { esGeometriaZona, esTipoUbicacion, type TipoUbicacion } from "@/lib/mapa/zonas";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +94,7 @@ export default async function PaginaNuevoDocumento({
 
   // Paso 3: campaña (dónde y cómo se instala).
   if (paso === "campana") {
-    const [{ data: campanas }, { data: puntos }, { data: lineasDoc }] = await Promise.all([
+    const [{ data: campanas }, { data: puntos }, articulos] = await Promise.all([
       supabase
         .from("campanas")
         .select("id, nombre, fecha_inicio, fecha_fin, estado")
@@ -101,45 +105,47 @@ export default async function PaginaNuevoDocumento({
         ? supabase
             .from("puntos_campana")
             .select(
-              "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
+              "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
             )
             .eq("campana_id", doc.campana_id)
             .order("id")
         : Promise.resolve({ data: [] }),
-      supabase
-        .from("lineas_documento")
-        .select("id, descripcion, articulo, artista, piezas, unidad, productos(nombre)")
-        .eq("documento_id", documentoId)
-        .order("orden"),
+      articulosDeDocumento(supabase, documentoId),
     ]);
     return (
       <PasoCampana
         documento={cabecera}
         campanas={campanas ?? []}
-        articulos={(lineasDoc ?? []).map((l) => {
-          const producto = Array.isArray(l.productos) ? l.productos[0] : l.productos;
-          return {
-          id: l.id,
-          descripcion: l.descripcion,
-          // Nombre corto para elegir el artículo: producto y formato, no el texto largo de la factura.
-          nombre: producto?.nombre ? `${producto.nombre}${l.articulo ? ` · ${l.articulo}` : ""}` : l.descripcion,
-          artista: l.artista,
-          piezas: Number(l.piezas),
-          unidad: l.unidad,
-          };
-        })}
+        articulos={articulos.map((a) => ({
+          id: a.id,
+          descripcion: a.descripcion,
+          nombre: a.nombre,
+          artista: a.artista,
+          piezas: a.piezas,
+          unidad: a.unidad,
+        }))}
         puntos={(puntos ?? []).map((p) => ({
           ...p,
           piezas: p.piezas == null ? null : Number(p.piezas),
           latitud: Number(p.latitud),
           longitud: Number(p.longitud),
+          tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
+          radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),
+          geometria: esGeometriaZona(p.geometria) ? p.geometria : null,
         }))}
       />
     );
   }
 
   // Paso 2: artículos.
-  const [{ data: lineas }, { data: productos }, { data: recientes }, { data: categorias }] = await Promise.all([
+  const [
+    { data: lineas },
+    { data: productos },
+    { data: recientes },
+    { data: categorias },
+    { data: cobrosCliente },
+    { data: metaDocsCliente },
+  ] = await Promise.all([
     supabase
       .from("lineas_documento")
       .select("id, descripcion, artista, piezas, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, importe")
@@ -163,7 +169,33 @@ export default async function PaginaNuevoDocumento({
       .select("id, nombre, orden")
       .order("orden")
       .order("nombre"),
+    supabase
+      .from("v_estado_cobro")
+      .select("id, tipo, fecha, fecha_vencimiento, total, cobrado, pendiente, estado_cobro")
+      .eq("cliente_id", doc.cliente_id),
+    supabase
+      .from("documentos")
+      .select("id, estado, documento_origen_id")
+      .eq("cliente_id", doc.cliente_id)
+      .in("tipo", ["factura", "rectificativa"])
+      .neq("estado", "borrador"),
   ]);
+
+  const hoy = new Date();
+  const anioActual = Number(hoyEnEspana(hoy).slice(0, 4));
+  const prefijoAnio = `${anioActual}-`;
+  const resumenCobros = resumirCobrosPendientes(cobrosCliente ?? [], metaDocsCliente ?? [], hoy);
+  const delAnio = resumenCobros.vigentes.filter((d) => d.fecha?.startsWith(prefijoAnio));
+  const situacionCliente: SituacionCliente = {
+    anio: anioActual,
+    facturadoAnio: Math.round(delAnio.reduce((s, d) => s + Number(d.total ?? 0), 0) * 100) / 100,
+    cobradoAnio: Math.round(delAnio.reduce((s, d) => s + Number(d.cobrado ?? 0), 0) * 100) / 100,
+    pendiente: resumenCobros.totalPendiente,
+    vencido: resumenCobros.sumaSaldo(resumenCobros.vencidas),
+    facturasVencidas: resumenCobros.vencidas.length,
+    maxDiasVencido: resumenCobros.vencidas.reduce((m, d) => Math.max(m, d.aging.diasVencido), 0),
+    tieneCriticas90: resumenCobros.criticas90.length > 0,
+  };
 
   const catalogo: ProductoCatalogo[] = (productos ?? [])
     .map((p) => {
@@ -204,6 +236,7 @@ export default async function PaginaNuevoDocumento({
   return (
     <PasoLineas
       documento={cabecera}
+      situacionCliente={situacionCliente}
       lineas={(lineas ?? []).map((l) => ({
         id: l.id,
         descripcion: l.descripcion,

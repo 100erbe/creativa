@@ -9,6 +9,7 @@ import { ALTURA_MAPA_GRANDE } from "@/components/mapa/config-mapa";
 import { Icono } from "@/components/ui/iconos";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaCorta } from "@/lib/formato";
+import type { GeometriaZona, TipoUbicacion } from "@/lib/mapa/zonas";
 
 type Punto = {
   punto_id: number;
@@ -21,6 +22,9 @@ type Punto = {
   direccion?: string | null;
   fecha_programada?: string | null;
   rol_asignacion?: string | null;
+  tipo_ubicacion?: TipoUbicacion;
+  radio_metros?: number | null;
+  geometria?: GeometriaZona | null;
 };
 
 type FiltroMapa = "todos" | "pendientes" | "incidencias";
@@ -95,6 +99,10 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
             latitud: p.latitud,
             longitud: p.longitud,
             estado: p.estado_punto,
+            direccion: p.direccion,
+            tipo_ubicacion: p.tipo_ubicacion,
+            radio_metros: p.radio_metros,
+            geometria: p.geometria,
           }))}
           altura={ALTURA_MAPA_GRANDE}
         />

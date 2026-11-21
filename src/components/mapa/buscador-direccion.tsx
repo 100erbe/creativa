@@ -26,11 +26,20 @@ export type Sugerencia = {
   detalle: string;
   /** Dirección completa para el campo "Dirección". */
   direccion: string;
+  /** Metadatos de OpenStreetMap para recuperar polígonos de distritos/barrios/municipios. */
+  osmId?: number;
+  osmType?: "R" | "W" | "N";
+  esZona?: boolean;
 };
 
 type Elemento = {
   geometry?: { coordinates?: [number, number] };
   properties?: {
+    osm_id?: number;
+    osm_type?: string;
+    osm_key?: string;
+    osm_value?: string;
+    type?: string;
     name?: string;
     street?: string;
     housenumber?: string;
@@ -41,6 +50,20 @@ type Elemento = {
     countrycode?: string;
   };
 };
+
+const VALORES_ZONA = new Set([
+  "administrative",
+  "suburb",
+  "quarter",
+  "neighbourhood",
+  "city_district",
+  "district",
+  "borough",
+  "city",
+  "town",
+  "village",
+  "municipality",
+]);
 
 function aSugerencia(e: Elemento): Sugerencia | null {
   const p = e.properties;
@@ -55,7 +78,23 @@ function aSugerencia(e: Elemento): Sugerencia | null {
   const localidad = p.city ?? p.district ?? p.county ?? "";
   const detalle = [localidad, p.postcode].filter(Boolean).join(", ");
   const direccion = [calle ?? p.name, localidad].filter(Boolean).join(", ");
-  return { latitud: c[1], longitud: c[0], titulo, detalle, direccion };
+  const osmType = p.osm_type === "R" || p.osm_type === "W" || p.osm_type === "N" ? p.osm_type : undefined;
+  const esZona = Boolean(
+    !calle &&
+      (osmType === "R" ||
+        (p.osm_value && VALORES_ZONA.has(p.osm_value)) ||
+        (p.type && VALORES_ZONA.has(p.type))),
+  );
+  return {
+    latitud: c[1],
+    longitud: c[0],
+    titulo,
+    detalle,
+    direccion,
+    osmId: typeof p.osm_id === "number" ? p.osm_id : undefined,
+    osmType,
+    esZona,
+  };
 }
 
 export function BuscadorDireccion({
@@ -220,7 +259,14 @@ export function BuscadorDireccion({
                 i === activo ? "bg-fondo-marca-sutil" : "hover:bg-fondo-sutil",
               )}
             >
-              <span className="text-sm text-texto-primario">{s.titulo}</span>
+              <div className="flex items-center justify-between gap-esp2">
+                <span className="truncate text-sm text-texto-primario">{s.titulo}</span>
+                {s.esZona && (
+                  <span className="shrink-0 rounded bg-fondo-marca-sutil px-1.5 py-0.5 text-micro font-medium text-texto-marca">
+                    Zona
+                  </span>
+                )}
+              </div>
               {s.detalle && <span className="text-xs text-texto-terciario">{s.detalle}</span>}
             </li>
           ))}

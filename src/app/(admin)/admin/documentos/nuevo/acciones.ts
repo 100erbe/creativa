@@ -3,9 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
-import type { Database } from "@/lib/supabase/types";
+import type { Database, Json } from "@/lib/supabase/types";
 import { soporteDe } from "@/lib/soporte";
+import { esLineaInstalableEnCampana } from "@/lib/campanas/articulos";
 import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
+import {
+  RADIO_DEFECTO_METROS,
+  esGeometriaZona,
+  esTipoUbicacion,
+  simplificarGeometria,
+  type GeometriaZona,
+  type TipoUbicacion,
+} from "@/lib/mapa/zonas";
 import { accion, desenvolver } from "@/lib/accion";
 import { guardarProducto } from "../../catalogo/acciones";
 
@@ -392,6 +401,9 @@ export const anadirPunto = accion(async (
     direccion?: string;
     latitud: number;
     longitud: number;
+    tipo_ubicacion?: TipoUbicacion;
+    radio_metros?: number | null;
+    geometria?: GeometriaZona | null;
     fecha_colocacion_prevista?: string;
     fecha_retirada_prevista?: string;
     notas?: string;
@@ -404,19 +416,34 @@ export const anadirPunto = accion(async (
   if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
     throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
+  const tipoUbicacion: TipoUbicacion = esTipoUbicacion(datos.tipo_ubicacion) ? datos.tipo_ubicacion : "punto";
+  let radioMetros: number | null = null;
+  let geometria: Json | null = null;
+  if (tipoUbicacion === "radio") {
+    const r = datos.radio_metros ?? RADIO_DEFECTO_METROS;
+    if (!Number.isFinite(r) || r < 50 || r > 25000) throw new Error("Radio de zona no válido.");
+    radioMetros = Math.round(r);
+  } else if (tipoUbicacion === "poligono") {
+    if (!esGeometriaZona(datos.geometria)) throw new Error("Geometría de zona no válida.");
+    geometria = simplificarGeometria(datos.geometria) as unknown as Json;
+  }
+
   const supabase = await createClient();
 
-  // El soporte sale del artículo elegido (solo se pueden usar artículos del documento).
+  // El soporte sale del artículo elegido (solo se pueden usar artículos instalables del documento).
   let tipoSoporte: TipoSoporte = "otro";
   if (datos.lineaId != null) {
     const { data: linea } = await supabase
       .from("lineas_documento")
-      .select("productos(nombre)")
+      .select("unidad, productos(nombre, instalable_en_campana)")
       .eq("id", datos.lineaId)
       .eq("documento_id", documentoId)
       .maybeSingle();
     if (!linea) throw new Error("El artículo elegido no pertenece a este documento.");
-    const producto = Array.isArray(linea.productos) ? linea.productos[0] : linea.productos;
+    const producto = (Array.isArray(linea.productos) ? linea.productos[0] : linea.productos) ?? null;
+    if (!esLineaInstalableEnCampana({ unidad: linea.unidad, producto })) {
+      throw new Error("Este concepto no es un artículo instalable en campaña.");
+    }
     tipoSoporte = soporteDe(producto?.nombre ?? "");
   }
 
@@ -438,12 +465,15 @@ export const anadirPunto = accion(async (
       direccion: datos.direccion?.trim() || null,
       latitud: Math.round(datos.latitud * 1e7) / 1e7,
       longitud: Math.round(datos.longitud * 1e7) / 1e7,
+      tipo_ubicacion: tipoUbicacion,
+      radio_metros: radioMetros,
+      geometria,
       fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
       fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
       notas: datos.notas?.trim() || null,
     })
     .select(
-      "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
+      "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
     )
     .single();
   if (error || !creado) throw new Error(error?.message ?? "No se pudo guardar el punto.");
@@ -454,6 +484,9 @@ export const anadirPunto = accion(async (
     piezas: creado.piezas == null ? null : Number(creado.piezas),
     latitud: Number(creado.latitud),
     longitud: Number(creado.longitud),
+    tipo_ubicacion: esTipoUbicacion(creado.tipo_ubicacion) ? creado.tipo_ubicacion : ("punto" as TipoUbicacion),
+    radio_metros: creado.radio_metros == null ? null : Number(creado.radio_metros),
+    geometria: esGeometriaZona(creado.geometria) ? creado.geometria : null,
   };
 });
 
@@ -496,6 +529,7 @@ export const actualizarPunto = accion(async (
     fecha_colocacion_prevista?: string;
     fecha_retirada_prevista?: string;
     notas?: string;
+    radio_metros?: number | null;
   },
 ) => {
   await exigirAdmin();
@@ -515,26 +549,47 @@ export const actualizarPunto = accion(async (
   if (datos.lineaId != null) {
     const { data: linea } = await supabase
       .from("lineas_documento")
-      .select("productos(nombre)")
+      .select("unidad, productos(nombre, instalable_en_campana)")
       .eq("id", datos.lineaId)
       .eq("documento_id", documentoId)
       .maybeSingle();
     if (!linea) throw new Error("El artículo elegido no pertenece a este documento.");
-    const producto = Array.isArray(linea.productos) ? linea.productos[0] : linea.productos;
+    const producto = (Array.isArray(linea.productos) ? linea.productos[0] : linea.productos) ?? null;
+    if (!esLineaInstalableEnCampana({ unidad: linea.unidad, producto })) {
+      throw new Error("Este concepto no es un artículo instalable en campaña.");
+    }
     tipoSoporte = soporteDe(producto?.nombre ?? "");
+  }
+
+  const { data: actual } = await supabase
+    .from("puntos_campana")
+    .select("tipo_ubicacion")
+    .eq("id", puntoId)
+    .eq("campana_id", campanaId)
+    .maybeSingle();
+
+  const cambios: Database["public"]["Tables"]["puntos_campana"]["Update"] = {
+    tipo_soporte: tipoSoporte,
+    linea_id: datos.lineaId,
+    piezas: datos.piezas ?? null,
+    direccion: datos.direccion?.trim() || null,
+    fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
+    fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
+    notas: datos.notas?.trim() || null,
+  };
+  if (
+    actual?.tipo_ubicacion === "radio" &&
+    datos.radio_metros != null &&
+    Number.isFinite(datos.radio_metros) &&
+    datos.radio_metros >= 50 &&
+    datos.radio_metros <= 25000
+  ) {
+    cambios.radio_metros = Math.round(datos.radio_metros);
   }
 
   const { error } = await supabase
     .from("puntos_campana")
-    .update({
-      tipo_soporte: tipoSoporte,
-      linea_id: datos.lineaId,
-      piezas: datos.piezas ?? null,
-      direccion: datos.direccion?.trim() || null,
-      fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
-      fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
-      notas: datos.notas?.trim() || null,
-    })
+    .update(cambios)
     .eq("id", puntoId)
     .eq("campana_id", campanaId);
   if (error) throw new Error(error.message);

@@ -412,6 +412,7 @@ export type Database = {
           creado_en: string
           cuenta_cobro_id: number | null
           descuento_habitual: number
+          dias_vencimiento: number | null
           direccion: string | null
           email_facturacion: string | null
           forma_pago_id: number | null
@@ -440,6 +441,7 @@ export type Database = {
           creado_en?: string
           cuenta_cobro_id?: number | null
           descuento_habitual?: number
+          dias_vencimiento?: number | null
           direccion?: string | null
           email_facturacion?: string | null
           forma_pago_id?: number | null
@@ -468,6 +470,7 @@ export type Database = {
           creado_en?: string
           cuenta_cobro_id?: number | null
           descuento_habitual?: number
+          dias_vencimiento?: number | null
           direccion?: string | null
           email_facturacion?: string | null
           forma_pago_id?: number | null
@@ -1074,6 +1077,7 @@ export type Database = {
           razon_social: string
           telefono: string | null
           validez_presupuesto_dias: number
+          vencimiento_defecto_dias: number
         }
         Insert: {
           codigo_postal?: string | null
@@ -1090,6 +1094,7 @@ export type Database = {
           razon_social: string
           telefono?: string | null
           validez_presupuesto_dias?: number
+          vencimiento_defecto_dias?: number
         }
         Update: {
           codigo_postal?: string | null
@@ -1106,6 +1111,7 @@ export type Database = {
           razon_social?: string
           telefono?: string | null
           validez_presupuesto_dias?: number
+          vencimiento_defecto_dias?: number
         }
         Relationships: []
       }
@@ -1650,6 +1656,7 @@ export type Database = {
           codigo: string
           descripcion_factura: string | null
           id: number
+          instalable_en_campana: boolean
           iva_pct: number
           material: string | null
           nombre: string
@@ -1668,6 +1675,7 @@ export type Database = {
           codigo: string
           descripcion_factura?: string | null
           id?: number
+          instalable_en_campana?: boolean
           iva_pct?: number
           material?: string | null
           nombre: string
@@ -1686,6 +1694,7 @@ export type Database = {
           codigo?: string
           descripcion_factura?: string | null
           id?: number
+          instalable_en_campana?: boolean
           iva_pct?: number
           material?: string | null
           nombre?: string
@@ -1726,6 +1735,9 @@ export type Database = {
           nombre: string
           notas: string | null
           tipo_soporte: Database["public"]["Enums"]["tipo_soporte"]
+          tipo_ubicacion: string
+          radio_metros: number | null
+          geometria: Json | null
         }
         Insert: {
           actualizado_en?: string
@@ -1745,6 +1757,9 @@ export type Database = {
           nombre: string
           notas?: string | null
           tipo_soporte: Database["public"]["Enums"]["tipo_soporte"]
+          tipo_ubicacion?: string
+          radio_metros?: number | null
+          geometria?: Json | null
         }
         Update: {
           actualizado_en?: string
@@ -1764,6 +1779,9 @@ export type Database = {
           nombre?: string
           notas?: string | null
           tipo_soporte?: Database["public"]["Enums"]["tipo_soporte"]
+          tipo_ubicacion?: string
+          radio_metros?: number | null
+          geometria?: Json | null
         }
         Relationships: [
           {
@@ -2077,6 +2095,9 @@ export type Database = {
           punto_id: number | null
           rol_asignacion: Database["public"]["Enums"]["rol_asignacion"] | null
           tipo_soporte: Database["public"]["Enums"]["tipo_soporte"] | null
+          tipo_ubicacion: string | null
+          radio_metros: number | null
+          geometria: Json | null
           usuario_id: string | null
         }
         Relationships: []
@@ -2346,6 +2367,26 @@ export type Database = {
           punto_id: number
           punto_nombre: string
           tipo_soporte: Database["public"]["Enums"]["tipo_soporte"]
+        }[]
+      }
+      obtener_campana_publica_v2: {
+        Args: { p_token: string }
+        Returns: {
+          campana_estado: Database["public"]["Enums"]["estado_campana"]
+          campana_nombre: string
+          cliente_nombre: string
+          direccion: string
+          fecha_fin: string
+          fecha_inicio: string
+          geometria: Json | null
+          latitud: number
+          longitud: number
+          punto_estado: Database["public"]["Enums"]["estado_punto"]
+          punto_id: number
+          punto_nombre: string
+          radio_metros: number | null
+          tipo_soporte: Database["public"]["Enums"]["tipo_soporte"]
+          tipo_ubicacion: string | null
         }[]
       }
       obtener_fotos_publicas: {

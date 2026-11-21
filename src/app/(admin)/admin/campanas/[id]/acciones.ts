@@ -4,12 +4,20 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { accion } from "@/lib/accion";
-import type { Database } from "@/lib/supabase/types";
+import type { Database, Json } from "@/lib/supabase/types";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { enSegundoPlano, fechaAviso, notificar } from "@/lib/push/notificar";
 import { soporteDe } from "@/lib/soporte";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
+import {
+  RADIO_DEFECTO_METROS,
+  esGeometriaZona,
+  esTipoUbicacion,
+  simplificarGeometria,
+  type GeometriaZona,
+  type TipoUbicacion,
+} from "@/lib/mapa/zonas";
 
 /** Personas con el punto pendiente o en curso en su agenda (las que hay que avisar de un cambio). */
 async function asignadosActivos(supabase: Awaited<ReturnType<typeof createClient>>, puntoId: number) {
@@ -185,9 +193,10 @@ export type DatosPunto = {
   fechaColocacion: string;
   fechaRetirada: string;
   instrucciones: string;
+  radioMetros?: number | null;
 };
 
-/** Añade un punto en un toque desde el mapa y lo devuelve para abrir el modal de detalles. */
+/** Añade un punto o zona en un toque desde el mapa y lo devuelve para abrir el modal de detalles. */
 export const anadirPuntoCampana = accion(
   async (
     campanaId: number,
@@ -197,6 +206,9 @@ export const anadirPuntoCampana = accion(
       longitud: number;
       fechaColocacion: string;
       fechaRetirada: string;
+      tipoUbicacion?: TipoUbicacion;
+      radioMetros?: number | null;
+      geometria?: GeometriaZona | null;
     },
   ) => {
     await exigirAdmin();
@@ -206,6 +218,18 @@ export const anadirPuntoCampana = accion(
     for (const f of [d.fechaColocacion, d.fechaRetirada]) {
       if (f && !FECHA.test(f)) throw new Error("Fecha no válida.");
     }
+    const tipoUbicacion: TipoUbicacion = esTipoUbicacion(d.tipoUbicacion) ? d.tipoUbicacion : "punto";
+    let radioMetros: number | null = null;
+    let geometria: Json | null = null;
+    if (tipoUbicacion === "radio") {
+      const r = d.radioMetros ?? RADIO_DEFECTO_METROS;
+      if (!Number.isFinite(r) || r < 50 || r > 25000) throw new Error("Radio de zona no válido.");
+      radioMetros = Math.round(r);
+    } else if (tipoUbicacion === "poligono") {
+      if (!esGeometriaZona(d.geometria)) throw new Error("Geometría de zona no válida.");
+      geometria = simplificarGeometria(d.geometria) as unknown as Json;
+    }
+
     const supabase = await createClient();
     const articulos = await articulosDeCampana(supabase, campanaId);
     const unico = articulos.length === 1 ? articulos[0]! : null;
@@ -227,11 +251,14 @@ export const anadirPuntoCampana = accion(
         direccion: d.direccion.trim() || null,
         latitud: Math.round(d.latitud * 1e7) / 1e7,
         longitud: Math.round(d.longitud * 1e7) / 1e7,
+        tipo_ubicacion: tipoUbicacion,
+        radio_metros: radioMetros,
+        geometria,
         fecha_colocacion_prevista: d.fechaColocacion || null,
         fecha_retirada_prevista: d.fechaRetirada || null,
       })
       .select(
-        "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
+        "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
       )
       .single();
     if (error || !creado) throw new Error(error?.message ?? "No se pudo añadir el punto.");
@@ -242,6 +269,9 @@ export const anadirPuntoCampana = accion(
       piezas: creado.piezas == null ? null : Number(creado.piezas),
       latitud: Number(creado.latitud),
       longitud: Number(creado.longitud),
+      tipo_ubicacion: esTipoUbicacion(creado.tipo_ubicacion) ? creado.tipo_ubicacion : ("punto" as TipoUbicacion),
+      radio_metros: creado.radio_metros == null ? null : Number(creado.radio_metros),
+      geometria: esGeometriaZona(creado.geometria) ? creado.geometria : null,
     };
   },
 );
@@ -348,12 +378,16 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
   } else {
     const { data: antes } = await supabase
       .from("puntos_campana")
-      .select("nombre, tipo_soporte, direccion, latitud, longitud, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, notas")
+      .select("nombre, tipo_soporte, direccion, latitud, longitud, tipo_ubicacion, radio_metros, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, notas")
       .eq("id", puntoId)
       .maybeSingle();
+    const filaUpdate =
+      antes?.tipo_ubicacion === "radio" && d.radioMetros != null && Number.isFinite(d.radioMetros) && d.radioMetros >= 50 && d.radioMetros <= 25000
+        ? { ...fila, radio_metros: Math.round(d.radioMetros) }
+        : fila;
     const { data, error } = await supabase
       .from("puntos_campana")
-      .update(fila)
+      .update(filaUpdate)
       .eq("id", puntoId)
       .eq("campana_id", campanaId)
       .select("id");

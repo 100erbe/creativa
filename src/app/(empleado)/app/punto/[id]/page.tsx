@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { esGeometriaZona, esTipoUbicacion, type TipoUbicacion } from "@/lib/mapa/zonas";
 import { PanelPunto } from "./panel-punto";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function PaginaPunto({
     supabase
       .from("puntos_campana")
       .select(
-        "id, nombre, tipo_soporte, direccion, latitud, longitud, estado, notas, incidencia, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, campana_id, campanas(nombre, descripcion)",
+        "id, nombre, tipo_soporte, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, estado, notas, incidencia, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, campana_id, campanas(nombre, descripcion)",
       )
       .eq("id", puntoId)
       .single(),
@@ -57,7 +58,14 @@ export default async function PaginaPunto({
 
   return (
     <PanelPunto
-      punto={punto}
+      punto={{
+        ...punto,
+        latitud: Number(punto.latitud),
+        longitud: Number(punto.longitud),
+        tipo_ubicacion: esTipoUbicacion(punto.tipo_ubicacion) ? punto.tipo_ubicacion : ("punto" as TipoUbicacion),
+        radio_metros: punto.radio_metros == null ? null : Number(punto.radio_metros),
+        geometria: esGeometriaZona(punto.geometria) ? punto.geometria : null,
+      }}
       asignacion={asignacion}
       fotos={fotosConUrl}
       usuarioId={usuario?.id ?? null}
