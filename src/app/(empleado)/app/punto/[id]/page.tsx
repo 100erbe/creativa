@@ -38,11 +38,12 @@ export default async function PaginaPunto({
       .select("id, tipo, url_foto, tomada_en, usuario_id, latitud, longitud, origen_foto, origen_ubicacion")
       .eq("punto_id", puntoId)
       .order("tomada_en", { ascending: false }),
+    supabase.rpc("obtener_otros_puntos_campanas_empleado"),
   ]);
 
   // "No se encuentra" (PGRST116) es un 404 normal; cualquier otro fallo es un error de verdad.
   if (resultados[0].error?.code !== "PGRST116") lanzarSiError(...resultados);
-  const [{ data: punto }, { data: asignacion }, { data: fotos }] = resultados;
+  const [{ data: punto }, { data: asignacion }, { data: fotos }, { data: otrosCampana }] = resultados;
 
   if (!punto) notFound();
 
@@ -56,6 +57,19 @@ export default async function PaginaPunto({
     }),
   );
 
+  const otrosPuntosCampana = (otrosCampana ?? [])
+    .filter((o) => o.campana_id === punto.campana_id && o.punto_id !== punto.id)
+    .map((o) => ({
+      id: o.punto_id,
+      nombre: o.punto,
+      direccion: o.direccion,
+      latitud: Number(o.latitud),
+      longitud: Number(o.longitud),
+      tipo_ubicacion: esTipoUbicacion(o.tipo_ubicacion) ? o.tipo_ubicacion : ("punto" as TipoUbicacion),
+      radio_metros: o.radio_metros == null ? null : Number(o.radio_metros),
+      geometria: esGeometriaZona(o.geometria) ? o.geometria : null,
+    }));
+
   return (
     <PanelPunto
       punto={{
@@ -66,6 +80,7 @@ export default async function PaginaPunto({
         radio_metros: punto.radio_metros == null ? null : Number(punto.radio_metros),
         geometria: esGeometriaZona(punto.geometria) ? punto.geometria : null,
       }}
+      otrosPuntosCampana={otrosPuntosCampana}
       asignacion={asignacion}
       fotos={fotosConUrl}
       usuarioId={usuario?.id ?? null}

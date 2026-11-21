@@ -2402,6 +2402,21 @@ export type Database = {
           url_foto: string
         }[]
       }
+      obtener_otros_puntos_campanas_empleado: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          campana: string
+          campana_id: number
+          direccion: string | null
+          geometria: Json | null
+          latitud: number
+          longitud: number
+          punto: string
+          punto_id: number
+          radio_metros: number | null
+          tipo_ubicacion: string | null
+        }[]
+      }
       precio_unitario: {
         Args: {
           p_alcance: Database["public"]["Enums"]["alcance_servicio"]

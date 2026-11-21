@@ -13,6 +13,7 @@ import type { GeometriaZona, TipoUbicacion } from "@/lib/mapa/zonas";
 
 type Punto = {
   punto_id: number;
+  campana_id?: number | null;
   punto: string;
   latitud: number;
   longitud: number;
@@ -27,9 +28,28 @@ type Punto = {
   geometria?: GeometriaZona | null;
 };
 
+type OtroPuntoCampana = {
+  punto_id: number;
+  campana_id: number;
+  campana: string;
+  punto: string;
+  direccion: string | null;
+  latitud: number;
+  longitud: number;
+  tipo_ubicacion: TipoUbicacion;
+  radio_metros: number | null;
+  geometria: GeometriaZona | null;
+};
+
 type FiltroMapa = "todos" | "pendientes" | "incidencias";
 
-export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
+export function MapaAgenda({
+  puntos,
+  otrosPuntos = [],
+}: {
+  puntos: Punto[];
+  otrosPuntos?: OtroPuntoCampana[];
+}) {
   const [filtro, setFiltro] = useState<FiltroMapa>("todos");
 
   const conteos = useMemo(
@@ -46,6 +66,39 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
     if (filtro === "incidencias") return puntos.filter((p) => p.estado_punto === "incidencia");
     return puntos;
   }, [puntos, filtro]);
+
+  const puntosMapa = useMemo(() => {
+    const campanasVisibles = new Set(visibles.map((p) => p.campana_id).filter((id): id is number => id != null));
+    const idsAsignados = new Set(visibles.map((p) => p.punto_id));
+    const contexto = otrosPuntos
+      .filter((p) => campanasVisibles.has(p.campana_id) && !idsAsignados.has(p.punto_id))
+      .map((p) => ({
+        id: p.punto_id,
+        nombre: p.punto,
+        latitud: p.latitud,
+        longitud: p.longitud,
+        direccion: p.direccion,
+        detalle: `${p.campana} · Otros puntos de la campaña`,
+        tipo_ubicacion: p.tipo_ubicacion,
+        radio_metros: p.radio_metros,
+        geometria: p.geometria,
+        inactivo: true,
+      }));
+    const asignados = visibles.map((p) => ({
+      id: p.punto_id,
+      nombre: p.punto,
+      latitud: p.latitud,
+      longitud: p.longitud,
+      estado: p.estado_punto,
+      direccion: p.direccion,
+      detalle: p.campana ?? undefined,
+      tipo_ubicacion: p.tipo_ubicacion,
+      radio_metros: p.radio_metros,
+      geometria: p.geometria,
+    }));
+    // Los puntos inactivos primero para que las capas asignadas queden siempre por encima.
+    return [...contexto, ...asignados];
+  }, [visibles, otrosPuntos]);
 
   return (
     <div className="flex flex-col gap-esp4 px-esp4 pt-esp5">
@@ -93,17 +146,7 @@ export function MapaAgenda({ puntos }: { puntos: Punto[] }) {
         address={visibles[0]?.direccion ?? null}
       >
         <MapaPuntos
-          puntos={visibles.map((p) => ({
-            id: p.punto_id,
-            nombre: p.punto,
-            latitud: p.latitud,
-            longitud: p.longitud,
-            estado: p.estado_punto,
-            direccion: p.direccion,
-            tipo_ubicacion: p.tipo_ubicacion,
-            radio_metros: p.radio_metros,
-            geometria: p.geometria,
-          }))}
+          puntos={puntosMapa}
           altura={ALTURA_MAPA_GRANDE}
         />
       </SafeMapContainer>

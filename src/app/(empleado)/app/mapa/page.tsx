@@ -10,16 +10,19 @@ export default async function PaginaMapa() {
   const supabase = await createClient();
   const usuario = await obtenerUsuarioActual();
 
-  const { data: agenda, error } = await supabase
-    .from("v_agenda_empleado")
-    .select("*")
-    .eq("usuario_id", usuario?.id ?? "")
-    .in("estado_asignacion", ["pendiente", "en_curso"]);
+  const [resAgenda, resOtros] = await Promise.all([
+    supabase
+      .from("v_agenda_empleado")
+      .select("*")
+      .eq("usuario_id", usuario?.id ?? "")
+      .in("estado_asignacion", ["pendiente", "en_curso"]),
+    supabase.rpc("obtener_otros_puntos_campanas_empleado"),
+  ]);
 
-  lanzarSiError({ error });
+  lanzarSiError(resAgenda, resOtros);
 
   // La vista devuelve columnas anulables; solo se mapean los puntos completos.
-  const puntos = (agenda ?? []).flatMap((p) =>
+  const puntos = (resAgenda.data ?? []).flatMap((p) =>
     p.punto_id != null &&
     p.punto != null &&
     p.latitud != null &&
@@ -28,9 +31,10 @@ export default async function PaginaMapa() {
       ? [
           {
             punto_id: p.punto_id,
+            campana_id: p.campana_id,
             punto: p.punto,
-            latitud: p.latitud,
-            longitud: p.longitud,
+            latitud: Number(p.latitud),
+            longitud: Number(p.longitud),
             estado_punto: p.estado_punto,
             campana: p.campana,
             tipo_soporte: p.tipo_soporte,
@@ -45,5 +49,18 @@ export default async function PaginaMapa() {
       : [],
   );
 
-  return <MapaAgenda puntos={puntos} />;
+  const otrosPuntos = (resOtros.data ?? []).map((p) => ({
+    punto_id: p.punto_id,
+    campana_id: p.campana_id,
+    campana: p.campana,
+    punto: p.punto,
+    direccion: p.direccion,
+    latitud: Number(p.latitud),
+    longitud: Number(p.longitud),
+    tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
+    radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),
+    geometria: esGeometriaZona(p.geometria) ? p.geometria : null,
+  }));
+
+  return <MapaAgenda puntos={puntos} otrosPuntos={otrosPuntos} />;
 }

@@ -75,14 +75,27 @@ function etiquetaUbicacion(f: Foto): { texto: string; ayuda: string } {
   }
 }
 
+type OtroPuntoContexto = {
+  id: number;
+  nombre: string;
+  direccion: string | null;
+  latitud: number;
+  longitud: number;
+  tipo_ubicacion: TipoUbicacion;
+  radio_metros: number | null;
+  geometria: GeometriaZona | null;
+};
+
 export function PanelPunto({
   punto,
+  otrosPuntosCampana = [],
   asignacion,
   fotos,
   usuarioId,
   esAdmin,
 }: {
   punto: Punto;
+  otrosPuntosCampana?: OtroPuntoContexto[];
   asignacion: { id: number; estado: string; rol_asignacion: string } | null;
   fotos: Foto[];
   usuarioId: string | null;
@@ -414,6 +427,18 @@ export function PanelPunto({
       >
         <MapaPuntos
           puntos={[
+            ...otrosPuntosCampana.map((o) => ({
+              id: o.id,
+              nombre: o.nombre,
+              latitud: o.latitud,
+              longitud: o.longitud,
+              direccion: o.direccion,
+              detalle: "Otros puntos de la campaña",
+              tipo_ubicacion: o.tipo_ubicacion,
+              radio_metros: o.radio_metros,
+              geometria: o.geometria,
+              inactivo: true,
+            })),
             {
               id: punto.id,
               nombre: punto.nombre,

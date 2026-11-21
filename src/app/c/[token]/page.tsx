@@ -191,7 +191,10 @@ export default async function PaginaPublicaCliente({
               nombre: p.punto_nombre ?? "Punto",
               latitud: Number(p.latitud!),
               longitud: Number(p.longitud!),
-              estado: p.punto_estado ?? undefined,
+              estado:
+                p.punto_estado === "incidencia"
+                  ? "pendiente"
+                  : (p.punto_estado ?? undefined),
               direccion: p.direccion,
               tipo_ubicacion: esTipoUbicacion(p.tipo_ubicacion) ? p.tipo_ubicacion : ("punto" as TipoUbicacion),
               radio_metros: p.radio_metros == null ? null : Number(p.radio_metros),

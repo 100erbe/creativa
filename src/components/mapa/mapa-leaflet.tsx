@@ -34,16 +34,19 @@ export type PuntoMapa = {
   tipo_ubicacion?: TipoUbicacion;
   radio_metros?: number | null;
   geometria?: GeometriaZona | null;
+  /** Punto/zona de contexto (p. ej. de la misma campaña pero no asignado a este miembro): se muestra en gris y no afecta al zoom por defecto. */
+  inactivo?: boolean;
 };
 
 // Los colores salen de src/design/tokens.ts (el HTML de un icono de Leaflet no pasa por Tailwind).
 const COLOR_POR_ESTADO: Record<string, string> = colorMapa.estado;
 const COLOR_DEFECTO = colorMapa.defecto;
+const COLOR_INACTIVO = colorMapa.estado.retirado;
 
-function iconoPunto(color: string, tamano = 16) {
+function iconoPunto(color: string, tamano = 16, opacidad = 1) {
   return L.divIcon({
     className: "",
-    html: `<span style="display:block;width:${tamano}px;height:${tamano}px;border-radius:50%;background:${color};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
+    html: `<span style="display:block;width:${tamano}px;height:${tamano}px;border-radius:50%;background:${color};opacity:${opacidad};border:2px solid ${colorMapa.contorno};box-shadow:0 1px 4px ${colorMapa.sombra}"></span>`,
     iconSize: [tamano, tamano],
     iconAnchor: [tamano / 2, tamano / 2],
     popupAnchor: [0, -tamano / 2],
@@ -68,7 +71,9 @@ function Encuadrar({ puntos, fotos }: { puntos: PuntoMapa[]; fotos: FotoMapa[] }
   const ultimoTamanoRef = useRef({ w: 0, h: 0 });
 
   const clave = [
-    ...puntos.map((p) => `${p.id}:${p.latitud},${p.longitud},${p.tipo_ubicacion ?? "punto"},${p.radio_metros ?? ""}`),
+    ...puntos
+      .filter((p) => !p.inactivo)
+      .map((p) => `${p.id}:${p.latitud},${p.longitud},${p.tipo_ubicacion ?? "punto"},${p.radio_metros ?? ""}`),
     ...fotos.map((f) => `${f.latitud},${f.longitud}`),
   ].join("|");
 
@@ -84,8 +89,10 @@ function Encuadrar({ puntos, fotos }: { puntos: PuntoMapa[]; fotos: FotoMapa[] }
       if (!forzar && !cambioTamano) return;
 
       mapa.invalidateSize({ animate: false });
+      const activos = puntosRef.current.filter((p) => !p.inactivo);
+      const fuenteEncuadre = activos.length > 0 ? activos : puntosRef.current;
       const esquinas: [number, number][] = [];
-      for (const p of puntosRef.current) {
+      for (const p of fuenteEncuadre) {
         if (p.tipo_ubicacion === "poligono" && esGeometriaZona(p.geometria)) {
           const b = boundsDeGeometria(p.geometria);
           if (b) esquinas.push(b[0], b[1]);
@@ -281,7 +288,8 @@ export function MapaLeaflet({
     );
   }
 
-  const baseCentro = puntos.length > 0 ? puntos : fotos;
+  const activos = puntos.filter((p) => !p.inactivo);
+  const baseCentro = activos.length > 0 ? activos : puntos.length > 0 ? puntos : fotos;
   const unico = baseCentro[0];
   const centro: [number, number] =
     baseCentro.length === 1 && unico
@@ -299,7 +307,7 @@ export function MapaLeaflet({
       >
         <MapContainer
           center={centro}
-          zoom={puntos.length === 1 ? 17 : 12}
+          zoom={baseCentro.length === 1 ? 17 : 12}
           zoomSnap={0.25}
           scrollWheelZoom={false}
           style={{ height: "100%", width: "100%" }}
@@ -310,7 +318,10 @@ export function MapaLeaflet({
           {onAnadirPunto && <PulsacionLarga onAnadirPunto={onAnadirPunto} />}
 
           {puntos.map((p) => {
-            const color = (p.estado && COLOR_POR_ESTADO[p.estado]) || COLOR_DEFECTO;
+            const inactivo = Boolean(p.inactivo);
+            const color = inactivo
+              ? COLOR_INACTIVO
+              : (p.estado && COLOR_POR_ESTADO[p.estado]) || COLOR_DEFECTO;
             const etiquetaZona = etiquetaTipoUbicacion(p.tipo_ubicacion, p.radio_metros, p.direccion);
             const contenidoPopup = (
               <Popup>
@@ -333,13 +344,15 @@ export function MapaLeaflet({
             if (p.tipo_ubicacion === "poligono" && esGeometriaZona(p.geometria)) {
               return (
                 <GeoJSON
-                  key={`poly-${p.id}`}
+                  key={`poly-${inactivo ? "ctx-" : ""}${p.id}`}
                   data={p.geometria}
                   style={{
                     color,
-                    weight: 2,
+                    weight: inactivo ? 1.5 : 2,
+                    dashArray: inactivo ? "4 4" : undefined,
+                    opacity: inactivo ? 0.65 : 1,
                     fillColor: color,
-                    fillOpacity: 0.14,
+                    fillOpacity: inactivo ? 0.06 : 0.14,
                   }}
                 >
                   {contenidoPopup}
@@ -350,15 +363,16 @@ export function MapaLeaflet({
             if (p.tipo_ubicacion === "radio" && p.radio_metros) {
               return (
                 <Circle
-                  key={`radio-${p.id}-${p.radio_metros}`}
+                  key={`radio-${inactivo ? "ctx-" : ""}${p.id}-${p.radio_metros}`}
                   center={[p.latitud, p.longitud]}
                   radius={p.radio_metros}
                   pathOptions={{
                     color,
-                    weight: 2,
-                    dashArray: "6 4",
+                    weight: inactivo ? 1.5 : 2,
+                    dashArray: inactivo ? "4 4" : "6 4",
+                    opacity: inactivo ? 0.65 : 1,
                     fillColor: color,
-                    fillOpacity: 0.14,
+                    fillOpacity: inactivo ? 0.06 : 0.14,
                   }}
                 >
                   {contenidoPopup}
@@ -368,10 +382,10 @@ export function MapaLeaflet({
 
             return (
               <Marker
-                key={p.id}
+                key={`${inactivo ? "ctx-" : ""}${p.id}`}
                 position={[p.latitud, p.longitud]}
-                icon={iconoPunto(color)}
-                zIndexOffset={100}
+                icon={iconoPunto(color, inactivo ? 13 : 16, inactivo ? 0.62 : 1)}
+                zIndexOffset={inactivo ? -20 : 100}
               >
                 {contenidoPopup}
               </Marker>
