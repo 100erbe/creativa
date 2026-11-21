@@ -24,8 +24,8 @@ self.addEventListener("push", (evento) => {
   const titulo = datos.titulo || "Creativa";
   const opciones = {
     body: datos.cuerpo || "",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: "/icons/icon-192.png?v=2",
+    badge: "/icons/icon-192.png?v=2",
     // Con la misma "tag" un aviso nuevo sustituye al anterior (p. ej. varios cambios en un mismo punto).
     tag: datos.tag || undefined,
     renotify: Boolean(datos.tag),
