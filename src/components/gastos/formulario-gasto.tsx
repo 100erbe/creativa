@@ -9,6 +9,11 @@ import { comprimirImagen } from "@/lib/comprimir-imagen";
 import { guardarGasto, type EstadoFormulario } from "@/app/(admin)/admin/gastos/acciones";
 import {
   BUCKET_TICKETS,
+  CONCEPTOS_AEAT,
+  PCT_DEDUCIBLE_IVA,
+  TIPOS_RETENCION,
+  cuotaDeducible,
+  importeRetencion,
   ETIQUETA_FORMA_PAGO_GASTO,
   FORMAS_PAGO_GASTO,
   TIPOS_IVA,
@@ -37,6 +42,10 @@ export type DatosGasto = {
   estado?: string;
   notas?: string | null;
   motivo_rechazo?: string | null;
+  retencion_pct?: number | null;
+  pct_deducible_iva?: number | null;
+  bien_inversion?: boolean | null;
+  concepto_aeat?: string | null;
 };
 
 type Opcion = { id: number | string; etiqueta: string };
@@ -112,12 +121,18 @@ export function FormularioGasto({
   const [tipo, setTipo] = useState<TipoGasto>(tipoFijo ?? inicial?.tipo ?? "menor");
   const [total, setTotal] = useState(inicial?.total != null ? String(inicial.total).replace(".", ",") : "");
   const [ivaPct, setIvaPct] = useState(String(inicial?.iva_pct ?? 21));
+  const [retencionPct, setRetencionPct] = useState(String(Number(inicial?.retencion_pct ?? 0)));
+  const [pctDeducible, setPctDeducible] = useState(String(Number(inicial?.pct_deducible_iva ?? 100)));
   const [ticket, setTicket] = useState<string | null>(inicial?.ticket_path ?? null);
   const [subiendo, setSubiendo] = useState(false);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
 
   const totalNum = aNumero(total);
   const desglose = totalNum && totalNum > 0 ? calcularIva(totalNum, Number(ivaPct)) : null;
+  const retencion = desglose ? importeRetencion(desglose.base, Number(retencionPct)) : 0;
+  const deducibleIva = desglose ? cuotaDeducible(desglose.cuota, Number(pctDeducible)) : 0;
+  // Si el tipo de retención guardado no es uno de los habituales, se ofrece igualmente.
+  const opcionesRetencion = [...new Set<number>([...TIPOS_RETENCION, Number(retencionPct) || 0])].sort((a, b) => a - b);
 
   async function subir(archivo: File | undefined) {
     if (!archivo) return;
@@ -257,6 +272,63 @@ export function FormularioGasto({
           <Campo etiqueta="Nº de factura *">
             <input name="numero_factura" defaultValue={inicial?.numero_factura ?? ""} required className={entrada} />
           </Campo>
+        </Seccion>
+      )}
+
+      {deducible && (
+        <Seccion titulo="Datos fiscales">
+          <Campo
+            etiqueta="Concepto fiscal (libro registro AEAT)"
+            className="md:col-span-2"
+            ayuda="Clasifica el gasto en el libro de compras y gastos que se presenta con el 303 y el 130."
+          >
+            <select name="concepto_aeat" defaultValue={inicial?.concepto_aeat ?? ""} className={entrada}>
+              <option value="">Sin clasificar</option>
+              {CONCEPTOS_AEAT.map((c) => (
+                <option key={c.codigo} value={c.codigo}>
+                  {c.codigo} · {c.etiqueta}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo
+            etiqueta="Retención IRPF practicada"
+            ayuda={retencion > 0 ? `Se retienen ${euros(retencion)} · a pagar ${euros((totalNum ?? 0) - retencion)}` : "Facturas de profesionales (habitual 15 %, 7 % los primeros años)."}
+          >
+            <select name="retencion_pct" value={retencionPct} onChange={(e) => setRetencionPct(e.target.value)} className={entrada}>
+              {opcionesRetencion.map((p) => (
+                <option key={p} value={p}>
+                  {p === 0 ? "Sin retención" : `${p} %`}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo
+            etiqueta="IVA deducible"
+            ayuda={desglose && Number(pctDeducible) < 100 ? `Se deducen ${euros(deducibleIva)} de ${euros(desglose.cuota)}` : "50 % para turismos que no se usan solo para la actividad."}
+          >
+            <select name="pct_deducible_iva" value={pctDeducible} onChange={(e) => setPctDeducible(e.target.value)} className={entrada}>
+              {PCT_DEDUCIBLE_IVA.map((p) => (
+                <option key={p} value={p}>
+                  {p} %
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <label className="flex items-start gap-esp3 md:col-span-2">
+            <input
+              type="checkbox"
+              name="bien_inversion"
+              defaultChecked={!!inicial?.bien_inversion}
+              className="mt-0.5 h-4 w-4"
+            />
+            <span className="flex flex-col">
+              <span className="text-sm text-texto-primario">Bien de inversión</span>
+              <span className="text-xs text-texto-terciario">
+                Vehículos, maquinaria, ordenadores… que duran más de un año. Su IVA va en las casillas 30–31 del 303.
+              </span>
+            </span>
+          </label>
         </Seccion>
       )}
 

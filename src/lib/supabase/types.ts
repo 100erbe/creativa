@@ -292,6 +292,11 @@ export type Database = {
           aprobado_en: string | null
           aprobado_por: string | null
           base_imponible: number | null
+          bien_inversion: boolean
+          concepto_aeat: string | null
+          importe_retencion: number
+          pct_deducible_iva: number
+          retencion_pct: number
           categoria_id: number | null
           codigo: string
           concepto: string
@@ -318,6 +323,11 @@ export type Database = {
           aprobado_en?: string | null
           aprobado_por?: string | null
           base_imponible?: number | null
+          bien_inversion?: boolean
+          concepto_aeat?: string | null
+          importe_retencion?: number
+          pct_deducible_iva?: number
+          retencion_pct?: number
           categoria_id?: number | null
           codigo?: string
           concepto: string
@@ -344,6 +354,11 @@ export type Database = {
           aprobado_en?: string | null
           aprobado_por?: string | null
           base_imponible?: number | null
+          bien_inversion?: boolean
+          concepto_aeat?: string | null
+          importe_retencion?: number
+          pct_deducible_iva?: number
+          retencion_pct?: number
           categoria_id?: number | null
           codigo?: string
           concepto?: string
@@ -1063,9 +1078,12 @@ export type Database = {
       }
       empresa: {
         Row: {
+          actividad_codigo: string | null
+          actividad_tipo: string | null
           codigo_postal: string | null
           direccion: string
           email: string | null
+          epigrafe_iae: string | null
           id: number
           lema: string | null
           logo_url: string | null
@@ -1080,9 +1098,12 @@ export type Database = {
           vencimiento_defecto_dias: number
         }
         Insert: {
+          actividad_codigo?: string | null
+          actividad_tipo?: string | null
           codigo_postal?: string | null
           direccion: string
           email?: string | null
+          epigrafe_iae?: string | null
           id?: number
           lema?: string | null
           logo_url?: string | null
@@ -1097,9 +1118,12 @@ export type Database = {
           vencimiento_defecto_dias?: number
         }
         Update: {
+          actividad_codigo?: string | null
+          actividad_tipo?: string | null
           codigo_postal?: string | null
           direccion?: string
           email?: string | null
+          epigrafe_iae?: string | null
           id?: number
           lema?: string | null
           logo_url?: string | null
@@ -2069,8 +2093,11 @@ export type Database = {
       v_gastos_iva_trimestral: {
         Row: {
           base_imponible: number | null
+          bien_inversion: boolean | null
+          cuota_deducible: number | null
           cuota_iva: number | null
           ejercicio: number | null
+          importe_retencion: number | null
           iva_pct: number | null
           n_gastos: number | null
           trimestre: number | null

@@ -12,10 +12,12 @@ import { enSegundoPlano, notificar, notificarAdministradores } from "@/lib/push/
 import {
   BUCKET_TICKETS,
   FORMAS_PAGO_GASTO,
+  PCT_DEDUCIBLE_IVA,
   TIPOS_GASTO,
   TIPOS_IVA,
   aNumero,
   calcularIva,
+  importeRetencion,
   type EstadoGasto,
 } from "@/lib/gastos";
 
@@ -36,6 +38,13 @@ const esquema = z.object({
   ticket_path: z.string().nullable(),
   estado: z.enum(["pendiente", "aprobado", "reembolsado"]),
   notas: z.string().nullable(),
+  retencion_pct: z.number().min(0, "La retención no es válida.").max(99.99, "La retención no es válida."),
+  pct_deducible_iva: z.number().refine((v) => (PCT_DEDUCIBLE_IVA as readonly number[]).includes(v), "El IVA deducible no es válido."),
+  bien_inversion: z.boolean(),
+  concepto_aeat: z
+    .string()
+    .regex(/^G[0-9Y][0-9]$/, "El concepto fiscal no es válido.")
+    .nullable(),
 });
 
 function leer(fd: FormData) {
@@ -58,6 +67,10 @@ function leer(fd: FormData) {
     ticket_path: t("ticket_path"),
     estado: t("estado") ?? "pendiente",
     notas: t("notas"),
+    retencion_pct: aNumero(t("retencion_pct")) ?? 0,
+    pct_deducible_iva: aNumero(t("pct_deducible_iva")) ?? 100,
+    bien_inversion: t("bien_inversion") === "on",
+    concepto_aeat: t("concepto_aeat"),
   };
 }
 
@@ -86,6 +99,8 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
   }
 
   let ivaCampos: { iva_pct: number | null; base_imponible: number | null; cuota_iva: number | null };
+  // Datos fiscales (retención, bien de inversión, % deducible, concepto AEAT): solo en deducibles.
+  let fiscales = { retencion_pct: 0, importe_retencion: 0, bien_inversion: false, pct_deducible_iva: 100, concepto_aeat: null as string | null };
   if (d.tipo === "deducible") {
     if (d.iva_pct == null || !(TIPOS_IVA as readonly number[]).includes(d.iva_pct)) {
       return { error: "Elige el tipo de IVA (21 %, 10 %, 4 % o 0 %)." };
@@ -94,6 +109,13 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
     if (!d.numero_factura) return { error: "El número de factura es obligatorio en un gasto deducible." };
     const { base, cuota } = calcularIva(d.total, d.iva_pct);
     ivaCampos = { iva_pct: d.iva_pct, base_imponible: base, cuota_iva: cuota };
+    fiscales = {
+      retencion_pct: d.retencion_pct,
+      importe_retencion: importeRetencion(base, d.retencion_pct),
+      bien_inversion: d.bien_inversion,
+      pct_deducible_iva: d.pct_deducible_iva,
+      concepto_aeat: d.concepto_aeat,
+    };
   } else {
     // El gasto menor no es deducible: no lleva IVA ni datos de proveedor/factura.
     ivaCampos = { iva_pct: null, base_imponible: null, cuota_iva: null };
@@ -113,6 +135,7 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
     forma_pago: d.forma_pago,
     total: d.total,
     ...ivaCampos,
+    ...fiscales,
     proveedor: d.tipo === "deducible" ? d.proveedor : null,
     nif_proveedor: d.tipo === "deducible" ? d.nif_proveedor : null,
     numero_factura: d.tipo === "deducible" ? d.numero_factura : null,

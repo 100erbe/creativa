@@ -47,6 +47,67 @@ export const ETIQUETA_FORMA_PAGO_GASTO: Record<FormaPagoGasto, string> = {
 
 export const BUCKET_TICKETS = "tickets-gastos";
 
+/** Retenciones IRPF habituales en facturas de profesionales (art. 101 LIRPF). */
+export const TIPOS_RETENCION = [0, 7, 15, 19] as const;
+
+/** Parte del IVA soportado deducible: 50 % es la presunción para turismos (art. 95.Tres LIVA). */
+export const PCT_DEDUCIBLE_IVA = [100, 50, 0] as const;
+
+/**
+ * Conceptos de gasto del libro registro AEAT (formato electrónico común, pestaña
+ * RECIBIDAS_GASTOS, columna "Concepto de Gasto"). Solo los que usa una actividad
+ * como la nuestra; el resto de códigos del diseño siguen siendo válidos en la BD.
+ */
+export const CONCEPTOS_AEAT = [
+  { codigo: "G01", etiqueta: "Compra de existencias / materiales" },
+  { codigo: "G03", etiqueta: "Otros consumos de explotación" },
+  { codigo: "G04", etiqueta: "Sueldos y salarios" },
+  { codigo: "G05", etiqueta: "Seguridad Social a cargo de la empresa" },
+  { codigo: "G45", etiqueta: "Seguridad Social del titular" },
+  { codigo: "G08", etiqueta: "Dietas y viajes del personal" },
+  { codigo: "G10", etiqueta: "Otros gastos de personal" },
+  { codigo: "G12", etiqueta: "Arrendamientos y cánones (alquiler, renting)" },
+  { codigo: "G13", etiqueta: "Reparaciones y conservación" },
+  { codigo: "G14", etiqueta: "Suministro eléctrico" },
+  { codigo: "G17", etiqueta: "Telefonía e internet" },
+  { codigo: "G18", etiqueta: "Otros suministros" },
+  { codigo: "G19", etiqueta: "Servicios de profesionales independientes" },
+  { codigo: "G20", etiqueta: "Primas de seguros" },
+  { codigo: "G22", etiqueta: "Otros servicios exteriores (transporte, publicidad, subcontratas…)" },
+  { codigo: "G24", etiqueta: "Otros gastos financieros (comisiones bancarias)" },
+  { codigo: "G26", etiqueta: "Otros tributos deducibles" },
+  { codigo: "G37", etiqueta: "Otros conceptos fiscalmente deducibles" },
+] as const;
+
+export function etiquetaConceptoAeat(codigo: string | null | undefined) {
+  if (!codigo) return null;
+  const c = CONCEPTOS_AEAT.find((x) => x.codigo === codigo);
+  return c ? `${c.codigo} · ${c.etiqueta}` : codigo;
+}
+
+/** Conceptos que no son facturas (nóminas, Seguridad Social): van al libro como "SF", sin IVA. */
+export const CONCEPTOS_SIN_FACTURA = ["G04", "G05", "G45", "G10"] as const;
+
+export const trimestreDe = (fecha: string) => Math.ceil(Number(fecha.slice(5, 7)) / 3);
+
+/**
+ * Fin del plazo de presentación del 303/130/111 de un trimestre: 20 de abril, julio y octubre;
+ * el 4T, 30 de enero del año siguiente. Si cae en fin de semana o festivo la AEAT lo
+ * traslada al siguiente día hábil: aquí solo se corre el fin de semana.
+ */
+export function plazoTrimestre(ejercicio: number, trimestre: number): Date {
+  const fecha = trimestre === 4 ? new Date(Date.UTC(ejercicio + 1, 0, 30)) : new Date(Date.UTC(ejercicio, trimestre * 3, 20));
+  while (fecha.getUTCDay() === 0 || fecha.getUTCDay() === 6) fecha.setUTCDate(fecha.getUTCDate() + 1);
+  return fecha;
+}
+
+/** Cuota de IVA deducible de un gasto, según su % deducible. */
+export const cuotaDeducible = (cuota: number | null | undefined, pct: number | null | undefined) =>
+  redondear((Number(cuota) || 0) * (pct == null ? 100 : Number(pct)) / 100);
+
+export const importeRetencion = (base: number | null | undefined, pct: number | null | undefined) =>
+  redondear((Number(base) || 0) * (Number(pct) || 0) / 100);
+
 const redondear = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /** A partir del total con IVA incluido: base = total / (1 + iva), cuota = total − base. */

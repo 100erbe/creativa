@@ -21,9 +21,22 @@ type Datos = {
   lema: string;
   validez_presupuesto_dias: number;
   vencimiento_defecto_dias: number;
+  /** Actividad para los libros registro AEAT: código + tipo (p. ej. "A03") y epígrafe IAE. */
+  actividad: string;
+  epigrafe_iae: string;
 };
 
-const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias" | "vencimiento_defecto_dias">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
+/** Combinaciones de código y tipo de actividad del formato electrónico común de la AEAT. */
+const ACTIVIDADES = [
+  { valor: "A03", etiqueta: "A03 · Actividad empresarial (IAE)" },
+  { valor: "A05", etiqueta: "A05 · Actividad profesional (IAE)" },
+  { valor: "A04", etiqueta: "A04 · Actividad profesional artística o deportiva (IAE)" },
+  { valor: "A01", etiqueta: "A01 · Arrendador de bienes inmuebles (IAE)" },
+  { valor: "B06", etiqueta: "B06 · Otras actividades no sujetas al IAE" },
+  { valor: "C", etiqueta: "C · Actividad no iniciada" },
+];
+
+const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias" | "vencimiento_defecto_dias" | "actividad" | "epigrafe_iae">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
   { campo: "nombre_comercial", etiqueta: "Nombre comercial *" },
   { campo: "razon_social", etiqueta: "Razón social *" },
   { campo: "nif", etiqueta: "NIF *" },
@@ -99,6 +112,39 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
             Se aplica al emitir si ni el documento, ni el cliente ni la forma de pago fijan otro (0 = al contado).
           </span>
         </label>
+      </div>
+      <div className="flex flex-col gap-esp3 border-t border-borde-default pt-esp4">
+        <div>
+          <h2 className="text-titulo-panel text-texto-primario">Actividad (libros registro AEAT)</h2>
+          <p className="text-xs text-texto-terciario">
+            Se escribe en cada asiento del libro registro que se exporta desde Gastos para importarlo en Pre303 y en el
+            modelo 130. El epígrafe lo encuentras en tu alta censal (modelo 036/037) o pregúntalo a tu gestor.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-esp3 md:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-texto-secundario">Tipo de actividad</span>
+            <select value={datos.actividad} onChange={(e) => setDatos({ ...datos, actividad: e.target.value })} className={CAMPO}>
+              <option value="">Sin indicar</option>
+              {ACTIVIDADES.map((a) => (
+                <option key={a.valor} value={a.valor}>
+                  {a.etiqueta}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-texto-secundario">Grupo o epígrafe del IAE</span>
+            <input
+              value={datos.epigrafe_iae}
+              onChange={(e) => setDatos({ ...datos, epigrafe_iae: e.target.value })}
+              maxLength={4}
+              placeholder="p. ej. 8449"
+              className={CAMPO}
+            />
+            <span className="text-xs text-texto-terciario">Hasta 4 caracteres, sin puntos.</span>
+          </label>
+        </div>
       </div>
       {error && <p className="text-sm text-texto-peligro">{error}</p>}
       <div className="flex items-center gap-esp3">

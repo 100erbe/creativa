@@ -234,7 +234,8 @@ export default async function PaginaContabilidad({
           {TRIMESTRES.map((t) => {
             const soportado = (ivaSoportado ?? [])
               .filter((r) => r.ejercicio === ejercicio && r.trimestre === t.n)
-              .reduce((s, r) => s + Number(r.cuota_iva ?? 0), 0);
+              // Solo la parte deducible (p. ej. el 50 % del IVA de un turismo).
+              .reduce((s, r) => s + Number(r.cuota_deducible ?? r.cuota_iva ?? 0), 0);
             const repercutido = ivaAnio
               .filter((r) => r.trimestre === t.n)
               .reduce((s, r) => s + Number(r.cuota_iva ?? 0), 0);

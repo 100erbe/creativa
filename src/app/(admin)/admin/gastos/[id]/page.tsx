@@ -13,6 +13,8 @@ import {
   ETIQUETA_FORMA_PAGO_GASTO,
   ETIQUETA_TIPO_GASTO,
   TONO_ESTADO_GASTO,
+  cuotaDeducible,
+  etiquetaConceptoAeat,
   etiquetaTipoIva,
 } from "@/lib/gastos";
 import { ControlesGasto } from "./controles";
@@ -101,6 +103,17 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
             <Dato etiqueta="Proveedor">{gasto.proveedor}</Dato>
             <Dato etiqueta="NIF proveedor">{gasto.nif_proveedor}</Dato>
             <Dato etiqueta="Nº de factura">{gasto.numero_factura}</Dato>
+            <Dato etiqueta="Concepto fiscal">{etiquetaConceptoAeat(gasto.concepto_aeat) ?? "Sin clasificar"}</Dato>
+            <Dato etiqueta="Retención IRPF">
+              {Number(gasto.retencion_pct) > 0
+                ? `${Number(gasto.retencion_pct)} % · ${euros(Number(gasto.importe_retencion))} (a pagar ${euros(Number(gasto.total) - Number(gasto.importe_retencion))})`
+                : "Sin retención"}
+            </Dato>
+            <Dato etiqueta="IVA deducible">
+              {Number(gasto.pct_deducible_iva)} %
+              {Number(gasto.pct_deducible_iva) < 100 ? ` · ${euros(cuotaDeducible(gasto.cuota_iva, gasto.pct_deducible_iva))}` : ""}
+              {gasto.bien_inversion ? " · Bien de inversión" : ""}
+            </Dato>
           </>
         ) : (
           <Dato etiqueta="IVA">No deducible</Dato>

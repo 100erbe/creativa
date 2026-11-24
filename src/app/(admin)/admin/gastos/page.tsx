@@ -16,14 +16,28 @@ import {
   ETIQUETA_FORMA_PAGO_GASTO,
   ETIQUETA_TIPO_GASTO,
   TONO_ESTADO_GASTO,
+  trimestreDe,
 } from "@/lib/gastos";
+import { REVISIONES, cumpleRevision, type Revision } from "@/lib/fiscal-gastos";
+import { ResumenFiscalAnual, ResumenFiscalTrimestre } from "./resumen-fiscal";
+import { hoyEnEspana } from "./opciones";
 
 export const dynamic = "force-dynamic";
 
 const POR_PAGINA = 50;
 const TRIMESTRES = [1, 2, 3, 4];
 
-type Filtros = { revisar?: string; tipo?: string; estado?: string; ejercicio?: string; trimestre?: string; q?: string; pagina?: string };
+type Filtros = {
+  revisar?: string;
+  tipo?: string;
+  estado?: string;
+  ejercicio?: string;
+  trimestre?: string;
+  q?: string;
+  pagina?: string;
+  /** Aviso del resumen fiscal: pendiente, sin_ticket, sin_nif, sin_numero, sin_concepto. */
+  revision?: string;
+};
 
 function enlace(actual: Filtros, cambios: Partial<Filtros>) {
   const params = new URLSearchParams();
@@ -39,12 +53,14 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
 
   // Ejercicios disponibles (primer y último gasto) y gastos pendientes de revisar de cualquier año:
   // consultas ligeras. El listado completo se pide ya filtrado por ejercicio en la base de datos.
-  const [resPrimero, resUltimo, resPendientes] = await Promise.all([
+  const [resPrimero, resUltimo, resPendientes, resEmpresa] = await Promise.all([
     supabase.from("gastos").select("fecha").order("fecha", { ascending: true }).limit(1),
     supabase.from("gastos").select("fecha").order("fecha", { ascending: false }).limit(1),
     supabase.from("gastos").select("id").eq("estado", "pendiente").order("fecha", { ascending: false }).order("id", { ascending: false }),
+    supabase.from("empresa").select("actividad_codigo, epigrafe_iae").eq("id", 1).maybeSingle(),
   ]);
-  lanzarSiError(resPrimero, resUltimo, resPendientes);
+  lanzarSiError(resPrimero, resUltimo, resPendientes, resEmpresa);
+  const actividadConfigurada = !!(resEmpresa.data?.actividad_codigo && resEmpresa.data?.epigrafe_iae);
   const anioActual = new Date().getFullYear();
   const desde = Number(resPrimero.data?.[0]?.fecha.slice(0, 4) ?? anioActual);
   const hasta = Math.max(Number(resUltimo.data?.[0]?.fecha.slice(0, 4) ?? anioActual), anioActual);
@@ -74,13 +90,15 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
   const q = (filtros.q ?? "").trim().toLowerCase();
   const pagina = Math.max(1, Number(filtros.pagina) || 1);
 
+  const aviso = filtros.revision && filtros.revision in REVISIONES ? (filtros.revision as Revision) : null;
+
   const delAnio = todos.filter((g) => g.fecha.startsWith(String(ejercicio)));
-  const trimestreDe = (fecha: string) => Math.ceil(Number(fecha.slice(5, 7)) / 3);
   const filtrados = delAnio.filter(
     (g) =>
       (tipo === "todos" || g.tipo === tipo) &&
       (!estado || g.estado === estado) &&
       (!trimestre || trimestreDe(g.fecha) === trimestre) &&
+      (!aviso || cumpleRevision(g, aviso)) &&
       (!q ||
         [g.codigo, g.concepto, g.proveedor, g.numero_factura, g.usuarios?.nombre].some((v) =>
           v?.toLowerCase().includes(q),
@@ -106,7 +124,9 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
     ejercicio: String(ejercicio),
     trimestre: trimestre ? String(trimestre) : "",
     q: filtros.q ?? "",
+    revision: aviso ?? "",
   };
+  const hoy = hoyEnEspana();
   // Panel de revisión (se abre desde el aviso de la campana o con "Revisar"): ?revisar=ID
   // El gasto a revisar puede ser de otro ejercicio: si no está en la lista, se pide aparte.
   const idRevisar = Number(filtros.revisar);
@@ -219,6 +239,34 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
           href={enlace(actual, { tipo: "menor", pagina: "" })}
         />
       </div>
+
+      {trimestre ? (
+        <ResumenFiscalTrimestre
+          gastos={delAnio}
+          ejercicio={ejercicio}
+          trimestre={trimestre}
+          hoy={hoy}
+          actividadConfigurada={actividadConfigurada}
+          enlaceRevision={(clave) => enlace(actual, { revision: clave, estado: "", tipo: "", pagina: "" })}
+        />
+      ) : (
+        <ResumenFiscalAnual
+          gastos={delAnio}
+          ejercicio={ejercicio}
+          hoy={hoy}
+          enlaceTrimestre={(t) => enlace(actual, { trimestre: String(t), pagina: "" })}
+        />
+      )}
+
+      {aviso && (
+        <div className="flex flex-wrap items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp4 py-esp2 text-sm">
+          <Icono nombre="filtro" size={16} className="text-texto-aviso" />
+          <span className="flex-1 text-texto-primario">Mostrando: {REVISIONES[aviso]}</span>
+          <Link href={enlace(actual, { revision: "", pagina: "" })} className="font-medium text-texto-marca">
+            Quitar filtro
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <div className="flex flex-wrap gap-esp2">
