@@ -51,6 +51,44 @@ export const ETIQUETA_TIPO: Record<string, string> = {
   recibo: "Recibo",
 };
 
+/** Título del documento impreso: la ley pide que conste que es una factura rectificativa (art. 15 RD 1619/2012). */
+export const TITULO_HOJA: Record<string, string> = {
+  rectificativa: "Factura rectificativa",
+};
+
+/** Causa de la rectificación = tipo de factura del libro registro AEAT y de VeriFactu. */
+export type CausaRectificacion = "R1" | "R2" | "R3" | "R4" | "R5";
+
+export const ETIQUETA_CAUSA_RECTIFICACION: Record<CausaRectificacion, string> = {
+  R1: "Art. 80 Uno, Dos y Seis LIVA",
+  R2: "Art. 80 Tres LIVA (concurso)",
+  R3: "Art. 80 Cuatro LIVA (crédito incobrable)",
+  R4: "Resto de causas",
+  R5: "Factura simplificada",
+};
+
+/**
+ * Motivos habituales de una rectificativa y la causa AEAT que les corresponde.
+ * El texto se guarda como motivo (más el detalle, si se escribe) y sale en el PDF.
+ */
+export const MOTIVOS_RECTIFICACION: { clave: string; texto: string; causa: CausaRectificacion; detalleObligatorio?: boolean }[] = [
+  { clave: "devolucion", texto: "Devolución o servicio no prestado", causa: "R1" },
+  { clave: "descuento", texto: "Descuento o bonificación posterior a la factura", causa: "R1" },
+  { clave: "anulacion", texto: "Anulación de la operación", causa: "R1" },
+  { clave: "error_importe", texto: "Error en precios, cantidades o tipo de IVA", causa: "R4" },
+  { clave: "error_datos", texto: "Error en los datos de la factura", causa: "R4", detalleObligatorio: true },
+  { clave: "otro", texto: "Otro motivo", causa: "R4", detalleObligatorio: true },
+];
+
+/** "Devolución…" + detalle → texto del motivo. "Otro motivo" solo deja el detalle. */
+export function textoMotivoRectificacion(clave: string, detalle: string): string {
+  const m = MOTIVOS_RECTIFICACION.find((x) => x.clave === clave);
+  const d = detalle.trim().replace(/\.$/, "");
+  if (!m) return d;
+  if (m.clave === "otro") return d;
+  return d ? `${m.texto}: ${d}` : m.texto;
+}
+
 export const ETIQUETA_ESTADO_DOC: Record<string, string> = {
   borrador: "Borrador",
   emitido: "Emitido",

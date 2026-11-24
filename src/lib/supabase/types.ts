@@ -823,6 +823,7 @@ export type Database = {
           base_imponible: number
           campana: string | null
           campana_id: number | null
+          causa_rectificacion: string | null
           cliente_cp: string | null
           cliente_direccion: string | null
           cliente_documento: string | null
@@ -886,6 +887,7 @@ export type Database = {
           base_imponible?: number
           campana?: string | null
           campana_id?: number | null
+          causa_rectificacion?: string | null
           cliente_cp?: string | null
           cliente_direccion?: string | null
           cliente_documento?: string | null
@@ -949,6 +951,7 @@ export type Database = {
           base_imponible?: number
           campana?: string | null
           campana_id?: number | null
+          causa_rectificacion?: string | null
           cliente_cp?: string | null
           cliente_direccion?: string | null
           cliente_documento?: string | null
@@ -2358,6 +2361,7 @@ export type Database = {
       }
       convertir_documento: {
         Args: {
+          p_causa?: string
           p_motivo?: string
           p_origen: number
           p_tipo: Database["public"]["Enums"]["tipo_documento"]

@@ -195,6 +195,7 @@ export default async function PaginaImprimirDocumento({
     descripcion: doc.descripcion,
     rectifica: origen ? { numero: origen.numero_completo, fecha: origen.fecha } : null,
     motivoRectificacion: doc.motivo_rectificacion,
+    causaRectificacion: doc.causa_rectificacion,
     lineas: lineas ?? [],
     totales: {
       suma: Number(doc.suma_lineas),

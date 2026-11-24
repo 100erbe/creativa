@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
-import { METODOS_COBRO, type MetodoCobro } from "@/lib/documentos";
+import { ETIQUETA_CAUSA_RECTIFICACION, METODOS_COBRO, type CausaRectificacion, type MetodoCobro } from "@/lib/documentos";
 import { accion } from "@/lib/accion";
 
 function refrescar(id?: number) {
@@ -38,14 +38,20 @@ export const convertirDocumento = accion(async (
   documentoId: number,
   tipo: "factura" | "rectificativa",
   motivo?: string,
+  causa?: CausaRectificacion,
 ) => {
   await exigirAdmin();
+  if (tipo === "rectificativa") {
+    if (!motivo?.trim()) throw new Error("Indica el motivo de la rectificación.");
+    if (!causa || !(causa in ETIQUETA_CAUSA_RECTIFICACION)) throw new Error("Causa de rectificación no válida.");
+  }
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("convertir_documento", {
     p_origen: documentoId,
     p_tipo: tipo,
     p_motivo: motivo?.trim() || undefined,
+    p_causa: tipo === "rectificativa" ? causa : undefined,
   });
   if (error) throw new Error(error.message);
 

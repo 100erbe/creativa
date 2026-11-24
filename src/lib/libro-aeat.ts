@@ -16,6 +16,8 @@ export type FacturaEmitida = {
   fecha: string;
   fecha_operacion: string | null;
   tipo: "factura" | "rectificativa";
+  /** R1–R5; si falta en una rectificativa, R1. */
+  causa_rectificacion?: string | null;
   serie: string | null;
   numero_completo: string | null;
   cliente_documento: string | null;
@@ -78,7 +80,7 @@ export function filasExpedidas(facturas: FacturaEmitida[], act: Actividad): Celd
 
     const nif = nifLimpio(f.cliente_documento);
     const extranjero = !!f.cliente_pais && f.cliente_pais.toUpperCase() !== "ES";
-    const tipoFactura = f.tipo === "rectificativa" ? "R1" : nif ? "F1" : "F2";
+    const tipoFactura = f.tipo === "rectificativa" ? (f.causa_rectificacion ?? "R1") : nif ? "F1" : "F2";
     for (const [pct, baseBruta] of porTipo) {
       const base = r2(baseBruta);
       const cuota = exenta ? 0 : r2((base * pct) / 100);

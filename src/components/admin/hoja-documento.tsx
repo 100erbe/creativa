@@ -2,7 +2,7 @@
 // Componente de presentación puro: recibe los datos ya preparados, para usarlo igual
 // en la página de impresión real y en pruebas.
 
-import { ETIQUETA_ALCANCE, ETIQUETA_TIPO } from "@/lib/documentos";
+import { ETIQUETA_ALCANCE, ETIQUETA_CAUSA_RECTIFICACION, ETIQUETA_TIPO, TITULO_HOJA, type CausaRectificacion } from "@/lib/documentos";
 import { fechaNumerica } from "@/lib/formato";
 import { documento } from "@/design/tokens";
 import {
@@ -64,6 +64,8 @@ export type DatosHoja = {
   descripcion: string | null;
   rectifica: { numero: string | null; fecha: string } | null;
   motivoRectificacion: string | null;
+  /** R1–R5 (solo rectificativas). */
+  causaRectificacion: string | null;
   lineas: LineaHoja[];
   totales: {
     suma: number;
@@ -123,7 +125,8 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
   const hayDescuento = d.lineas.some((l) => Number(l.descuento_pct) > 0);
   const mismaOperacion = !d.fechaOperacion || d.fechaOperacion === d.fecha;
 
-  const tituloTipo = (ETIQUETA_TIPO[d.tipo] ?? d.tipo).toUpperCase();
+  const tituloTipo = (TITULO_HOJA[d.tipo] ?? ETIQUETA_TIPO[d.tipo] ?? d.tipo).toUpperCase();
+  const tituloLargo = tituloTipo.length > 12;
   // Columnas de la tabla: concepto + (alcance) + cantidad + precio + (dto) + (iva) + importe
   const columnas = 4 + (hayAlcance ? 1 : 0) + (hayDescuento ? 1 : 0) + (variosTipos ? 1 : 0);
 
@@ -161,7 +164,9 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
             )}
           </div>
           <div className="text-right">
-            <p className={`text-[21pt] font-bold leading-none tracking-[0.04em] ${AZUL}`}>{tituloTipo}</p>
+            <p className={`${tituloLargo ? "text-[15pt]" : "text-[21pt]"} font-bold leading-none tracking-[0.04em] ${AZUL}`}>
+              {tituloTipo}
+            </p>
             <p className="mt-[1.5mm] text-[11pt] font-bold">Nº {d.numero ?? "—"}</p>
           </div>
         </header>
@@ -182,6 +187,14 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
             <Dato
               etiqueta="Rectifica la factura"
               valor={`${d.rectifica.numero ?? "—"} · ${fechaNumerica(d.rectifica.fecha)}`}
+            />
+          )}
+          {d.tipo === "rectificativa" && d.causaRectificacion && (
+            <Dato
+              etiqueta="Rectificación"
+              valor={`Por diferencias · ${d.causaRectificacion} ${
+                ETIQUETA_CAUSA_RECTIFICACION[d.causaRectificacion as CausaRectificacion] ?? ""
+              }`.trim()}
             />
           )}
         </div>

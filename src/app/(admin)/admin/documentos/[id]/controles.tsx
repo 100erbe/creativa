@@ -9,7 +9,9 @@ import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
 import {
   etiquetaDiasVencimiento,
   METODOS_COBRO,
+  MOTIVOS_RECTIFICACION,
   resolverVencimientoDefecto,
+  textoMotivoRectificacion,
   type MetodoCobro,
 } from "@/lib/documentos";
 import {
@@ -138,10 +140,14 @@ export function AccionesDocumento({
   const condiciones = useContext(ContextoCondiciones);
   const guardarCondiciones = condiciones?.guardarPendiente ?? null;
   const [fecha, setFecha] = useState(hoy());
-  const [motivo, setMotivo] = useState("");
+  const [claveMotivo, setClaveMotivo] = useState("");
+  const [detalleMotivo, setDetalleMotivo] = useState("");
   const [confirmarEmision, setConfirmarEmision] = useState(false);
   // Tras compartir o enviar por email un presupuesto recién emitido, se propone marcarlo como enviado.
   const [ofrecerEnviado, setOfrecerEnviado] = useState(false);
+
+  const motivoElegido = MOTIVOS_RECTIFICACION.find((m) => m.clave === claveMotivo);
+  const motivoListo = !!motivoElegido && (!motivoElegido.detalleObligatorio || detalleMotivo.trim().length > 0);
 
   const esBorrador = estado === "borrador";
   const emitido = !esBorrador && estado !== "anulado";
@@ -384,24 +390,62 @@ export function AccionesDocumento({
 
       {emitido && tipo === "factura" && (
         <div className="flex flex-col gap-esp2">
-          <input
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Motivo de la rectificación (opcional)"
-            className="h-11 md:h-9 rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
-          />
+          <label className="flex flex-col gap-1 text-xs text-texto-secundario">
+            Motivo de la rectificación
+            <select
+              value={claveMotivo}
+              onChange={(e) => setClaveMotivo(e.target.value)}
+              className="h-11 md:h-9 rounded-lg border border-borde-campo bg-fondo-superficie px-esp2 text-base md:text-sm text-texto-primario"
+            >
+              <option value="" disabled>
+                Elige el motivo…
+              </option>
+              {MOTIVOS_RECTIFICACION.map((m) => (
+                <option key={m.clave} value={m.clave}>
+                  {m.texto} ({m.causa})
+                </option>
+              ))}
+            </select>
+          </label>
+          {motivoElegido && (
+            <input
+              value={detalleMotivo}
+              onChange={(e) => setDetalleMotivo(e.target.value)}
+              placeholder={
+                motivoElegido.detalleObligatorio
+                  ? motivoElegido.clave === "error_datos"
+                    ? "¿Qué dato estaba mal? (p. ej. NIF del cliente)"
+                    : "Describe el motivo"
+                  : "Detalle (opcional)"
+              }
+              aria-label="Detalle del motivo"
+              className="h-11 md:h-9 rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-base md:text-sm text-texto-primario outline-none focus:border-borde-foco"
+            />
+          )}
           <Boton
             variante="secundario"
             cargando={pendiente}
+            disabled={!motivoListo}
             onClick={() =>
               ejecutar(async () => {
-                const nuevo = await desenvolver(convertirDocumento(documentoId, "rectificativa", motivo));
+                const nuevo = await desenvolver(
+                  convertirDocumento(
+                    documentoId,
+                    "rectificativa",
+                    textoMotivoRectificacion(claveMotivo, detalleMotivo),
+                    motivoElegido!.causa,
+                  ),
+                );
                 router.push(`/admin/documentos/${nuevo}`);
               })
             }
           >
             Crear rectificativa (abono total)
           </Boton>
+          <p className="text-xs text-texto-terciario">
+            Se crea en borrador con todas las líneas en negativo. Para un abono parcial, ajusta las líneas antes de
+            emitirla.
+          </p>
           {facturaImportada && (
             <p className="text-xs text-texto-aviso">
               Factura importada: sus líneas pueden no sumar el total del PDF. Comprueba el importe del borrador antes

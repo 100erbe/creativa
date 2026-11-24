@@ -6,7 +6,15 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
 import { PasosDocumento } from "@/components/admin/pasos-documento";
 import { euros, fechaMedia } from "@/lib/formato";
-import { ETIQUETA_COBRO, ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO, clasificarAgingCobro, validezVencida } from "@/lib/documentos";
+import {
+  ETIQUETA_CAUSA_RECTIFICACION,
+  ETIQUETA_COBRO,
+  ETIQUETA_ESTADO_DOC,
+  ETIQUETA_TIPO,
+  clasificarAgingCobro,
+  validezVencida,
+  type CausaRectificacion,
+} from "@/lib/documentos";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { componerDireccion } from "@/lib/direccion";
 import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
@@ -321,7 +329,16 @@ export default async function PaginaDocumento({
           </div>
         )}
         {doc.motivo_rectificacion && (
-          <p className="text-xs text-texto-secundario">Motivo: {doc.motivo_rectificacion}</p>
+          <p className="text-xs text-texto-secundario">
+            Motivo: {doc.motivo_rectificacion}
+            {doc.causa_rectificacion && (
+              <>
+                {" "}
+                · Causa {doc.causa_rectificacion} (
+                {ETIQUETA_CAUSA_RECTIFICACION[doc.causa_rectificacion as CausaRectificacion] ?? "—"})
+              </>
+            )}
+          </p>
         )}
         {limiteRectificacion &&
           (limiteRectificacion.rectificado > 0.005 || limiteRectificacion.excede || limiteRectificacion.noCuadra) && (

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     supabase
       .from("documentos")
       .select(
-        "fecha, fecha_operacion, tipo, numero_completo, cliente_documento, cliente_razon_social, cliente_pais, regimen_iva, motivo_exencion, descuento_global_pct, retencion_pct, total, series(codigo), lineas_documento(importe, iva_pct)",
+        "fecha, fecha_operacion, tipo, causa_rectificacion, numero_completo, cliente_documento, cliente_razon_social, cliente_pais, regimen_iva, motivo_exencion, descuento_global_pct, retencion_pct, total, series(codigo), lineas_documento(importe, iva_pct)",
       )
       .in("tipo", ["factura", "rectificativa"])
       .not("estado", "in", "(borrador,anulado)")
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
     fecha: d.fecha,
     fecha_operacion: d.fecha_operacion,
     tipo: d.tipo as FacturaEmitida["tipo"],
+    causa_rectificacion: d.causa_rectificacion,
     serie: d.series?.codigo ?? null,
     numero_completo: d.numero_completo,
     cliente_documento: d.cliente_documento,
