@@ -7,12 +7,13 @@ import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
 import {
-  etiquetaDiasVencimiento,
+  etiquetaReglaVencimiento,
   METODOS_COBRO,
   MOTIVOS_RECTIFICACION,
   resolverVencimientoDefecto,
   textoMotivoRectificacion,
   type MetodoCobro,
+  type ReglaVencimiento,
 } from "@/lib/documentos";
 import {
   emitirDocumento,
@@ -699,8 +700,8 @@ export function CondicionesDocumento({
   tipo,
   inicial,
   formasPago,
-  vencimientoClienteDias = null,
-  vencimientoGeneralDias = 30,
+  vencimientoCliente = null,
+  vencimientoGeneral = { dias: 30 },
 }: {
   documentoId: number;
   tipo: string;
@@ -716,8 +717,8 @@ export function CondicionesDocumento({
     notasCliente: string | null;
   };
   formasPago: { id: number; nombre: string; dias_vencimiento: number; plazos_dias: number[] }[];
-  vencimientoClienteDias?: number | null;
-  vencimientoGeneralDias?: number;
+  vencimientoCliente?: ReglaVencimiento | null;
+  vencimientoGeneral?: ReglaVencimiento;
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
   const [guardado, setGuardado] = useState(false);
@@ -740,9 +741,9 @@ export function CondicionesDocumento({
   // Plazos a elegir: solo si la forma de pago es aplazada (y no en presupuestos).
   const plazosForma = esPresupuesto ? [] : (formaSeleccionada?.plazos_dias ?? []);
   const defectoVencimiento = resolverVencimientoDefecto({
-    diasCliente: vencimientoClienteDias,
+    cliente: vencimientoCliente,
     diasFormaPago: formaSeleccionada?.dias_vencimiento ?? null,
-    diasGeneral: vencimientoGeneralDias,
+    general: vencimientoGeneral,
   });
   const textoOrigenVencimiento =
     defectoVencimiento.origen === "cliente"
@@ -848,7 +849,7 @@ export function CondicionesDocumento({
             <span className="pb-1 text-xs text-texto-terciario">Vacío = se calcula al emitir.</span>
           ) : (
             <span className="pb-1 text-xs text-texto-terciario">
-              Vacío = {etiquetaDiasVencimiento(defectoVencimiento.dias).toLowerCase()} ({textoOrigenVencimiento}).
+              Vacío = {etiquetaReglaVencimiento(defectoVencimiento.regla).toLowerCase()} ({textoOrigenVencimiento}).
             </span>
           )}
         </div>

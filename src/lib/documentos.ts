@@ -12,25 +12,62 @@ export function sumarDias(fecha: string, dias: number) {
 /** Opciones rápidas de vencimiento en días para la ficha del cliente. */
 export const PLAZOS_VENCIMIENTO_PRESET = [0, 15, 30, 60, 90] as const;
 
+/** Día del mes siguiente que se ofrece como vencimiento («día 30 del mes siguiente»). */
+export const DIA_MES_SIGUIENTE_PRESET = 30;
+
 export type OrigenVencimiento = "cliente" | "forma_pago" | "general";
 
 /**
+ * Regla de vencimiento por defecto: N días desde la fecha de la factura, o el día N del mes
+ * siguiente (`diaMes`, que manda si está puesto).
+ */
+export type ReglaVencimiento = { dias: number; diaMes?: null } | { diaMes: number; dias?: null };
+
+/** Regla a partir de las columnas (días / día del mes); null si no hay ninguna. */
+export function reglaVencimiento(
+  dias: number | null | undefined,
+  diaMes: number | null | undefined,
+): ReglaVencimiento | null {
+  if (diaMes != null) return { diaMes };
+  if (dias != null) return { dias };
+  return null;
+}
+
+/** Día N del mes siguiente a una fecha AAAA-MM-DD; si ese mes no tiene el día, el último (igual que en SQL). */
+export function diaDelMesSiguiente(fecha: string, dia: number): string {
+  const [a, m] = fecha.slice(0, 10).split("-").map(Number) as [number, number];
+  const ultimo = new Date(Date.UTC(a, m + 1, 0)).getUTCDate(); // último día del mes siguiente
+  const d = new Date(Date.UTC(a, m, Math.min(dia, ultimo)));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Fecha de vencimiento que da una regla para una factura de fecha `fecha`. */
+export function aplicarReglaVencimiento(fecha: string, regla: ReglaVencimiento): string {
+  return regla.diaMes != null ? diaDelMesSiguiente(fecha, regla.diaMes) : sumarDias(fecha, regla.dias);
+}
+
+/**
  * Resuelve el vencimiento por defecto cuando el borrador no fija plazo ni fecha manual.
- * Misma prioridad que `emitir_documento` en SQL: ficha del cliente > forma de pago > ajuste general.
+ * Misma prioridad que `vencimiento_automatico` en SQL: ficha del cliente > forma de pago > ajuste general.
  */
 export function resolverVencimientoDefecto(args: {
-  diasCliente: number | null | undefined;
+  cliente: ReglaVencimiento | null | undefined;
   diasFormaPago: number | null | undefined;
-  diasGeneral: number;
-}): { dias: number; origen: OrigenVencimiento } {
-  if (args.diasCliente != null) return { dias: args.diasCliente, origen: "cliente" };
-  if (args.diasFormaPago != null) return { dias: args.diasFormaPago, origen: "forma_pago" };
-  return { dias: args.diasGeneral, origen: "general" };
+  general: ReglaVencimiento;
+}): { regla: ReglaVencimiento; origen: OrigenVencimiento } {
+  if (args.cliente) return { regla: args.cliente, origen: "cliente" };
+  if (args.diasFormaPago != null) return { regla: { dias: args.diasFormaPago }, origen: "forma_pago" };
+  return { regla: args.general, origen: "general" };
 }
 
 export function etiquetaDiasVencimiento(dias: number): string {
   if (dias === 0) return "Al contado (0 días)";
   return `${dias} ${dias === 1 ? "día" : "días"}`;
+}
+
+/** «30 días», «Al contado (0 días)» o «Día 30 del mes siguiente». */
+export function etiquetaReglaVencimiento(regla: ReglaVencimiento): string {
+  return regla.diaMes != null ? `Día ${regla.diaMes} del mes siguiente` : etiquetaDiasVencimiento(regla.dias);
 }
 
 /**

@@ -8,7 +8,13 @@ import {
   TIPOS_CLIENTE,
   TIPOS_DOCUMENTO_ID,
 } from "@/lib/clientes";
-import { etiquetaDiasVencimiento, PLAZOS_VENCIMIENTO_PRESET } from "@/lib/documentos";
+import {
+  DIA_MES_SIGUIENTE_PRESET,
+  etiquetaDiasVencimiento,
+  etiquetaReglaVencimiento,
+  PLAZOS_VENCIMIENTO_PRESET,
+  type ReglaVencimiento,
+} from "@/lib/documentos";
 import { guardarCliente, type EstadoFormulario } from "./acciones";
 
 export type DatosCliente = {
@@ -32,6 +38,7 @@ export type DatosCliente = {
   motivo_exencion?: string | null;
   forma_pago_id?: number | null;
   dias_vencimiento?: number | null;
+  vencimiento_dia_mes?: number | null;
   cuenta_cobro_id?: number | null;
   descuento_habitual?: number | null;
   notas?: string | null;
@@ -87,26 +94,40 @@ export function FormularioCliente({
   grupos,
   formasPago,
   cuentas,
-  vencimientoGeneralDias = 30,
+  vencimientoGeneral = { dias: 30 },
 }: {
   inicial?: DatosCliente;
   grupos: Opcion[];
   formasPago: Opcion[];
   cuentas: Opcion[];
-  vencimientoGeneralDias?: number;
+  vencimientoGeneral?: ReglaVencimiento;
 }) {
   const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(guardarCliente, {});
   const [regimen, setRegimen] = useState(inicial?.regimen_iva ?? "general");
   const diasInicial = inicial?.dias_vencimiento ?? null;
   const esPresetInicial =
     diasInicial != null && (PLAZOS_VENCIMIENTO_PRESET as readonly number[]).includes(diasInicial);
+  const diaMesInicial = inicial?.vencimiento_dia_mes ?? null;
+  // Valores de la lista: "" = ajuste general, "30" = días, "dia:30" = día del mes siguiente, "personalizado".
   const [modoVencimiento, setModoVencimiento] = useState<string>(
-    diasInicial == null ? "" : esPresetInicial ? String(diasInicial) : "personalizado",
+    diaMesInicial != null
+      ? `dia:${diaMesInicial}`
+      : diasInicial == null
+        ? ""
+        : esPresetInicial
+          ? String(diasInicial)
+          : "personalizado",
   );
   const [diasPersonalizado, setDiasPersonalizado] = useState<string>(
     diasInicial != null && !esPresetInicial ? String(diasInicial) : "",
   );
-  const valorDiasVencimiento = modoVencimiento === "personalizado" ? diasPersonalizado : modoVencimiento;
+  const esDiaMes = modoVencimiento.startsWith("dia:");
+  const valorDiaMes = esDiaMes ? modoVencimiento.slice(4) : "";
+  const valorDiasVencimiento = esDiaMes
+    ? ""
+    : modoVencimiento === "personalizado"
+      ? diasPersonalizado
+      : modoVencimiento;
   const editando = inicial?.id != null;
   const necesitaMotivo = regimen === "exento" || regimen === "intracomunitario";
 
@@ -250,6 +271,7 @@ export function FormularioCliente({
           ayuda="Se aplica a las facturas de este cliente que no tienen un plazo o una fecha propios, también a las ya emitidas: al cambiarlo se recalcula su vencimiento."
         >
           <input type="hidden" name="dias_vencimiento" value={valorDiasVencimiento} />
+          <input type="hidden" name="vencimiento_dia_mes" value={valorDiaMes} />
           <div className="flex gap-esp2">
             <select
               aria-label="Vencimiento por defecto"
@@ -257,12 +279,19 @@ export function FormularioCliente({
               onChange={(e) => setModoVencimiento(e.target.value)}
               className={entrada}
             >
-              <option value="">Usar ajuste general ({etiquetaDiasVencimiento(vencimientoGeneralDias)})</option>
+              <option value="">Usar ajuste general ({etiquetaReglaVencimiento(vencimientoGeneral)})</option>
               {PLAZOS_VENCIMIENTO_PRESET.map((d) => (
                 <option key={d} value={String(d)}>
                   {etiquetaDiasVencimiento(d)}
                 </option>
               ))}
+              <option value={`dia:${DIA_MES_SIGUIENTE_PRESET}`}>
+                {etiquetaReglaVencimiento({ diaMes: DIA_MES_SIGUIENTE_PRESET })}
+              </option>
+              {/* Un cliente con otro día del mes (puesto a mano en la base de datos) no se pierde al editar. */}
+              {diaMesInicial != null && diaMesInicial !== DIA_MES_SIGUIENTE_PRESET && (
+                <option value={`dia:${diaMesInicial}`}>{etiquetaReglaVencimiento({ diaMes: diaMesInicial })}</option>
+              )}
               <option value="personalizado">Personalizado (otros días)…</option>
             </select>
             {modoVencimiento === "personalizado" && (

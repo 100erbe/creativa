@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { desenvolver } from "@/lib/accion";
+import { DIA_MES_SIGUIENTE_PRESET, etiquetaReglaVencimiento } from "@/lib/documentos";
 import { guardarEmpresa } from "./acciones";
 
 type Datos = {
@@ -21,6 +22,7 @@ type Datos = {
   lema: string;
   validez_presupuesto_dias: number;
   vencimiento_defecto_dias: number;
+  vencimiento_defecto_dia_mes: number | null;
   /** Actividad para los libros registro AEAT: código + tipo (p. ej. "A03") y epígrafe IAE. */
   actividad: string;
   epigrafe_iae: string;
@@ -36,7 +38,7 @@ const ACTIVIDADES = [
   { valor: "C", etiqueta: "C · Actividad no iniciada" },
 ];
 
-const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias" | "vencimiento_defecto_dias" | "actividad" | "epigrafe_iae">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
+const CAMPOS: { campo: Exclude<keyof Datos, "validez_presupuesto_dias" | "vencimiento_defecto_dias" | "vencimiento_defecto_dia_mes" | "actividad" | "epigrafe_iae">; etiqueta: string; ancho?: "completo"; tipo?: string }[] = [
   { campo: "nombre_comercial", etiqueta: "Nombre comercial *" },
   { campo: "razon_social", etiqueta: "Razón social *" },
   { campo: "nif", etiqueta: "NIF *" },
@@ -55,6 +57,10 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
   const [datos, setDatos] = useState(inicial);
   const [dias, setDias] = useState(String(inicial.validez_presupuesto_dias));
   const [vencimientoDefecto, setVencimientoDefecto] = useState(String(inicial.vencimiento_defecto_dias));
+  // "dias" = N días desde la factura; "30" = día 30 del mes siguiente.
+  const [tipoVencimiento, setTipoVencimiento] = useState(
+    inicial.vencimiento_defecto_dia_mes != null ? String(inicial.vencimiento_defecto_dia_mes) : "dias",
+  );
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
   const [pendiente, iniciar] = useTransition();
@@ -73,6 +79,7 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
                 ...datos,
                 validez_presupuesto_dias: Number(dias),
                 vencimiento_defecto_dias: Number(vencimientoDefecto),
+                vencimiento_defecto_dia_mes: tipoVencimiento === "dias" ? null : Number(tipoVencimiento),
               }),
             );
             setGuardado(true);
@@ -101,16 +108,40 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
           <span className="text-xs text-texto-terciario">Se usa al emitir si no pones «Válido hasta».</span>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-texto-secundario">Vencimiento por defecto (días)</span>
-          <input
-            value={vencimientoDefecto}
-            onChange={(e) => setVencimientoDefecto(e.target.value)}
-            inputMode="numeric"
-            className={CAMPO}
-          />
+          <span className="text-xs font-medium text-texto-secundario">Vencimiento por defecto</span>
+          <div className="flex gap-esp2">
+            <select
+              aria-label="Tipo de vencimiento por defecto"
+              value={tipoVencimiento}
+              onChange={(e) => setTipoVencimiento(e.target.value)}
+              className={CAMPO}
+            >
+              <option value="dias">Días desde la factura</option>
+              <option value={String(DIA_MES_SIGUIENTE_PRESET)}>
+                {etiquetaReglaVencimiento({ diaMes: DIA_MES_SIGUIENTE_PRESET })}
+              </option>
+              {inicial.vencimiento_defecto_dia_mes != null &&
+                inicial.vencimiento_defecto_dia_mes !== DIA_MES_SIGUIENTE_PRESET && (
+                  <option value={String(inicial.vencimiento_defecto_dia_mes)}>
+                    {etiquetaReglaVencimiento({ diaMes: inicial.vencimiento_defecto_dia_mes })}
+                  </option>
+                )}
+            </select>
+            {tipoVencimiento === "dias" && (
+              <input
+                aria-label="Días de vencimiento por defecto"
+                value={vencimientoDefecto}
+                onChange={(e) => setVencimientoDefecto(e.target.value)}
+                inputMode="numeric"
+                placeholder="Días"
+                className={`${CAMPO} w-24 shrink-0 tabular-nums`}
+              />
+            )}
+          </div>
           <span className="text-xs text-texto-terciario">
-            Se aplica si ni el documento, ni el cliente ni la forma de pago fijan otro (0 = al contado). Al
-            cambiarlo se recalcula también el vencimiento de las facturas ya emitidas que lo usan.
+            Se aplica si ni el documento, ni el cliente ni la forma de pago fijan otro (0 días = al contado; si el
+            mes siguiente no tiene día 30, vence el último día del mes). Al cambiarlo se recalcula también el
+            vencimiento de las facturas ya emitidas que lo usan.
           </span>
         </label>
       </div>

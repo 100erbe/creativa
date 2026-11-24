@@ -20,6 +20,7 @@ const esquema = z.object({
   lema: z.string().trim(),
   validez_presupuesto_dias: z.number().int("Los días de validez son un número entero.").min(1, "Mínimo 1 día.").max(365, "Máximo 365 días."),
   vencimiento_defecto_dias: z.number().int("Los días de vencimiento son un número entero.").min(0, "Mínimo 0 días.").max(365, "Máximo 365 días."),
+  vencimiento_defecto_dia_mes: z.number().int().min(1, "El día va de 1 a 31.").max(31, "El día va de 1 a 31.").nullable(),
   actividad: z.union([z.literal(""), z.string().regex(/^(C|D|[AB]\d{2})$/, "El tipo de actividad no es válido.")]),
   epigrafe_iae: z.union([z.literal(""), z.string().trim().regex(/^[0-9A-Za-z]{1,4}$/, "El epígrafe IAE tiene hasta 4 caracteres, sin puntos.")]),
 });
@@ -50,6 +51,7 @@ export const guardarEmpresa = accion(async (datos: DatosEmpresa) => {
       lema: d.lema || null,
       validez_presupuesto_dias: d.validez_presupuesto_dias,
       vencimiento_defecto_dias: d.vencimiento_defecto_dias,
+      vencimiento_defecto_dia_mes: d.vencimiento_defecto_dia_mes,
       actividad_codigo: d.actividad ? d.actividad.slice(0, 1) : null,
       actividad_tipo: d.actividad.length === 3 ? d.actividad.slice(1) : null,
       epigrafe_iae: d.epigrafe_iae || null,

@@ -7,7 +7,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { clasificarAgingCobro, etiquetaDiasVencimiento } from "@/lib/documentos";
+import { clasificarAgingCobro, etiquetaReglaVencimiento, reglaVencimiento } from "@/lib/documentos";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -115,7 +115,7 @@ export default async function PaginaCliente({
       .neq("estado", "anulado")
       .order("fecha", { ascending: false })
       .order("id", { ascending: false }),
-    supabase.from("empresa").select("vencimiento_defecto_dias").eq("id", 1).maybeSingle(),
+    supabase.from("empresa").select("vencimiento_defecto_dias, vencimiento_defecto_dia_mes").eq("id", 1).maybeSingle(),
   ]);
   const productosVendidos: ProductoVendidoItem[] = (facturasConLineas ?? []).flatMap((doc) =>
     [...(doc.lineas_documento ?? [])]
@@ -416,9 +416,15 @@ export default async function PaginaCliente({
               <Dato
                 etiqueta="Vencimiento por defecto"
                 valor={
-                  cliente.dias_vencimiento != null
-                    ? etiquetaDiasVencimiento(cliente.dias_vencimiento)
-                    : `${etiquetaDiasVencimiento(empresa?.vencimiento_defecto_dias ?? 30)} (general)`
+                  (() => {
+                    const propia = reglaVencimiento(cliente.dias_vencimiento, cliente.vencimiento_dia_mes);
+                    if (propia) return etiquetaReglaVencimiento(propia);
+                    const general = reglaVencimiento(
+                      empresa?.vencimiento_defecto_dias ?? 30,
+                      empresa?.vencimiento_defecto_dia_mes,
+                    ) ?? { dias: 30 };
+                    return `${etiquetaReglaVencimiento(general)} (general)`;
+                  })()
                 }
               />
               <Dato

@@ -1,4 +1,11 @@
-import { METODOS_COBRO, resolverVencimientoDefecto, sumarDias, textoFormaPago } from "@/lib/documentos";
+import {
+  aplicarReglaVencimiento,
+  METODOS_COBRO,
+  reglaVencimiento,
+  resolverVencimientoDefecto,
+  sumarDias,
+  textoFormaPago,
+} from "@/lib/documentos";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -52,7 +59,7 @@ export default async function PaginaImprimirDocumento({
     supabase
       .from("documentos")
       .select(
-        "*, clientes(razon_social, numero_documento, tipo_documento, direccion, codigo_postal, municipio, provincia, dias_vencimiento)",
+        "*, clientes(razon_social, numero_documento, tipo_documento, direccion, codigo_postal, municipio, provincia, dias_vencimiento, vencimiento_dia_mes)",
       )
       .eq("id", documentoId)
       .maybeSingle(),
@@ -102,13 +109,15 @@ export default async function PaginaImprimirDocumento({
         ).data
       : null;
     const defecto = resolverVencimientoDefecto({
-      diasCliente: cliente?.dias_vencimiento,
+      cliente: reglaVencimiento(cliente?.dias_vencimiento, cliente?.vencimiento_dia_mes),
       diasFormaPago: forma?.dias_vencimiento ?? null,
-      diasGeneral: empresa?.vencimiento_defecto_dias ?? 30,
+      general: reglaVencimiento(empresa?.vencimiento_defecto_dias ?? 30, empresa?.vencimiento_defecto_dia_mes) ?? {
+        dias: 30,
+      },
     });
     fechaVencimientoPreview = doc.plazo_dias
       ? sumarDias(doc.fecha, doc.plazo_dias)
-      : (doc.fecha_vencimiento ?? sumarDias(doc.fecha, defecto.dias));
+      : (doc.fecha_vencimiento ?? aplicarReglaVencimiento(doc.fecha, defecto.regla));
     if (!textoPago && forma?.texto_factura) {
       textoPago = textoFormaPago(forma.texto_factura, doc.plazo_dias, fechaVencimientoPreview);
     }

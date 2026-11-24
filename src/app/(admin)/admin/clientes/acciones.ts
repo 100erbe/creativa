@@ -36,6 +36,12 @@ const esquema = z
       .min(0, "El vencimiento va de 0 a 365 días.")
       .max(365, "El vencimiento va de 0 a 365 días.")
       .nullable(),
+    vencimiento_dia_mes: z
+      .number()
+      .int("El día de vencimiento es un número entero.")
+      .min(1, "El día de vencimiento va de 1 a 31.")
+      .max(31, "El día de vencimiento va de 1 a 31.")
+      .nullable(),
     cuenta_cobro_id: z.number().int().nullable(),
     descuento_habitual: z.number().min(0, "El descuento va de 0 a 100.").max(100, "El descuento va de 0 a 100."),
     notas: z.string().nullable(),
@@ -73,7 +79,9 @@ function leer(formData: FormData) {
     regimen_iva: t("regimen_iva") ?? "general",
     motivo_exencion: t("motivo_exencion"),
     forma_pago_id: n("forma_pago_id"),
-    dias_vencimiento: n("dias_vencimiento"),
+    // «Día N del mes siguiente» y «N días» se excluyen: si hay día del mes, los días quedan vacíos.
+    vencimiento_dia_mes: n("vencimiento_dia_mes"),
+    dias_vencimiento: n("vencimiento_dia_mes") != null ? null : n("dias_vencimiento"),
     cuenta_cobro_id: n("cuenta_cobro_id"),
     descuento_habitual: n("descuento_habitual") ?? 0,
     notas: t("notas"),

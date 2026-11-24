@@ -48,6 +48,7 @@ export default async function PaginaEmpresa() {
             lema: e.lema ?? "",
             validez_presupuesto_dias: e.validez_presupuesto_dias,
             vencimiento_defecto_dias: e.vencimiento_defecto_dias,
+            vencimiento_defecto_dia_mes: e.vencimiento_defecto_dia_mes,
             actividad: e.actividad_codigo ? `${e.actividad_codigo}${e.actividad_tipo ?? ""}` : "",
             epigrafe_iae: e.epigrafe_iae ?? "",
           }}

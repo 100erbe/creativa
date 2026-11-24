@@ -428,6 +428,7 @@ export type Database = {
           cuenta_cobro_id: number | null
           descuento_habitual: number
           dias_vencimiento: number | null
+          vencimiento_dia_mes: number | null
           direccion: string | null
           email_facturacion: string | null
           forma_pago_id: number | null
@@ -457,6 +458,7 @@ export type Database = {
           cuenta_cobro_id?: number | null
           descuento_habitual?: number
           dias_vencimiento?: number | null
+          vencimiento_dia_mes?: number | null
           direccion?: string | null
           email_facturacion?: string | null
           forma_pago_id?: number | null
@@ -486,6 +488,7 @@ export type Database = {
           cuenta_cobro_id?: number | null
           descuento_habitual?: number
           dias_vencimiento?: number | null
+          vencimiento_dia_mes?: number | null
           direccion?: string | null
           email_facturacion?: string | null
           forma_pago_id?: number | null
@@ -1102,6 +1105,7 @@ export type Database = {
           telefono: string | null
           validez_presupuesto_dias: number
           vencimiento_defecto_dias: number
+          vencimiento_defecto_dia_mes: number | null
         }
         Insert: {
           actividad_codigo?: string | null
@@ -1122,6 +1126,7 @@ export type Database = {
           telefono?: string | null
           validez_presupuesto_dias?: number
           vencimiento_defecto_dias?: number
+          vencimiento_defecto_dia_mes?: number | null
         }
         Update: {
           actividad_codigo?: string | null
@@ -1142,6 +1147,7 @@ export type Database = {
           telefono?: string | null
           validez_presupuesto_dias?: number
           vencimiento_defecto_dias?: number
+          vencimiento_defecto_dia_mes?: number | null
         }
         Relationships: []
       }

@@ -12,6 +12,7 @@ import {
   ETIQUETA_ESTADO_DOC,
   ETIQUETA_TIPO,
   clasificarAgingCobro,
+  reglaVencimiento,
   validezVencida,
   type CausaRectificacion,
 } from "@/lib/documentos";
@@ -51,7 +52,7 @@ export default async function PaginaDocumento({
   const resultados = await Promise.all([
     supabase
       .from("documentos")
-      .select("*, clientes(razon_social, nombre_comercial, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion, dias_vencimiento)")
+      .select("*, clientes(razon_social, nombre_comercial, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion, dias_vencimiento, vencimiento_dia_mes)")
       .eq("id", documentoId)
       .maybeSingle(),
     supabase
@@ -123,7 +124,7 @@ export default async function PaginaDocumento({
   const [{ data: formasPago }, { data: empresaBorrador }] = esBorrador
     ? await Promise.all([
         supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre"),
-        supabase.from("empresa").select("vencimiento_defecto_dias").eq("id", 1).maybeSingle(),
+        supabase.from("empresa").select("vencimiento_defecto_dias, vencimiento_defecto_dia_mes").eq("id", 1).maybeSingle(),
       ])
     : [{ data: [] }, { data: null }];
   // Facturas y rectificativas emitidas llevan cobros (en la rectificativa, devoluciones o compensaciones).
@@ -618,8 +619,13 @@ export default async function PaginaDocumento({
                 documentoId={doc.id}
                 tipo={doc.tipo}
                 formasPago={formasPago ?? []}
-                vencimientoClienteDias={cliente?.dias_vencimiento ?? null}
-                vencimientoGeneralDias={empresaBorrador?.vencimiento_defecto_dias ?? 30}
+                vencimientoCliente={reglaVencimiento(cliente?.dias_vencimiento, cliente?.vencimiento_dia_mes)}
+                vencimientoGeneral={
+                  reglaVencimiento(
+                    empresaBorrador?.vencimiento_defecto_dias ?? 30,
+                    empresaBorrador?.vencimiento_defecto_dia_mes,
+                  ) ?? { dias: 30 }
+                }
                 inicial={{
                   fechaVencimiento: doc.fecha_vencimiento,
                   plazoDias: doc.plazo_dias,
