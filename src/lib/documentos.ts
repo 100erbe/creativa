@@ -1,6 +1,6 @@
 // Etiquetas en castellano para los enums de documentos y cobros.
 
-import { DIAS_PARA_INSOLUTA, diasEntre, hoyEnEspana } from "./estado-cuenta";
+import { DIAS_RIESGO_CRITICO, diasEntre, hoyEnEspana, vencimientoEfectivo } from "./estado-cuenta";
 
 /** Suma días a una fecha AAAA-MM-DD. */
 export function sumarDias(fecha: string, dias: number) {
@@ -97,10 +97,8 @@ export function diasDesdeVencimiento(fechaVencimiento: string | null | undefined
 }
 
 /**
- * Clasifica una factura o abono positivo pendiente por antigüedad:
- * - Con `fechaVencimiento`: cuenta los días desde el vencimiento (1–30, 31–90, >90).
- * - Sin `fechaVencimiento` (facturas importadas): si tiene `fechaEmision` y supera 90 días desde
- *   la emisión, se clasifica como `critica_90` (misma regla que el estado de cuenta).
+ * Clasifica una factura o abono positivo pendiente por los días desde su vencimiento (1–30, 31–90, >90).
+ * Sin `fechaVencimiento` se usa la emisión + DIAS_VENCIMIENTO_DEFECTO (misma regla que el estado de cuenta).
  */
 export function clasificarAgingCobro(
   estadoCobro: string | null | undefined,
@@ -111,9 +109,10 @@ export function clasificarAgingCobro(
   if (!estadoCobro || estadoCobro === "cobrada") {
     return { tramo: "al_dia", diasVencido: 0, esCritica90: false };
   }
-  if (fechaVencimiento) {
-    const dias = diasDesdeVencimiento(fechaVencimiento, hoy);
-    if (dias > DIAS_PARA_INSOLUTA) {
+  const vencimiento = fechaVencimiento || (fechaEmision ? vencimientoEfectivo(fechaEmision, null) : null);
+  if (vencimiento) {
+    const dias = diasDesdeVencimiento(vencimiento, hoy);
+    if (dias > DIAS_RIESGO_CRITICO) {
       return { tramo: "critica_90", diasVencido: dias, esCritica90: true };
     }
     if (dias >= 31) {
@@ -123,12 +122,6 @@ export function clasificarAgingCobro(
       return { tramo: "vencida_30", diasVencido: Math.max(1, dias), esCritica90: false };
     }
     return { tramo: "al_dia", diasVencido: 0, esCritica90: false };
-  }
-  if (fechaEmision) {
-    const diasEmision = diasDesdeVencimiento(fechaEmision, hoy);
-    if (diasEmision > DIAS_PARA_INSOLUTA) {
-      return { tramo: "critica_90", diasVencido: diasEmision, esCritica90: true };
-    }
   }
   return { tramo: "al_dia", diasVencido: 0, esCritica90: false };
 }

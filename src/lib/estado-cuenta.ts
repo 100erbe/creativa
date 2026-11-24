@@ -1,15 +1,18 @@
 // Estado de cuenta de un cliente: todas sus facturas emitidas con su situación de cobro,
-// y cuáles están vencidas (+90 días). Lógica pura, sin acceso a datos, para poder probarla aparte.
+// y cuáles están vencidas. Lógica pura, sin acceso a datos, para poder probarla aparte.
 //
-// Reglas (decididas con la empresa el 17/11/2026):
-// - «Vencida» (+90 días): con saldo pendiente y más de 90 días desde su emisión (también si se pagó una parte).
-//   No se mira la fecha de vencimiento: las facturas importadas no la tienen.
+// Reglas (decididas con la empresa el 24/11/2026, sustituyen a la de «+90 días desde la emisión»):
+// - «Vencida»: con saldo pendiente y ya pasada su fecha de vencimiento (también si se pagó una parte).
+//   El vencimiento es el de cada factura (plazo del cliente, de la forma de pago o puesto a mano); si una
+//   factura no lo tiene, se usa la fecha de emisión + DIAS_VENCIMIENTO_DEFECTO.
 // - Un saldo de menos de 1 € (diferencias de céntimos de la importación) se da por cobrado.
 // - Las rectificativas (abonos) ligadas a una factura se descuentan de su saldo: una factura
 //   saldada con su abono no se reclama. Los abonos sueltos sin aplicar se descuentan del total.
 
-/** Días desde la emisión a partir de los cuales una factura sin cobrar se considera vencida (+90 días). */
-export const DIAS_PARA_INSOLUTA = 90;
+/** Vencimiento que se aplica a una factura que no tiene fecha de vencimiento (días desde la emisión). */
+export const DIAS_VENCIMIENTO_DEFECTO = 30;
+/** Días desde el vencimiento a partir de los cuales el saldo se considera en riesgo crítico (Panel, Cobros). */
+export const DIAS_RIESGO_CRITICO = 90;
 /** Saldos por debajo de esto se ignoran (diferencias de céntimos). */
 export const SALDO_MINIMO = 1;
 
@@ -29,6 +32,8 @@ export type DocumentoCobro = {
   tipo: "factura" | "rectificativa";
   numero: string;
   fecha: string; // AAAA-MM-DD
+  /** Fecha de vencimiento (AAAA-MM-DD); null = emisión + DIAS_VENCIMIENTO_DEFECTO. */
+  fechaVencimiento: string | null;
   total: number;
   cobrado: number;
   pendiente: number;
@@ -39,7 +44,10 @@ export type DocumentoCobro = {
 
 export type LineaEstadoCuenta = DocumentoCobro & {
   estado: EstadoLinea;
-  diasDesdeEmision: number;
+  /** Vencimiento que se aplica (el de la factura o el de por defecto). */
+  vencimiento: string;
+  /** Días desde el vencimiento (0 si todavía no ha vencido). */
+  diasVencida: number;
   /** Lo que queda por pagar después de aplicar los abonos ligados (en un abono: lo que queda a favor del cliente, en negativo). */
   saldo: number;
   /** Números de los abonos que se han descontado de esta factura. */
@@ -57,7 +65,7 @@ export type EstadoCuenta = {
   totalInsoluto: number;
   /** Abonos sueltos todavía sin aplicar (importe negativo). */
   abonosPendientes: number;
-  /** Importe vencido (+90 días) a pagar ya, descontados los abonos sin aplicar (nunca menos de 0). */
+  /** Importe vencido a pagar ya, descontados los abonos sin aplicar (nunca menos de 0). */
   totalAReclamar: number;
 };
 
@@ -70,22 +78,35 @@ export function diasEntre(desde: string, hasta: string) {
   return Math.round((b - a) / 86_400_000);
 }
 
+/** Suma días a una fecha AAAA-MM-DD. */
+export function sumarDias(fecha: string, dias: number) {
+  const t = Date.UTC(+fecha.slice(0, 4), +fecha.slice(5, 7) - 1, +fecha.slice(8, 10)) + dias * 86_400_000;
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+/** Vencimiento que se aplica a un documento: el suyo o, si no tiene, la emisión + DIAS_VENCIMIENTO_DEFECTO. */
+export function vencimientoEfectivo(fecha: string, fechaVencimiento: string | null | undefined) {
+  const v = fechaVencimiento?.slice(0, 10);
+  return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : sumarDias(fecha.slice(0, 10), DIAS_VENCIMIENTO_DEFECTO);
+}
+
 /** Fecha de hoy en España (AAAA-MM-DD), aunque el servidor esté en UTC. */
 export function hoyEnEspana(ahora = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(ahora);
 }
 
-/** Estado de algo que se debe (factura, o «abono» con importe positivo) según su saldo y antigüedad. */
-function estadoDeuda(saldo: number, dias: number, algoCobrado: boolean): EstadoLinea {
+/** Estado de algo que se debe (factura, o «abono» con importe positivo) según su saldo y los días desde su vencimiento. */
+function estadoDeuda(saldo: number, diasVencida: number, algoCobrado: boolean): EstadoLinea {
   if (saldo < SALDO_MINIMO) return "pagada";
-  if (dias > DIAS_PARA_INSOLUTA) return "insoluta";
+  if (diasVencida > 0) return "insoluta";
   return algoCobrado ? "parcial" : "pendiente";
 }
 
 export function calcularEstadoCuenta(documentos: DocumentoCobro[], hoy: string): EstadoCuenta {
   const ordenados = [...documentos].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero.localeCompare(b.numero));
   const ids = new Set(ordenados.map((d) => d.id));
-  const dias = (d: DocumentoCobro) => Math.max(0, diasEntre(d.fecha, hoy));
+  const venc = (d: DocumentoCobro) => vencimientoEfectivo(d.fecha, d.fechaVencimiento);
+  const dias = (d: DocumentoCobro) => Math.max(0, diasEntre(venc(d), hoy));
 
   // Abonos ligados a una factura de la lista.
   const abonosPorFactura = new Map<number, DocumentoCobro[]>();
@@ -116,7 +137,8 @@ export function calcularEstadoCuenta(documentos: DocumentoCobro[], hoy: string):
     porId.set(d.id, {
       ...d,
       estado,
-      diasDesdeEmision: dias(d),
+      vencimiento: venc(d),
+      diasVencida: dias(d),
       saldo: estado === "pagada" ? 0 : saldo,
       abonos: aplicados,
       centimosIgnorados: centimos,
@@ -138,7 +160,8 @@ export function calcularEstadoCuenta(documentos: DocumentoCobro[], hoy: string):
       lineas.push({
         ...d,
         estado,
-        diasDesdeEmision: dias(d),
+        vencimiento: venc(d),
+      diasVencida: dias(d),
         saldo: estado === "pagada" ? 0 : saldo,
         abonos: [],
         centimosIgnorados: estado === "pagada" ? saldo : 0,
@@ -149,7 +172,8 @@ export function calcularEstadoCuenta(documentos: DocumentoCobro[], hoy: string):
     lineas.push({
       ...d,
       estado: pendienteAbono ? "abono_pendiente" : "abono_aplicado",
-      diasDesdeEmision: dias(d),
+      vencimiento: venc(d),
+      diasVencida: dias(d),
       saldo: pendienteAbono ? saldo : 0,
       abonos: [],
       centimosIgnorados: pendienteAbono ? 0 : Math.abs(saldo),

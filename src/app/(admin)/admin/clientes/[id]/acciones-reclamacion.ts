@@ -33,7 +33,7 @@ export const crearBorradorReclamacion = accion(
     const estadoCuenta = await cargarEstadoCuenta(supabase, clienteId);
     if (!estadoCuenta) throw new Error("El cliente no existe.");
     const { estado, cliente } = estadoCuenta;
-    if (estado.insolutas.length === 0) throw new Error("Este cliente no tiene facturas vencidas (+90 días).");
+    if (estado.insolutas.length === 0) throw new Error("Este cliente no tiene facturas vencidas.");
 
     // Si entre preparar y crear el borrador ha cambiado algo (un cobro nuevo), se vuelve a preparar.
     const actuales = estado.insolutas.map((l) => l.id).sort((a, b) => a - b).join(",");

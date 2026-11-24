@@ -179,8 +179,8 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
               {sinVenc.length} factura{sinVenc.length === 1 ? "" : "s"} sin fecha de vencimiento
             </p>
             <p className="text-meta font-medium text-texto-secundario">
-              <span className="tabular-nums">{euros(suma(sinVenc))}</span> que no cuentan en el tramo 1–89 días hasta
-              completar su vencimiento; las que superan 90 días desde la emisión sí figuran en «90+ días».
+              <span className="tabular-nums">{euros(suma(sinVenc))}</span> : se les aplica un
+              vencimiento de 30 días desde la emisión hasta que se complete.
             </p>
           </div>
           <Link

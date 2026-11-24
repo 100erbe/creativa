@@ -11,7 +11,7 @@ import { euros, fechaNumerica } from "@/lib/formato";
 import { separarEmails } from "@/lib/reclamacion";
 import { crearBorradorReclamacion } from "./acciones-reclamacion";
 
-export type FacturaInsoluta = { id: number; numero: string; fecha: string; saldo: number; diasDesdeEmision: number; archivo: string };
+export type FacturaInsoluta = { id: number; numero: string; fecha: string; saldo: number; vencimiento: string; archivo: string };
 
 type EstadoArchivo = "espera" | "preparando" | "listo" | "error";
 
@@ -44,12 +44,12 @@ export function ReclamarImpagadas(p: Props) {
   const [hecho, setHecho] = useState<{ url: string; remitente: string } | null>(null);
 
   const archivos: { clave: string; archivo: "estado" | number; nombre: string; detalle: string }[] = [
-    { clave: "estado", archivo: "estado", nombre: `${p.archivoEstado}.pdf`, detalle: "Todas las facturas del cliente y el total vencido (+90 días)" },
+    { clave: "estado", archivo: "estado", nombre: `${p.archivoEstado}.pdf`, detalle: "Todas las facturas del cliente y el total vencido" },
     ...p.insolutas.map((f) => ({
       clave: String(f.id),
       archivo: f.id,
       nombre: `${f.archivo}.pdf`,
-      detalle: `${fechaNumerica(f.fecha)} · pendiente ${euros(f.saldo)} · emitida hace ${f.diasDesdeEmision} días`,
+      detalle: `${fechaNumerica(f.fecha)} · pendiente ${euros(f.saldo)} · vencida el ${fechaNumerica(f.vencimiento)}`,
     })),
   ];
 
@@ -139,7 +139,7 @@ export function ReclamarImpagadas(p: Props) {
                 </h2>
                 <p className="tabular-nums text-sm text-texto-secundario">
                   {p.insolutas.length} factura{p.insolutas.length === 1 ? "" : "s"} vencida
-                  {p.insolutas.length === 1 ? "" : "s"} (+90 días) · total{" "}
+                  {p.insolutas.length === 1 ? "" : "s"} · total{" "}
                   <strong className="text-texto-critico">{euros(p.totalAReclamar)}</strong>
                 </p>
               </div>

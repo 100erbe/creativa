@@ -148,10 +148,10 @@ export default async function PaginaCliente({
     }));
 
   const vencidas = cobrosConAging.filter((c) => c.aging.diasVencido > 0 || c.estado_cobro === "vencida");
-  // Vencidas (+90 días): sin cobrar y con más de 90 días desde la emisión (misma regla que el estado de cuenta).
+  // Vencidas: sin cobrar y con el vencimiento ya pasado (misma regla que el estado de cuenta).
   const criticas90 = insolutas;
   const sumaCriticas90 = estadoCuenta?.estado.totalInsoluto ?? 0;
-  const maxDiasVencido = insolutas.reduce((m, l) => Math.max(m, l.diasDesdeEmision), 0);
+  const maxDiasVencido = insolutas.reduce((m, l) => Math.max(m, l.diasVencida), 0);
 
   const direccion = componerDireccion({
     direccion: cliente.direccion,
@@ -232,7 +232,7 @@ export default async function PaginaCliente({
                   numero: l.numero,
                   fecha: l.fecha,
                   saldo: l.saldo,
-                  diasDesdeEmision: l.diasDesdeEmision,
+                  vencimiento: l.vencimiento,
                   archivo: nombreArchivoFactura(l.tipo, l.numero, cliente.razon_social),
                 }))}
                 totalAReclamar={estadoCuenta.estado.totalAReclamar}
@@ -260,11 +260,11 @@ export default async function PaginaCliente({
         </div>
       </div>
 
-      {/* Banner de alerta crítica 90+ días */}
+      {/* Banner de facturas vencidas (misma regla que el estado de cuenta) */}
       {criticas90.length > 0 && (
         <div
           role="region"
-          aria-label="Alerta de facturas vencidas con más de 90 días"
+          aria-label="Alerta de facturas vencidas"
           className="flex flex-wrap items-center gap-esp3 rounded-lg border border-borde-critico-sutil border-l-4 border-l-borde-critico bg-fondo-critico-sutil px-esp4 py-esp3"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-fondo-critico text-texto-inverso">
@@ -273,11 +273,11 @@ export default async function PaginaCliente({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-texto-critico">
               {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} vencida
-              {criticas90.length === 1 ? "" : "s"} con más de 90 días desde su emisión
+              {criticas90.length === 1 ? "" : "s"} sin cobrar
             </p>
             <p className="tabular-nums text-xs text-texto-primario">
-              Saldo en riesgo crítico: <strong className="text-texto-critico">{euros(sumaCriticas90)}</strong> (máximo{" "}
-              {maxDiasVencido} días desde la emisión).
+              Saldo vencido: <strong className="text-texto-critico">{euros(sumaCriticas90)}</strong> (la más antigua, vencida
+              hace {maxDiasVencido} días).
             </p>
           </div>
           <Link href={`/admin/clientes/${clienteId}/estado-cuenta`}>

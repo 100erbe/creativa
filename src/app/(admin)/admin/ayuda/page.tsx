@@ -50,7 +50,7 @@ const GUIAS: Guia[] = [
     resumen: "Se prepara un estado de cuenta en PDF y un borrador de correo en Gmail.",
     pasos: [
       "En Cobros, «Clientes con más saldo» lleva al estado de cuenta de cada cliente.",
-      "Revisa el estado de cuenta: una factura se considera vencida (+90 días) cuando supera los 90 días desde su emisión.",
+      "Revisa el estado de cuenta: una factura se considera vencida cuando ha pasado su fecha de vencimiento (si no la tiene, a los 30 días de su emisión).",
       "En la ficha del cliente, pulsa «Reclamar impagadas»: se crea el borrador en Gmail con el estado de cuenta y las facturas adjuntas.",
       "Revisa el borrador en Gmail y envíalo desde allí.",
     ],

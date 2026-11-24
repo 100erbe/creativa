@@ -5,7 +5,7 @@ import { lanzarSiError } from "@/lib/supabase/consulta";
 import { componerDireccionEnLineas } from "@/lib/direccion";
 import { etiquetaDocumentoIdentidad, formatoEuros, nombreArchivo } from "@/lib/documento-impresion";
 import { fechaNumerica } from "@/lib/formato";
-import { DIAS_PARA_INSOLUTA, calcularEstadoCuenta, hoyEnEspana, type DocumentoCobro, type EstadoCuenta } from "@/lib/estado-cuenta";
+import { calcularEstadoCuenta, hoyEnEspana, type DocumentoCobro, type EstadoCuenta } from "@/lib/estado-cuenta";
 
 const LOGO_PRINCIPAL = "/brand/logo-creativa.svg";
 const LOGO_SECUNDARIO = "/brand/logo-crea-comunicacion.svg";
@@ -49,7 +49,7 @@ export async function cargarEstadoCuenta(supabase: Supabase, clienteId: number):
       .eq("cliente_id", clienteId),
     supabase
       .from("documentos")
-      .select("id, estado, documento_origen_id, campana, descripcion")
+      .select("id, estado, documento_origen_id, campana, descripcion, fecha_vencimiento")
       .eq("cliente_id", clienteId)
       .in("tipo", ["factura", "rectificativa"])
       .neq("estado", "borrador"),
@@ -71,6 +71,7 @@ export async function cargarEstadoCuenta(supabase: Supabase, clienteId: number):
         tipo: c.tipo,
         numero: c.numero_completo ?? `#${d.id}`,
         fecha: c.fecha,
+        fechaVencimiento: d.fecha_vencimiento,
         total: Number(c.total ?? 0),
         cobrado: Number(c.cobrado ?? 0),
         pendiente: Number(c.pendiente ?? 0),
@@ -149,7 +150,7 @@ export function mensajeReclamacion(d: DatosEstadoCuenta) {
   const lista = estado.insolutas
     .map(
       (l) =>
-        `  · ${l.numero} del ${fechaNumerica(l.fecha)} — pendiente ${formatoEuros(l.saldo)} (emitida hace ${l.diasDesdeEmision} días)`,
+        `  · ${l.numero} del ${fechaNumerica(l.fecha)} — pendiente ${formatoEuros(l.saldo)} (vencida el ${fechaNumerica(l.vencimiento)})`,
     )
     .join("\n");
   const abonos =
@@ -162,11 +163,11 @@ export function mensajeReclamacion(d: DatosEstadoCuenta) {
   const firma = [d.empresa.nombreComercial, d.empresa.telefonos, d.empresa.email].filter(Boolean).join("\n");
   const cuerpo = `Buenos días:
 
-Según nuestros registros, a fecha ${fechaNumerica(estado.fecha)} las siguientes facturas, con más de ${DIAS_PARA_INSOLUTA} días desde su emisión, siguen pendientes de pago:
+Según nuestros registros, a fecha ${fechaNumerica(estado.fecha)} las siguientes facturas vencidas siguen pendientes de pago:
 
 ${lista}
 
-Total vencido (+90 días): ${formatoEuros(estado.totalInsoluto)}
+Total vencido: ${formatoEuros(estado.totalInsoluto)}
 ${abonos}
 Les adjuntamos el estado de cuenta con todas sus facturas y una copia de cada factura pendiente. Les agradeceríamos que realizaran el pago ${pago} o que nos indicaran la fecha prevista de pago.
 

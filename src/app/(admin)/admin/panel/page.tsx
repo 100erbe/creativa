@@ -348,8 +348,7 @@ export default async function PaginaPanel() {
             <div className="flex gap-esp3 rounded-lg bg-fondo-sutil px-esp4 py-esp3">
               <Icono nombre="alerta" size={20} className="text-icono-default" />
               <p className="text-meta font-medium text-texto-primario">
-                Hay facturas sin fecha de vencimiento: no cuentan en 1–89 días, aunque las que superan 90 días desde la
-                emisión sí aparecen como vencidas.
+                Hay facturas sin fecha de vencimiento: se les aplica un vencimiento de 30 días desde la emisión.
               </p>
             </div>
           )}

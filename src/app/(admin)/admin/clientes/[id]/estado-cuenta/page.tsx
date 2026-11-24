@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Icono } from "@/components/ui/iconos";
 import { HojaEstadoCuenta } from "@/components/admin/hoja-estado-cuenta";
 import { cargarEstadoCuenta, nombreArchivoEstadoCuenta } from "@/lib/estado-cuenta-datos";
-import { DIAS_PARA_INSOLUTA, hoyEnEspana } from "@/lib/estado-cuenta";
+import { DIAS_VENCIMIENTO_DEFECTO, hoyEnEspana } from "@/lib/estado-cuenta";
 import { BotonImprimir } from "@/app/(admin)/admin/documentos/[id]/imprimir/boton-imprimir";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +39,7 @@ export default async function PaginaEstadoCuenta({ params }: { params: Promise<{
           Volver al cliente
         </Link>
         <p className="flex-1 text-xs text-texto-terciario">
-          Vencidas (+90 días): facturas sin cobrar con más de {DIAS_PARA_INSOLUTA} días desde su emisión.
+          Vencidas: facturas sin cobrar cuya fecha de vencimiento ya ha pasado (sin vencimiento: {DIAS_VENCIMIENTO_DEFECTO} días desde la emisión).
           {centimos > 0 &&
             ` ${centimos} factura${centimos === 1 ? "" : "s"} con una diferencia de céntimos (menos de 1 €) se da${centimos === 1 ? "" : "n"} por cobrada${centimos === 1 ? "" : "s"}.`}
         </p>

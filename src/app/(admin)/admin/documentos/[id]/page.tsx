@@ -389,14 +389,14 @@ export default async function PaginaDocumento({
                 <strong className="font-semibold text-texto-critico">{euros(pendienteNeto)}</strong>
                 {doc.fecha_vencimiento
                   ? ` (vencimiento ${fechaMedia(doc.fecha_vencimiento)}).`
-                  : ` (emitida el ${fechaMedia(doc.fecha)}).`}
+                  : ` (sin vencimiento: se cuentan 30 días desde la emisión, ${fechaMedia(doc.fecha)}).`}
               </p>
             </div>
           </div>
         )}
         {cobrable && !doc.fecha_vencimiento && doc.tipo === "factura" && (
           <p className="text-xs text-texto-aviso">
-            Esta factura no tiene fecha de vencimiento: solo se evalúa como vencida al superar 90 días desde la emisión.
+            Esta factura no tiene fecha de vencimiento: se considera vencida a los 30 días de su emisión.
           </p>
         )}
       </div>

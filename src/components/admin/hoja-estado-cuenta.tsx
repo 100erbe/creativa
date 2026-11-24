@@ -1,10 +1,10 @@
 // Hoja A4 del estado de cuenta de un cliente: todas sus facturas, su situación de cobro
-// y las vencidas (+90 días) resaltadas con su total. Componente de presentación puro.
+// y las vencidas (ya pasada su fecha de vencimiento) resaltadas con su total. Componente de presentación puro.
 
 import { documento } from "@/design/tokens";
 import { fechaNumerica } from "@/lib/formato";
 import { formatoEuros, formatoImporte } from "@/lib/documento-impresion";
-import { DIAS_PARA_INSOLUTA, ETIQUETA_ESTADO_LINEA, type EstadoLinea } from "@/lib/estado-cuenta";
+import { ETIQUETA_ESTADO_LINEA, type EstadoLinea } from "@/lib/estado-cuenta";
 import type { DatosEstadoCuenta } from "@/lib/estado-cuenta-datos";
 
 const AZUL = "text-documento-acento";
@@ -34,6 +34,9 @@ function Resumen({ etiqueta, valor, destacado }: { etiqueta: string; valor: stri
 export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
   const { estado } = d;
   const hayAbonos = estado.abonosPendientes < 0;
+  // Todo lo que el cliente debe en facturas (pendientes, parciales y vencidas), sin restar los abonos sin aplicar.
+  const totalFacturasPendientes =
+    Math.round(estado.lineas.reduce((s, l) => s + (l.saldo > 0 ? l.saldo : 0), 0) * 100) / 100;
 
   return (
     <>
@@ -88,7 +91,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
           <Resumen etiqueta="Pendiente de cobro" valor={formatoEuros(estado.totalPendiente)} />
           {hayAbonos && <Resumen etiqueta="Abonos sin aplicar" valor={formatoEuros(estado.abonosPendientes)} />}
           <Resumen
-            etiqueta={`Total vencido (+90 días) (${estado.insolutas.length} ${estado.insolutas.length === 1 ? "factura" : "facturas"})`}
+            etiqueta={`Total vencido (${estado.insolutas.length} ${estado.insolutas.length === 1 ? "factura" : "facturas"})`}
             valor={formatoEuros(estado.totalInsoluto)}
             destacado={estado.totalInsoluto > 0}
           />
@@ -101,7 +104,8 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
               <tr className="bg-documento-acento text-left text-[7.5pt] uppercase tracking-[0.06em] text-documento-sobre-acento">
                 <th className="px-[2mm] py-[1.8mm] font-semibold">Factura</th>
                 <th className="px-[2mm] py-[1.8mm] font-semibold">Fecha</th>
-                <th className="px-[2mm] py-[1.8mm] text-right font-semibold">Días desde emisión</th>
+                <th className="px-[2mm] py-[1.8mm] font-semibold">Vencimiento</th>
+                <th className="px-[2mm] py-[1.8mm] text-right font-semibold">Días vencida</th>
                 <th className="px-[2mm] py-[1.8mm] font-semibold">Estado</th>
                 <th className="px-[2mm] py-[1.8mm] text-right font-semibold">Total €</th>
                 <th className="whitespace-nowrap px-[2mm] py-[1.8mm] text-right font-semibold">Pendiente €</th>
@@ -121,14 +125,14 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
                       {l.concepto && <span className="block text-[7.5pt] font-normal text-documento-tenue">{l.concepto}</span>}
                     </td>
                     <td className="whitespace-nowrap px-[2mm] py-[1.6mm] tabular-nums">{fechaNumerica(l.fecha)}</td>
-                    <td className="px-[2mm] py-[1.6mm] text-right tabular-nums">{l.diasDesdeEmision}</td>
+                    <td className="whitespace-nowrap px-[2mm] py-[1.6mm] tabular-nums">
+                      {l.tipo === "factura" || l.saldo > 0 ? fechaNumerica(l.vencimiento) : "—"}
+                    </td>
+                    <td className={`px-[2mm] py-[1.6mm] text-right tabular-nums ${insoluta ? "font-bold text-documento-insoluto" : ""}`}>
+                      {insoluta ? l.diasVencida : "—"}
+                    </td>
                     <td className={`px-[2mm] py-[1.6mm] ${COLOR_ESTADO[l.estado]}`}>
                       {ETIQUETA_ESTADO_LINEA[l.estado]}
-                      {insoluta && (
-                        <span className="block text-[7pt] font-normal">
-                          más de {DIAS_PARA_INSOLUTA} días
-                        </span>
-                      )}
                       {l.abonos.length > 0 && (
                         <span className="block text-[7pt] font-normal text-documento-tenue">descontado {l.abonos.join(", ")}</span>
                       )}
@@ -144,7 +148,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
               })}
               {estado.lineas.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-[4mm] text-center text-documento-tenue">
+                  <td colSpan={7}className="py-[4mm] text-center text-documento-tenue">
                     No hay facturas emitidas a este cliente.
                   </td>
                 </tr>
@@ -155,8 +159,8 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
 
         <section className="ml-auto mt-[5mm] w-[95mm] [break-inside:avoid]">
           <div className="flex gap-4 py-[1.2mm] text-[9.5pt]">
-            <span className="flex-1 text-documento-tenue">Total facturas vencidas (+90 días)</span>
-            <span className="whitespace-nowrap tabular-nums">{formatoEuros(estado.totalInsoluto)}</span>
+            <span className="flex-1 text-documento-tenue">Total pendiente de pago</span>
+            <span className="whitespace-nowrap tabular-nums">{formatoEuros(totalFacturasPendientes)}</span>
           </div>
           {hayAbonos && (
             <div className="flex gap-4 py-[1.2mm] text-[9.5pt]">
@@ -165,7 +169,7 @@ export function HojaEstadoCuenta({ d }: { d: DatosEstadoCuenta }) {
             </div>
           )}
           <div className="mt-[1.5mm] flex items-center gap-4 bg-documento-insoluto px-[3mm] py-[2.2mm] text-[11pt] font-bold text-documento-sobre-acento">
-            <span className="flex-1 tracking-[0.04em]">TOTAL VENCIDO (+90 DÍAS)</span>
+            <span className="flex-1 tracking-[0.04em]">TOTAL VENCIDO</span>
             <span className="whitespace-nowrap tabular-nums">{formatoEuros(estado.totalAReclamar)}</span>
           </div>
         </section>
