@@ -294,6 +294,7 @@ export type Database = {
           base_imponible: number | null
           bien_inversion: boolean
           concepto_aeat: string | null
+          datos_ticket: Json | null
           importe_retencion: number
           pct_deducible_iva: number
           retencion_pct: number
@@ -325,6 +326,7 @@ export type Database = {
           base_imponible?: number | null
           bien_inversion?: boolean
           concepto_aeat?: string | null
+          datos_ticket?: Json | null
           importe_retencion?: number
           pct_deducible_iva?: number
           retencion_pct?: number
@@ -356,6 +358,7 @@ export type Database = {
           base_imponible?: number | null
           bien_inversion?: boolean
           concepto_aeat?: string | null
+          datos_ticket?: Json | null
           importe_retencion?: number
           pct_deducible_iva?: number
           retencion_pct?: number

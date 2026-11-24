@@ -9,6 +9,8 @@ import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { accion } from "@/lib/accion";
 import { euros } from "@/lib/formato";
 import { enSegundoPlano, notificar, notificarAdministradores } from "@/lib/push/notificar";
+import { leerLecturaTicket } from "@/lib/datos-ticket";
+import { completarLecturaTicket } from "@/lib/ticket-ia";
 import {
   BUCKET_TICKETS,
   FORMAS_PAGO_GASTO,
@@ -74,8 +76,31 @@ function leer(fd: FormData) {
   };
 }
 
-/** Crea o corrige un gasto. El empleado solo gestiona los suyos y siempre quedan "pendientes". */
+/** Crea o corrige un gasto y va a su ficha (admin) o a "Mis gastos" (empleado). */
 export async function guardarGasto(_previo: EstadoFormulario, formData: FormData): Promise<EstadoFormulario> {
+  const r = await guardar(formData);
+  if ("error" in r) return r;
+  redirect(r.esAdmin ? `/admin/gastos/${r.id}` : "/app/gastos");
+}
+
+/**
+ * Envía un gasto que se guardó en el móvil sin conexión (sin redirigir). Si el ticket ya está en un
+ * gasto, el envío anterior llegó aunque se perdiera la respuesta: no se duplica.
+ */
+export const enviarGastoGuardado = accion(async (formData: FormData) => {
+  const ruta = formData.get("ticket_path");
+  if (typeof ruta === "string" && ruta && !formData.get("id")) {
+    const supabase = await createClient();
+    const { data: existente } = await supabase.from("gastos").select("id").eq("ticket_path", ruta).maybeSingle();
+    if (existente) return existente.id;
+  }
+  const r = await guardar(formData);
+  if ("error" in r) throw new Error(r.error);
+  return r.id;
+});
+
+/** Crea o corrige un gasto. El empleado solo gestiona los suyos y siempre quedan "pendientes". */
+async function guardar(formData: FormData): Promise<{ error: string } | { id: number; esAdmin: boolean }> {
   const usuario = await obtenerUsuarioActual();
   if (!usuario) return { error: "Tu sesión ha caducado. Vuelve a entrar." };
   const esAdmin = usuario.rol === "admin";
@@ -125,6 +150,9 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
     return { error: "Un gasto deducible necesita la factura adjunta para aprobarse." };
   }
 
+  // Lectura de la IA (solo orientativa): se valida y, si no cuadra, se descarta.
+  const lectura = d.ticket_path ? leerLecturaTicket(formData.get("datos_ticket")) : null;
+
   const supabase = await createClient();
   const datos = {
     tipo: d.tipo,
@@ -140,6 +168,7 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
     nif_proveedor: d.tipo === "deducible" ? d.nif_proveedor : null,
     numero_factura: d.tipo === "deducible" ? d.numero_factura : null,
     ticket_path: d.ticket_path,
+    datos_ticket: lectura,
     estado,
     notas: d.notas,
     motivo_rechazo: null,
@@ -183,10 +212,16 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
     }
   }
 
+  // Ticket sin lectura (sin cobertura al escanear, IA saturada…): se lee después de responder.
+  if (d.ticket_path && !lectura) {
+    const ruta = d.ticket_path;
+    enSegundoPlano(() => completarLecturaTicket(destino, ruta));
+  }
+
   revalidatePath("/admin/gastos");
   revalidatePath("/admin/contabilidad");
   revalidatePath("/app/gastos");
-  redirect(esAdmin ? `/admin/gastos/${destino}` : "/app/gastos");
+  return { id: destino, esAdmin };
 }
 
 /** Aprobar, rechazar (con motivo) o marcar como reembolsado. Solo admin. */

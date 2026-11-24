@@ -156,6 +156,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
       numeroFactura: aRevisar.numero_factura,
       urlTicket: firma?.data?.signedUrl ?? null,
       esPdf: aRevisar.ticket_path?.endsWith(".pdf") ?? false,
+      datosTicket: aRevisar.datos_ticket,
     };
   }
   const primeraPendiente = pendientes.at(-1);

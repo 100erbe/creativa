@@ -16,6 +16,7 @@ import {
   type FormaPagoGasto,
   type TipoGasto,
 } from "@/lib/gastos";
+import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
 import { cambiarEstadoGasto } from "./acciones";
 
 export type GastoRevision = {
@@ -34,6 +35,7 @@ export type GastoRevision = {
   numeroFactura: string | null;
   urlTicket: string | null;
   esPdf: boolean;
+  datosTicket: unknown;
 };
 
 /**
@@ -129,6 +131,8 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
             <p className="text-sm text-texto-aviso">⚠ Sin {deducible ? "factura" : "ticket"} adjunto.</p>
           )}
         </div>
+
+        <LecturaTicketResumen gastoId={gasto.id} tipo={gasto.tipo} datos={gasto.datosTicket} editable={decidible} />
 
         {decidible ? (
           <div className="flex flex-col gap-esp3">

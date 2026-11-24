@@ -1,12 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
-import { Boton } from "@/components/ui/boton";
+import { useRouter } from "next/navigation";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { createClient } from "@/lib/supabase/client";
 import { comprimirImagen } from "@/lib/comprimir-imagen";
+import { desenvolver } from "@/lib/accion";
+import { esErrorDeRed } from "@/lib/cola-indexeddb";
+import { encolarGasto } from "@/lib/cola-gastos";
+import { leerLecturaTicket, type LecturaTicket, type SugerenciaGasto } from "@/lib/datos-ticket";
 import { guardarGasto, type EstadoFormulario } from "@/app/(admin)/admin/gastos/acciones";
+import { leerTicket } from "@/app/(admin)/admin/gastos/acciones-ticket";
 import {
   BUCKET_TICKETS,
   CONCEPTOS_AEAT,
@@ -46,7 +52,26 @@ export type DatosGasto = {
   pct_deducible_iva?: number | null;
   bien_inversion?: boolean | null;
   concepto_aeat?: string | null;
+  datos_ticket?: unknown;
 };
+
+/** Campos que la lectura del ticket puede rellenar. */
+type CampoLeido = "concepto" | "fecha" | "total" | "forma_pago" | "categoria_id" | "proveedor" | "nif_proveedor" | "numero_factura" | "iva_pct";
+
+/** Nombre del campo en `campos_dudosos` (lo que devuelve la IA) → campo del formulario. */
+const DUDOSO_A_CAMPO: Record<string, CampoLeido> = {
+  concepto: "concepto",
+  fecha: "fecha",
+  total: "total",
+  forma_pago: "forma_pago",
+  categoria: "categoria_id",
+  proveedor: "proveedor",
+  nif_proveedor: "nif_proveedor",
+  numero_factura: "numero_factura",
+  iva_pct: "iva_pct",
+};
+
+const LIMITE_LECTURA_MS = 25_000;
 
 type Opcion = { id: number | string; etiqueta: string };
 
@@ -56,17 +81,32 @@ const entrada =
 function Campo({
   etiqueta,
   ayuda,
+  leido,
   children,
   className,
 }: {
   etiqueta: string;
   ayuda?: string;
+  /** Rellenado por la lectura del ticket: "seguro" o "dudoso" (la IA no lo lee con claridad). */
+  leido?: "seguro" | "dudoso";
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <label className={cn("flex flex-col gap-1", className)}>
-      <span className="text-xs font-medium text-texto-secundario">{etiqueta}</span>
+      <span className="flex items-center gap-esp2 text-xs font-medium text-texto-secundario">
+        {etiqueta}
+        {leido && (
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-micro font-semibold",
+              leido === "dudoso" ? "bg-fondo-aviso-sutil text-texto-aviso" : "bg-fondo-marca-sutil text-texto-marca",
+            )}
+          >
+            {leido === "dudoso" ? "⚠ Compruébalo" : "Leído del ticket"}
+          </span>
+        )}
+      </span>
       {children}
       {ayuda && <span className="text-xs text-texto-terciario">{ayuda}</span>}
     </label>
@@ -116,16 +156,120 @@ export function FormularioGasto({
   esAdmin: boolean;
   cancelarHref: string;
 }) {
-  const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(guardarGasto, {});
+  const router = useRouter();
   const editando = inicial?.id != null;
+  // Sin conexión (o servidor caído) el empleado no pierde el gasto: se guarda en el móvil y se envía solo.
+  const puedeGuardarEnMovil = !esAdmin && !editando;
   const [tipo, setTipo] = useState<TipoGasto>(tipoFijo ?? inicial?.tipo ?? "menor");
+  const [concepto, setConcepto] = useState(inicial?.concepto ?? "");
+  const [fecha, setFecha] = useState(inicial?.fecha ?? hoy);
+  const [categoriaId, setCategoriaId] = useState(inicial?.categoria_id != null ? String(inicial.categoria_id) : "");
+  const [formaPago, setFormaPago] = useState(inicial?.forma_pago ?? "efectivo");
+  const [proveedor, setProveedor] = useState(inicial?.proveedor ?? "");
+  const [nifProveedor, setNifProveedor] = useState(inicial?.nif_proveedor ?? "");
+  const [numeroFactura, setNumeroFactura] = useState(inicial?.numero_factura ?? "");
   const [total, setTotal] = useState(inicial?.total != null ? String(inicial.total).replace(".", ",") : "");
   const [ivaPct, setIvaPct] = useState(String(inicial?.iva_pct ?? 21));
   const [retencionPct, setRetencionPct] = useState(String(Number(inicial?.retencion_pct ?? 0)));
   const [pctDeducible, setPctDeducible] = useState(String(Number(inicial?.pct_deducible_iva ?? 100)));
   const [ticket, setTicket] = useState<string | null>(inicial?.ticket_path ?? null);
+  /** Foto que no se pudo subir por falta de conexión: viaja con el gasto guardado en el móvil. */
+  const [ticketEnMovil, setTicketEnMovil] = useState<Blob | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [errorArchivo, setErrorArchivo] = useState<string | null>(null);
+  const [lectura, setLectura] = useState<LecturaTicket | null>(() => leerLecturaTicket(inicial?.datos_ticket ?? null));
+  const [leyendo, setLeyendo] = useState(false);
+  const [avisoTicket, setAvisoTicket] = useState<string | null>(null);
+  const [leidos, setLeidos] = useState<Partial<Record<CampoLeido, "seguro" | "dudoso">>>({});
+  /** Campos que la persona ya ha tocado: la lectura no los pisa. */
+  const tocados = useRef(new Set<CampoLeido>());
+
+  function tocar(campo: CampoLeido) {
+    tocados.current.add(campo);
+    setLeidos((l) => {
+      if (!l[campo]) return l;
+      const resto = { ...l };
+      delete resto[campo];
+      return resto;
+    });
+  }
+
+  async function guardarEnMovil(formData: FormData): Promise<EstadoFormulario> {
+    const guardado = await encolarGasto(formData, usuarioId, ticketEnMovil);
+    if (!guardado) {
+      return { error: "No hay conexión y este móvil no permite guardar el gasto. Inténtalo cuando tengas cobertura." };
+    }
+    router.push("/app/gastos");
+    return {};
+  }
+
+  const [estado, accion, pendiente] = useActionState<EstadoFormulario, FormData>(async (previo, formData) => {
+    if (puedeGuardarEnMovil && (ticketEnMovil || navigator.onLine === false)) return guardarEnMovil(formData);
+    try {
+      return await guardarGasto(previo, formData);
+    } catch (e) {
+      if (puedeGuardarEnMovil && esErrorDeRed(e)) return guardarEnMovil(formData);
+      throw e;
+    }
+  }, {});
+
+  /** Rellena con la lectura del ticket los campos que la persona aún no ha tocado. */
+  function aplicar(s: SugerenciaGasto) {
+    const l = s.lectura;
+    setLectura(l);
+    if (l.tipo_documento === "otro" && !s.total) {
+      setAvisoTicket("La foto no parece un ticket ni una factura. Revisa la foto o rellena los datos a mano.");
+      return;
+    }
+    const dudosos = new Set(l.campos_dudosos.map((c) => DUDOSO_A_CAMPO[c]).filter(Boolean));
+    const nuevos: Partial<Record<CampoLeido, "seguro" | "dudoso">> = {};
+    const poner = (campo: CampoLeido, valor: string | number | null | undefined, fijar: (v: string) => void) => {
+      if (valor == null || valor === "" || tocados.current.has(campo)) return;
+      fijar(String(valor));
+      nuevos[campo] = dudosos.has(campo) ? "dudoso" : "seguro";
+    };
+    poner("concepto", s.concepto, setConcepto);
+    poner("fecha", s.fecha, setFecha);
+    poner("total", s.total != null ? s.total.toFixed(2).replace(".", ",") : null, setTotal);
+    poner("forma_pago", s.forma_pago, setFormaPago);
+    poner("categoria_id", s.categoria_id, setCategoriaId);
+    if (tipo === "deducible") {
+      poner("proveedor", l.proveedor, setProveedor);
+      poner("nif_proveedor", l.nif_proveedor, setNifProveedor);
+      poner("numero_factura", l.numero_factura, setNumeroFactura);
+      if (l.iva_pct != null && (TIPOS_IVA as readonly number[]).includes(l.iva_pct)) poner("iva_pct", l.iva_pct, setIvaPct);
+    }
+    setLeidos(nuevos);
+    setAvisoTicket(
+      Object.keys(nuevos).length > 0
+        ? "Hemos rellenado los datos del ticket. Compruébalos antes de enviar."
+        : "No hemos podido leer datos del ticket. Rellénalos a mano.",
+    );
+  }
+
+  async function leer(ruta: string) {
+    setLeyendo(true);
+    setAvisoTicket(null);
+    try {
+      const limite = new Promise<never>((_, rechazar) =>
+        setTimeout(() => rechazar(new Error("tiempo agotado")), LIMITE_LECTURA_MS),
+      );
+      aplicar(await Promise.race([desenvolver(leerTicket(ruta)), limite]));
+    } catch {
+      // El ticket ya está guardado: al enviar el gasto se volverá a leer en el servidor para la administración.
+      setAvisoTicket("No hemos podido leer el ticket ahora. Rellena los datos a mano: la foto se guarda igualmente.");
+    } finally {
+      setLeyendo(false);
+    }
+  }
+
+  function quitarTicket() {
+    setTicket(null);
+    setTicketEnMovil(null);
+    setLectura(null);
+    setLeidos({});
+    setAvisoTicket(null);
+  }
 
   const totalNum = aNumero(total);
   const desglose = totalNum && totalNum > 0 ? calcularIva(totalNum, Number(ivaPct)) : null;
@@ -136,34 +280,118 @@ export function FormularioGasto({
 
   async function subir(archivo: File | undefined) {
     if (!archivo) return;
+    quitarTicket();
     setErrorArchivo(null);
     setSubiendo(true);
+    let final: File | null = null;
+    let ruta: string | null = null;
     try {
       const esPdf = archivo.type === "application/pdf";
       if (!esPdf && !archivo.type.startsWith("image/")) throw new Error("Sube una foto o un PDF.");
       if (esPdf && archivo.size > 2 * 1024 * 1024) throw new Error("El PDF pesa más de 2 MB.");
-      const final = esPdf ? archivo : await comprimirImagen(archivo);
+      final = esPdf ? archivo : await comprimirImagen(archivo);
       const extension = esPdf ? "pdf" : final.type === "image/webp" ? "webp" : "jpg";
-      const ruta = `${usuarioId}/${crypto.randomUUID()}.${extension}`;
+      ruta = `${usuarioId}/${crypto.randomUUID()}.${extension}`;
       const { error } = await createClient().storage.from(BUCKET_TICKETS).upload(ruta, final, {
         contentType: final.type,
       });
       if (error) throw new Error(error.message);
       setTicket(ruta);
     } catch (e) {
-      setErrorArchivo(e instanceof Error ? e.message : "No se pudo subir el archivo.");
+      ruta = null;
+      if (final && puedeGuardarEnMovil && esErrorDeRed(e)) {
+        setTicketEnMovil(final);
+        setAvisoTicket("Sin conexión: rellena los datos y envía. El gasto se guarda en el móvil y se enviará solo cuando vuelva la cobertura.");
+      } else {
+        setErrorArchivo(e instanceof Error ? e.message : "No se pudo subir el archivo.");
+      }
     } finally {
       setSubiendo(false);
     }
+    if (ruta) await leer(ruta);
   }
 
   const deducible = tipo === "deducible";
+  const hayTicket = !!ticket || !!ticketEnMovil;
+
+  const bloqueTicket = (
+    <div className="flex flex-col gap-esp2 md:col-span-2">
+      {hayTicket ? (
+        <div
+          className={cn(
+            "flex items-center gap-esp3 rounded-md border px-esp4 py-esp3 text-sm",
+            ticket ? "border-borde-exito bg-fondo-exito-sutil text-texto-exito" : "border-borde-aviso bg-fondo-aviso-sutil text-texto-primario",
+          )}
+        >
+          <Icono nombre={ticket ? "check" : "camara"} size={16} />
+          <span className="flex-1">
+            {leyendo ? "Leyendo el ticket…" : ticket ? "Ticket adjuntado" : "Ticket guardado en el móvil"}
+          </span>
+          <button type="button" onClick={quitarTicket} disabled={leyendo} className="text-xs underline">
+            Quitar
+          </button>
+        </div>
+      ) : editando ? (
+        <label className="flex cursor-pointer items-center gap-esp3 rounded-md border border-dashed border-borde-campo px-esp4 py-esp4 text-sm text-texto-secundario hover:bg-fondo-sutil">
+          <Icono nombre="camara" size={18} />
+          {subiendo ? "Subiendo…" : "Hacer foto o elegir archivo (imagen o PDF)"}
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            className="sr-only"
+            disabled={subiendo}
+            onChange={(e) => subir(e.target.files?.[0])}
+          />
+        </label>
+      ) : (
+        <div className="flex flex-col items-center gap-esp3 rounded-xl border border-dashed border-borde-marca bg-fondo-marca-sutil px-esp4 py-esp5 text-center">
+          <Icono nombre="camara" size={28} className="text-texto-marca" />
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold text-texto-primario">Escanea el ticket o la factura</p>
+            <p className="text-xs text-texto-secundario">Leemos los datos por ti: solo tienes que comprobarlos.</p>
+          </div>
+          <label className={clasesBoton("primario", "m", cn("cursor-pointer", subiendo && "pointer-events-none opacity-60"))}>
+            <Icono nombre="camara" size={16} />
+            {subiendo ? "Subiendo…" : "Escanear ticket"}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              disabled={subiendo}
+              onChange={(e) => subir(e.target.files?.[0])}
+            />
+          </label>
+          <label className="cursor-pointer text-xs font-medium text-texto-marca underline">
+            o elegir una foto o un PDF
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              className="sr-only"
+              disabled={subiendo}
+              onChange={(e) => subir(e.target.files?.[0])}
+            />
+          </label>
+        </div>
+      )}
+      {avisoTicket && !leyendo && <p className="text-xs text-texto-secundario">{avisoTicket}</p>}
+      {!hayTicket && editando && (
+        <p className={cn("text-xs", deducible ? "text-texto-aviso" : "text-texto-terciario")}>
+          {deducible
+            ? "⚠ Sin factura no se puede aprobar el gasto."
+            : "⚠ Falta ticket — es opcional, pero conviene adjuntarlo."}
+        </p>
+      )}
+      {errorArchivo && <p className="text-xs text-texto-peligro">{errorArchivo}</p>}
+    </div>
+  );
 
   return (
     <form action={accion} className="flex flex-col gap-esp5">
       {editando && <input type="hidden" name="id" value={inicial?.id} />}
       <input type="hidden" name="tipo" value={tipo} />
       <input type="hidden" name="ticket_path" value={ticket ?? ""} />
+      <input type="hidden" name="datos_ticket" value={lectura ? JSON.stringify(lectura) : ""} />
       {!esAdmin && <input type="hidden" name="usuario_id" value={usuarioId} />}
 
       <div className={cn("grid grid-cols-1 gap-esp3 md:grid-cols-2", tipoFijo && "hidden")}>
@@ -186,15 +414,44 @@ export function FormularioGasto({
         ))}
       </div>
 
+      {!editando && <div className="grid grid-cols-1 md:grid-cols-2">{bloqueTicket}</div>}
+
       <Seccion titulo="El gasto">
-        <Campo etiqueta="Concepto *" className="md:col-span-2">
-          <input name="concepto" defaultValue={inicial?.concepto} required className={entrada} />
+        <Campo etiqueta="Concepto *" className="md:col-span-2" leido={leidos.concepto}>
+          <input
+            name="concepto"
+            value={concepto}
+            onChange={(e) => {
+              tocar("concepto");
+              setConcepto(e.target.value);
+            }}
+            required
+            className={entrada}
+          />
         </Campo>
-        <Campo etiqueta="Fecha *">
-          <input name="fecha" type="date" defaultValue={inicial?.fecha ?? hoy} required className={entrada} />
+        <Campo etiqueta="Fecha *" leido={leidos.fecha}>
+          <input
+            name="fecha"
+            type="date"
+            value={fecha}
+            onChange={(e) => {
+              tocar("fecha");
+              setFecha(e.target.value);
+            }}
+            required
+            className={entrada}
+          />
         </Campo>
-        <Campo etiqueta="Categoría">
-          <select name="categoria_id" defaultValue={inicial?.categoria_id ?? ""} className={entrada}>
+        <Campo etiqueta="Categoría" leido={leidos.categoria_id}>
+          <select
+            name="categoria_id"
+            value={categoriaId}
+            onChange={(e) => {
+              tocar("categoria_id");
+              setCategoriaId(e.target.value);
+            }}
+            className={entrada}
+          >
             <option value="">Sin categoría</option>
             {categorias.map((c) => (
               <option key={c.id} value={c.id}>
@@ -214,8 +471,16 @@ export function FormularioGasto({
             </select>
           </Campo>
         )}
-        <Campo etiqueta="Forma de pago *">
-          <select name="forma_pago" defaultValue={inicial?.forma_pago ?? "efectivo"} className={entrada}>
+        <Campo etiqueta="Forma de pago *" leido={leidos.forma_pago}>
+          <select
+            name="forma_pago"
+            value={formaPago}
+            onChange={(e) => {
+              tocar("forma_pago");
+              setFormaPago(e.target.value);
+            }}
+            className={entrada}
+          >
             {FORMAS_PAGO_GASTO.map((f) => (
               <option key={f} value={f}>
                 {ETIQUETA_FORMA_PAGO_GASTO[f]}
@@ -226,12 +491,19 @@ export function FormularioGasto({
       </Seccion>
 
       <Seccion titulo={deducible ? "Importe e IVA" : "Importe"}>
-        <Campo etiqueta="Total (IVA incluido) *" ayuda={deducible ? undefined : "No se desglosa IVA en un gasto menor."}>
+        <Campo
+          etiqueta="Total (IVA incluido) *"
+          ayuda={deducible ? undefined : "No se desglosa IVA en un gasto menor."}
+          leido={leidos.total}
+        >
           <input
             name="total"
             inputMode="decimal"
             value={total}
-            onChange={(e) => setTotal(e.target.value)}
+            onChange={(e) => {
+              tocar("total");
+              setTotal(e.target.value);
+            }}
             placeholder="0,00"
             required
             className={cn(entrada, "tabular-nums")}
@@ -239,8 +511,16 @@ export function FormularioGasto({
         </Campo>
         {deducible && (
           <>
-            <Campo etiqueta="Tipo de IVA *">
-              <select name="iva_pct" value={ivaPct} onChange={(e) => setIvaPct(e.target.value)} className={entrada}>
+            <Campo etiqueta="Tipo de IVA *" leido={leidos.iva_pct}>
+              <select
+                name="iva_pct"
+                value={ivaPct}
+                onChange={(e) => {
+                  tocar("iva_pct");
+                  setIvaPct(e.target.value);
+                }}
+                className={entrada}
+              >
                 {TIPOS_IVA.map((p) => (
                   <option key={p} value={p}>
                     {etiquetaTipoIva(p)}
@@ -263,14 +543,40 @@ export function FormularioGasto({
 
       {deducible && (
         <Seccion titulo="Proveedor y factura">
-          <Campo etiqueta="Proveedor *">
-            <input name="proveedor" defaultValue={inicial?.proveedor ?? ""} required className={entrada} />
+          <Campo etiqueta="Proveedor *" leido={leidos.proveedor}>
+            <input
+              name="proveedor"
+              value={proveedor}
+              onChange={(e) => {
+                tocar("proveedor");
+                setProveedor(e.target.value);
+              }}
+              required
+              className={entrada}
+            />
           </Campo>
-          <Campo etiqueta="NIF del proveedor">
-            <input name="nif_proveedor" defaultValue={inicial?.nif_proveedor ?? ""} className={entrada} />
+          <Campo etiqueta="NIF del proveedor" leido={leidos.nif_proveedor}>
+            <input
+              name="nif_proveedor"
+              value={nifProveedor}
+              onChange={(e) => {
+                tocar("nif_proveedor");
+                setNifProveedor(e.target.value);
+              }}
+              className={entrada}
+            />
           </Campo>
-          <Campo etiqueta="Nº de factura *">
-            <input name="numero_factura" defaultValue={inicial?.numero_factura ?? ""} required className={entrada} />
+          <Campo etiqueta="Nº de factura *" leido={leidos.numero_factura}>
+            <input
+              name="numero_factura"
+              value={numeroFactura}
+              onChange={(e) => {
+                tocar("numero_factura");
+                setNumeroFactura(e.target.value);
+              }}
+              required
+              className={entrada}
+            />
           </Campo>
         </Seccion>
       )}
@@ -332,38 +638,8 @@ export function FormularioGasto({
         </Seccion>
       )}
 
-      <Seccion titulo={deducible ? "Factura adjunta" : "Ticket"}>
-        <div className="flex flex-col gap-esp2 md:col-span-2">
-          {ticket ? (
-            <div className="flex items-center gap-esp3 rounded-md border border-borde-exito bg-fondo-exito-sutil px-esp4 py-esp3 text-sm text-texto-exito">
-              <Icono nombre="check" size={16} />
-              <span className="flex-1">Archivo adjuntado</span>
-              <button type="button" onClick={() => setTicket(null)} className="text-xs underline">
-                Quitar
-              </button>
-            </div>
-          ) : (
-            <label className="flex cursor-pointer items-center gap-esp3 rounded-md border border-dashed border-borde-campo px-esp4 py-esp4 text-sm text-texto-secundario hover:bg-fondo-sutil">
-              <Icono nombre="camara" size={18} />
-              {subiendo ? "Subiendo…" : "Hacer foto o elegir archivo (imagen o PDF)"}
-              <input
-                type="file"
-                accept="image/*,application/pdf"
-                className="sr-only"
-                disabled={subiendo}
-                onChange={(e) => subir(e.target.files?.[0])}
-              />
-            </label>
-          )}
-          {!ticket && (
-            <p className={cn("text-xs", deducible ? "text-texto-aviso" : "text-texto-terciario")}>
-              {deducible
-                ? "⚠ Sin factura no se puede aprobar el gasto."
-                : "⚠ Falta ticket — es opcional, pero conviene adjuntarlo."}
-            </p>
-          )}
-          {errorArchivo && <p className="text-xs text-texto-peligro">{errorArchivo}</p>}
-        </div>
+      <Seccion titulo={editando ? (deducible ? "Factura adjunta" : "Ticket") : "Notas"}>
+        {editando && bloqueTicket}
         <Campo etiqueta="Notas" className="md:col-span-2">
           <textarea
             name="notas"
@@ -395,7 +671,7 @@ export function FormularioGasto({
             Cancelar
           </Boton>
         </Link>
-        <Boton type="submit" cargando={pendiente} disabled={subiendo}>
+        <Boton type="submit" cargando={pendiente} disabled={subiendo || leyendo}>
           {editando ? "Guardar cambios" : "Guardar gasto"}
         </Boton>
       </div>

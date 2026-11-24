@@ -7,6 +7,7 @@ import { CabeceraEmpleado } from "@/components/empleado/cabecera-empleado";
 import { contarNoLeidos } from "@/lib/push/bandeja";
 import { avisosUrgentesPendientes } from "@/lib/avisos/pendientes";
 import { SincronizarFotos } from "@/components/empleado/sincronizar-fotos";
+import { SincronizarGastos } from "@/components/empleado/sincronizar-gastos";
 import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { urlAvatar } from "@/lib/avatar";
@@ -87,6 +88,7 @@ export default async function LayoutEmpleado({
             </Link>
           )}
           <SincronizarFotos />
+          <SincronizarGastos />
           <BannerAvisos />
           {children}
         </div>

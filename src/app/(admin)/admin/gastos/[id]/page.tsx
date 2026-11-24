@@ -17,6 +17,7 @@ import {
   etiquetaConceptoAeat,
   etiquetaTipoIva,
 } from "@/lib/gastos";
+import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
 import { ControlesGasto } from "./controles";
 
 export const dynamic = "force-dynamic";
@@ -141,6 +142,12 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         ) : (
           <p className="text-sm text-texto-aviso">⚠ Falta {deducible ? "la factura" : "el ticket"}.</p>
         )}
+        <LecturaTicketResumen
+          gastoId={gasto.id}
+          tipo={gasto.tipo}
+          datos={gasto.datos_ticket}
+          editable={gasto.estado !== "reembolsado"}
+        />
       </div>
 
       <ControlesGasto

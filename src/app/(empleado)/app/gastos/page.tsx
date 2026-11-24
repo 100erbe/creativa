@@ -56,7 +56,7 @@ export default async function PaginaMisGastos({
         <Link href="/app/gastos/nuevo" className="shrink-0">
           <Boton>
             <Icono nombre="camara" size={16} />
-            Nuevo gasto
+            Escanear ticket
           </Boton>
         </Link>
       </div>
