@@ -9,6 +9,7 @@ import { componerDireccionEnLineas } from "@/lib/direccion";
 import { etiquetaDocumentoIdentidad } from "@/lib/documento-impresion";
 import { nombreArchivoDocumento } from "@/lib/nombre-documento";
 import { BotonImprimir } from "./boton-imprimir";
+import { BotonDescargarPdf } from "./boton-descargar";
 
 export const dynamic = "force-dynamic";
 
@@ -233,6 +234,7 @@ export default async function PaginaImprimirDocumento({
               </p>
             )
           ))}
+        <BotonDescargarPdf documentoId={documentoId} pagada={!!pagada} />
         <BotonImprimir />
       </div>
 

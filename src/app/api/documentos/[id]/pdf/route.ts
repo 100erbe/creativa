@@ -36,7 +36,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": cabeceraDescarga(`${nombre}.pdf`, "inline"),
+      // ?descargar=1 → se guarda directamente con su nombre, sin abrir el visor.
+      "Content-Disposition": cabeceraDescarga(
+        `${nombre}.pdf`,
+        request.nextUrl.searchParams.get("descargar") === "1" ? "attachment" : "inline",
+      ),
       "Cache-Control": "private, no-store",
     },
   });
