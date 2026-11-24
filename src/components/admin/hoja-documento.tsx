@@ -117,6 +117,10 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
   const esPresupuesto = d.tipo === "presupuesto";
   const esAlbaran = d.tipo === "albaran";
   const esRecibo = d.tipo === "recibo";
+  // Datos bancarios solo donde el cliente tiene que pagar (no en el recibo, que ya está cobrado)
+  const mostrarCuenta = !esRecibo && Boolean(d.pago.banco || d.pago.iban);
+  const mostrarPago =
+    (d.tipo === "factura" || esPresupuesto || esRecibo) && Boolean(d.pago.texto || mostrarCuenta);
   const sinIva = d.regimenIva === "exento" || d.regimenIva === "intracomunitario";
 
   const desglose = desgloseIva(d.lineas, d.totales.descuentoPct, sinIva);
@@ -314,18 +318,6 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
                 )}
               </div>
             )}
-            {(d.pago.texto || d.pago.iban) && (d.tipo === "factura" || esPresupuesto || esRecibo) && (
-              <div>
-                <Etiqueta>Forma de pago</Etiqueta>
-                {d.pago.texto && <p>{d.pago.texto}</p>}
-                {!esRecibo && d.pago.banco && <p>{d.pago.banco}</p>}
-                {!esRecibo && d.pago.iban && (
-                  <p>
-                    IBAN <span className="font-semibold tabular-nums">{d.pago.iban}</span>
-                  </p>
-                )}
-              </div>
-            )}
             {sinIva && d.motivoExencion && (
               <div className="border border-documento-borde px-[3mm] py-[2mm] text-[8.5pt]">{d.motivoExencion}</div>
             )}
@@ -364,6 +356,29 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
             </div>
           </div>
         </section>
+
+        {/* Forma de pago: franja propia justo debajo del total, con los datos para pagar */}
+        {mostrarPago && (
+          <section className="mt-[5mm] grid grid-cols-[1fr_auto] gap-x-[8mm] gap-y-[2mm] bg-documento-fondo px-[4mm] py-[2.5mm] [break-inside:avoid]">
+            {d.pago.texto && (
+              <div className="min-w-0">
+                <Etiqueta>Forma de pago</Etiqueta>
+                <p className="font-semibold">{d.pago.texto}</p>
+              </div>
+            )}
+            {mostrarCuenta && (
+              <div>
+                <Etiqueta>Datos bancarios</Etiqueta>
+                {d.pago.banco && <p>{d.pago.banco}</p>}
+                {d.pago.iban && (
+                  <p className="whitespace-nowrap">
+                    IBAN <span className="font-semibold tabular-nums">{d.pago.iban}</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Firmas según el tipo de documento */}
         {esPresupuesto && (
