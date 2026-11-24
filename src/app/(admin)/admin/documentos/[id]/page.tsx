@@ -17,7 +17,7 @@ import {
 } from "@/lib/documentos";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { componerDireccion } from "@/lib/direccion";
-import { formatoCantidad, precioUnitarioImpreso } from "@/lib/documento-impresion";
+import { formatoCantidad, nombreArchivo, precioUnitarioImpreso } from "@/lib/documento-impresion";
 import {
   AccionesDocumento,
   BotonSalirConCondiciones,
@@ -51,7 +51,7 @@ export default async function PaginaDocumento({
   const resultados = await Promise.all([
     supabase
       .from("documentos")
-      .select("*, clientes(razon_social, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion, dias_vencimiento)")
+      .select("*, clientes(razon_social, nombre_comercial, numero_documento, direccion, codigo_postal, municipio, provincia, email_facturacion, dias_vencimiento)")
       .eq("id", documentoId)
       .maybeSingle(),
     supabase
@@ -219,7 +219,15 @@ export default async function PaginaDocumento({
       )}`;
   const nombreDocumento = `${etiquetaTipo} ${doc.numero_completo ?? "(borrador)"}`.trim();
   const compartir = {
-    archivo: nombreDocumento,
+    // Mismo nombre que el PDF descargado y que «Guardar como PDF» en la pantalla de impresión.
+    archivo: nombreArchivo({
+      tipo: doc.tipo,
+      numero: doc.numero_completo,
+      razonSocial: doc.cliente_razon_social ?? cliente?.razon_social ?? "",
+      nombreComercial: cliente?.nombre_comercial,
+      campana: doc.campana,
+      descripcion: doc.descripcion,
+    }),
     titulo: nombreDocumento,
     texto: `${nombreDocumento} por importe de ${euros(Number(doc.total))}.`,
   };

@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Icono } from "@/components/ui/iconos";
 import { HojaDocumento, type DatosHoja } from "@/components/admin/hoja-documento";
 import { componerDireccionEnLineas } from "@/lib/direccion";
-import { etiquetaDocumentoIdentidad, nombreArchivo } from "@/lib/documento-impresion";
+import { etiquetaDocumentoIdentidad } from "@/lib/documento-impresion";
+import { nombreArchivoDocumento } from "@/lib/nombre-documento";
 import { BotonImprimir } from "./boton-imprimir";
 
 export const dynamic = "force-dynamic";
@@ -27,23 +28,9 @@ export async function generateMetadata({
   const documentoId = Number(id);
   if (!Number.isInteger(documentoId)) return { title: "Documento" };
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("documentos")
-    .select("tipo, numero_completo, cliente_razon_social, clientes(razon_social)")
-    .eq("id", documentoId)
-    .maybeSingle();
-  if (!data) return { title: "Documento" };
-
-  const cliente = Array.isArray(data.clientes) ? data.clientes[0] : data.clientes;
-  const nombre = nombreArchivo(data.tipo, data.numero_completo, data.cliente_razon_social ?? cliente?.razon_social ?? "");
   // «PAGADA» en el nombre solo si de verdad lleva el sello (factura cobrada por completo).
-  const cobrada =
-    conSello &&
-    data.tipo === "factura" &&
-    (await supabase.from("v_estado_cobro").select("estado_cobro").eq("id", documentoId).maybeSingle()).data
-      ?.estado_cobro === "cobrada";
-  return { title: cobrada ? `${nombre} PAGADA` : nombre };
+  const nombre = await nombreArchivoDocumento(await createClient(), documentoId, conSello);
+  return { title: nombre ?? "Documento" };
 }
 
 export default async function PaginaImprimirDocumento({

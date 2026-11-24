@@ -48,7 +48,7 @@ export const crearBorradorReclamacion = accion(
 
     const archivos: { archivo: "estado" | number; nombre: string }[] = [
       { archivo: "estado", nombre: nombreArchivoEstadoCuenta(cliente.razonSocial, estado.fecha) },
-      ...estado.insolutas.map((l) => ({ archivo: l.id, nombre: nombreArchivoFactura(l.tipo, l.numero, cliente.razonSocial) })),
+      ...estado.insolutas.map((l) => ({ archivo: l.id, nombre: nombreArchivoFactura(l.tipo, l.numero, cliente.razonSocial, l.concepto) })),
     ];
     const adjuntos: Adjunto[] = [];
     for (const a of archivos) {

@@ -233,7 +233,7 @@ export default async function PaginaCliente({
                   fecha: l.fecha,
                   saldo: l.saldo,
                   vencimiento: l.vencimiento,
-                  archivo: nombreArchivoFactura(l.tipo, l.numero, cliente.razon_social),
+                  archivo: nombreArchivoFactura(l.tipo, l.numero, cliente.razon_social, l.concepto),
                 }))}
                 totalAReclamar={estadoCuenta.estado.totalAReclamar}
                 archivoEstado={nombreArchivoEstadoCuenta(cliente.razon_social, estadoCuenta.estado.fecha)}

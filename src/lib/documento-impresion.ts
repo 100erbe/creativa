@@ -5,21 +5,86 @@ import { ETIQUETA_TIPO, PREFIJO_ARCHIVO } from "./documentos";
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
+const LARGO_MAXIMO_NOMBRE = 100;
+const LARGO_MAXIMO_CONCEPTO = 45;
+
+/** Quita lo que Windows no admite en un nombre de archivo, los espacios dobles y los puntos finales. */
+function limpiarNombre(t: string): string {
+  return t
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[\s.,;·-]+$/, "");
+}
+
+/** Corta en una palabra entera, sin pasar de `max` caracteres. */
+function cortarEnPalabra(t: string, max: number): string {
+  if (t.length <= max) return t;
+  const corte = t.slice(0, max + 1).replace(/\s+\S*$/, "");
+  return (corte || t.slice(0, max)).replace(/[\s.,;·-]+$/, "");
+}
+
+/** «SEA LIFE CENTRE SPAIN S.A.» → «SEA LIFE CENTRE SPAIN»: sin la forma societaria, que alarga el nombre. */
+export function clienteCorto(razonSocial: string, nombreComercial?: string | null): string {
+  const base = (nombreComercial?.trim() || razonSocial).trim();
+  const sinForma = base.replace(
+    /[\s,]+(S\.?\s?L\.?\s?U\.?|S\.?\s?L\.?\s?L\.?|S\.?\s?L\.?|S\.?\s?A\.?\s?U\.?|S\.?\s?A\.?|A\.?\s?I\.?\s?E\.?|S\.?\s?C\.?|C\.?\s?B\.?|S\.?\s?COOP\.?(\s?AND\.?)?)$/i,
+    "",
+  );
+  return limpiarNombre(sinForma || base);
+}
+
 /**
- * Nombre que propone el navegador al "Guardar como PDF": "FAC 0139.26 Cliente S.L."
- * (el mismo criterio que ya usan las facturas de Creativa: prefijo, número con punto y cliente).
- * Se quitan los caracteres que Windows no admite en un nombre de archivo.
+ * Concepto corto para el nombre del archivo: la campaña o, si no hay, el primer trozo de la
+ * descripción (hasta « · », el salto de línea o la primera coma), cortado en una palabra entera.
  */
-export function nombreArchivo(tipo: string, numero: string | null, cliente: string): string {
-  const limpiar = (t: string) => t.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
-  const prefijo = PREFIJO_ARCHIVO[tipo] ?? (ETIQUETA_TIPO[tipo] ?? "DOC").toUpperCase();
-  const num = numero ? limpiar(numero.replace(/\//g, ".")) : "BORRADOR";
-  // Los abonos se numeran "Abono001": el prefijo ya está en el número y no se repite.
-  const prefijoEnNumero = num.toLowerCase().startsWith(prefijo.toLowerCase());
-  const nombre = [numero ? (prefijoEnNumero ? "" : prefijo) : `BORRADOR ${prefijo}`, numero ? num : "", limpiar(cliente)]
-    .filter(Boolean)
-    .join(" ");
-  return nombre.slice(0, 120).trim();
+export function conceptoCorto(campana: string | null | undefined, descripcion: string | null | undefined): string {
+  const texto = ((campana?.trim() || descripcion?.trim() || "").split(/\s·\s|\n/)[0] ?? "").trim();
+  if (!texto) return "";
+  const coma = texto.indexOf(", ");
+  const primero = coma >= 12 ? texto.slice(0, coma) : texto;
+  return cortarEnPalabra(limpiarNombre(primero), LARGO_MAXIMO_CONCEPTO);
+}
+
+/** «FAC-0142/26» → «0142.26»; si el número no sigue ese formato, se deja tal cual (limpio). */
+function numeroParaArchivo(numero: string): string {
+  const m = numero.match(/(\d+)\s*\/\s*(\d+)\s*$/);
+  return m ? `${m[1]}.${m[2]}` : limpiarNombre(numero.replace(/\//g, "."));
+}
+
+export type DatosNombreArchivo = {
+  tipo: string;
+  numero: string | null;
+  razonSocial: string;
+  nombreComercial?: string | null;
+  campana?: string | null;
+  descripcion?: string | null;
+  /** PDF con el sello «PAGADA». */
+  pagada?: boolean;
+};
+
+/**
+ * Nombre de un documento al guardarlo o compartirlo como PDF (sin extensión), igual en todas partes:
+ * «FAC 0142.26 SEA LIFE CENTRE SPAIN, SERVICIOS DE STREET-MARKETING». Sigue el criterio de los PDF de
+ * Creativa: prefijo, número con punto y año, cliente, coma y concepto. «BORRADOR» delante en los
+ * borradores y «PAGADA» al final si lleva el sello.
+ */
+export function nombreArchivo(d: DatosNombreArchivo): string {
+  const prefijo = PREFIJO_ARCHIVO[d.tipo] ?? (ETIQUETA_TIPO[d.tipo] ?? "DOC").toUpperCase();
+  const cabeza = d.numero ? `${prefijo} ${numeroParaArchivo(d.numero)}` : `BORRADOR ${prefijo}`;
+  const cliente = clienteCorto(d.razonSocial, d.nombreComercial);
+  const cola = d.pagada ? " PAGADA" : "";
+  const sinConcepto = limpiarNombre([cabeza, cliente].filter(Boolean).join(" "));
+  const sitio = LARGO_MAXIMO_NOMBRE - sinConcepto.length - cola.length - 2;
+  const concepto = sitio >= 8 ? cortarEnPalabra(conceptoCorto(d.campana, d.descripcion), sitio) : "";
+  const nombre = concepto && cliente ? `${sinConcepto}, ${concepto}` : concepto ? `${sinConcepto} ${concepto}` : sinConcepto;
+  return `${cortarEnPalabra(nombre, LARGO_MAXIMO_NOMBRE - cola.length)}${cola}`;
+}
+
+/** Versión ASCII del nombre para la cabecera Content-Disposition (el nombre completo va en filename*). */
+export function cabeceraDescarga(nombre: string, modo: "inline" | "attachment" = "attachment"): string {
+  const ascii = nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "");
+  return `${modo}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombre)}`;
 }
 
 type LineaIva = { importe: number | string; iva_pct: number | string };

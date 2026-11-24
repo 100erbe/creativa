@@ -2,6 +2,7 @@
 // Componente de presentación puro: recibe los datos ya preparados, para usarlo igual
 // en la página de impresión real y en pruebas.
 
+import { Fragment } from "react";
 import { ETIQUETA_ALCANCE, ETIQUETA_CAUSA_RECTIFICACION, ETIQUETA_TIPO, TITULO_HOJA, type CausaRectificacion } from "@/lib/documentos";
 import { fechaNumerica } from "@/lib/formato";
 import { documento } from "@/design/tokens";
@@ -126,13 +127,16 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
   const desglose = desgloseIva(d.lineas, d.totales.descuentoPct, sinIva);
   const variosTipos = desglose.length > 1;
   const hayAlcance = d.lineas.some((l) => l.alcance);
-  const hayDescuento = d.lineas.some((l) => Number(l.descuento_pct) > 0);
+  const hayDescuentoLinea = d.lineas.some((l) => Number(l.descuento_pct) > 0);
+  const hayDescuentoGlobal = d.totales.descuentoImporte !== 0;
   const mismaOperacion = !d.fechaOperacion || d.fechaOperacion === d.fecha;
 
   const tituloTipo = (TITULO_HOJA[d.tipo] ?? ETIQUETA_TIPO[d.tipo] ?? d.tipo).toUpperCase();
   const tituloLargo = tituloTipo.length > 12;
-  // Columnas de la tabla: concepto + (alcance) + cantidad + precio + (dto) + (iva) + importe
-  const columnas = 4 + (hayAlcance ? 1 : 0) + (hayDescuento ? 1 : 0) + (variosTipos ? 1 : 0);
+  // Columnas de la tabla: concepto + (alcance) + cantidad + precio + (iva) + importe
+  const columnas = 4 + (hayAlcance ? 1 : 0) + (variosTipos ? 1 : 0);
+  // Columnas vacías entre el concepto y el importe en las filas de descuento
+  const columnasIntermedias = columnas - 2 - (variosTipos ? 1 : 0);
 
   return (
     <>
@@ -245,7 +249,6 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
               {hayAlcance && <th className="px-[2mm] py-[2mm] whitespace-nowrap font-semibold">Servicio</th>}
               <th className="px-[2mm] py-[2mm] text-right whitespace-nowrap font-semibold">Cant.</th>
               <th className="px-[2mm] py-[2mm] text-right whitespace-nowrap font-semibold">Precio (€)</th>
-              {hayDescuento && <th className="px-[2mm] py-[2mm] text-right whitespace-nowrap font-semibold">Dto.</th>}
               {variosTipos && <th className="px-[2mm] py-[2mm] text-right whitespace-nowrap font-semibold">IVA</th>}
               <th className="whitespace-nowrap px-[2.5mm] py-[2mm] text-right font-semibold">Importe (€)</th>
             </tr>
@@ -253,8 +256,15 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
           <tbody>
             {d.lineas.map((l) => {
               const conMedidas = (l.unidad === "m2" || l.unidad === "ml") && l.ancho_cm != null;
+              // El descuento de la línea se imprime como una fila propia en negativo: la línea va por su
+              // importe bruto (cantidad × precio) y bruto + descuento = importe guardado, al céntimo.
+              const pct = Number(l.descuento_pct);
+              const bruto = pct > 0 ? Math.round(Number(l.cantidad) * precioUnitarioImpreso(l) * 100) / 100 : Number(l.importe);
+              const descuento = Math.round((Number(l.importe) - bruto) * 100) / 100;
+              const conDescuento = pct > 0 && descuento !== 0;
               return (
-                <tr key={l.id} className="border-b border-documento-linea align-top [break-inside:avoid]">
+                <Fragment key={l.id}>
+                <tr className={`${conDescuento ? "" : "border-b border-documento-linea "}align-top [break-inside:avoid]`}>
                   <td className="px-[2.5mm] py-[2mm]">
                     <p>{l.descripcion}</p>
                     {l.artista && <p className="text-[8.5pt] font-medium text-documento-texto-suave">{l.artista}</p>}
@@ -276,22 +286,43 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
                   <td className="whitespace-nowrap px-[2mm] py-[2mm] text-right tabular-nums">
                     {formatoImporte(precioUnitarioImpreso(l))}
                   </td>
-                  {hayDescuento && (
-                    <td className="whitespace-nowrap px-[2mm] py-[2mm] text-right tabular-nums">
-                      {Number(l.descuento_pct) > 0 ? `${formatoCantidad(l.descuento_pct)} %` : ""}
-                    </td>
-                  )}
                   {variosTipos && (
                     <td className="whitespace-nowrap px-[2mm] py-[2mm] text-right tabular-nums">
                       {sinIva ? "0 %" : `${formatoCantidad(l.iva_pct)} %`}
                     </td>
                   )}
                   <td className="whitespace-nowrap px-[2.5mm] py-[2mm] text-right font-semibold tabular-nums">
-                    {formatoImporte(l.importe)}
+                    {formatoImporte(bruto)}
                   </td>
                 </tr>
+                {conDescuento && (
+                  <tr className="border-b border-documento-linea align-top text-documento-texto-suave [break-inside:avoid]">
+                    <td className="px-[2.5mm] pb-[2mm] pl-[6mm]">Descuento {formatoCantidad(pct)} %</td>
+                    <td colSpan={columnasIntermedias} />
+                    {variosTipos && (
+                      <td className="whitespace-nowrap px-[2mm] pb-[2mm] text-right tabular-nums">
+                        {sinIva ? "0 %" : `${formatoCantidad(l.iva_pct)} %`}
+                      </td>
+                    )}
+                    <td className="whitespace-nowrap px-[2.5mm] pb-[2mm] text-right font-semibold tabular-nums">
+                      {formatoImporte(descuento)}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
+            {hayDescuentoGlobal && (
+              <tr className="border-b border-documento-linea align-top [break-inside:avoid]">
+                <td className="px-[2.5mm] py-[2mm]">
+                  {hayDescuentoLinea ? "Descuento general" : "Descuento"} {formatoCantidad(d.totales.descuentoPct)} %
+                </td>
+                <td colSpan={columnasIntermedias + (variosTipos ? 1 : 0)} />
+                <td className="whitespace-nowrap px-[2.5mm] py-[2mm] text-right font-semibold tabular-nums">
+                  {formatoImporte(-d.totales.descuentoImporte)}
+                </td>
+              </tr>
+            )}
             {d.lineas.length === 0 && (
               <tr>
                 <td colSpan={columnas} className="px-[2.5mm] py-[4mm] text-documento-tenue">
@@ -325,15 +356,7 @@ export function HojaDocumento({ d }: { d: DatosHoja }) {
           </div>
 
           <div>
-            {d.totales.descuentoImporte !== 0 && (
-              <>
-                <FilaTotal etiqueta="Suma" valor={formatoEuros(d.totales.suma)} />
-                <FilaTotal
-                  etiqueta={`Descuento ${formatoCantidad(d.totales.descuentoPct)} %`}
-                  valor={formatoEuros(-d.totales.descuentoImporte)}
-                />
-              </>
-            )}
+            {/* El descuento general ya figura como última fila de la tabla */}
             <div className="border-t border-documento-borde">
               <FilaTotal etiqueta="Base imponible" valor={formatoEuros(d.totales.base)} />
               {desglose.map((x) => (

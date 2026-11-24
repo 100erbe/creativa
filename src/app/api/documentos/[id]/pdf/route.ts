@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { generarPdf } from "@/lib/pdf";
+import { createClient } from "@/lib/supabase/server";
+import { cabeceraDescarga } from "@/lib/documento-impresion";
+import { nombreArchivoDocumento } from "@/lib/nombre-documento";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,10 +30,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new NextResponse("No se ha podido abrir el documento", { status: 502 });
   }
 
+  // Mismo nombre que propone «Guardar como PDF» en la pantalla de impresión.
+  const nombre = (await nombreArchivoDocumento(await createClient(), documentoId, !!sello)) ?? `Documento ${documentoId}`;
+
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="documento-${documentoId}.pdf"`,
+      "Content-Disposition": cabeceraDescarga(`${nombre}.pdf`, "inline"),
       "Cache-Control": "private, no-store",
     },
   });

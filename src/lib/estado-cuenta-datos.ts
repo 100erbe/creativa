@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { componerDireccionEnLineas } from "@/lib/direccion";
-import { etiquetaDocumentoIdentidad, formatoEuros, nombreArchivo } from "@/lib/documento-impresion";
+import { clienteCorto, etiquetaDocumentoIdentidad, formatoEuros, nombreArchivo } from "@/lib/documento-impresion";
 import { fechaNumerica } from "@/lib/formato";
 import { calcularEstadoCuenta, hoyEnEspana, type DocumentoCobro, type EstadoCuenta } from "@/lib/estado-cuenta";
 
@@ -133,14 +133,14 @@ export async function cargarEstadoCuenta(supabase: Supabase, clienteId: number):
   };
 }
 
-/** «Estado de cuenta Cliente S.L. 17-11-2026» (sin extensión). */
+/** «Estado de cuenta SEA LIFE CENTRE SPAIN 2026-11-24» (sin extensión): la fecha al revés para que se ordenen solos. */
 export function nombreArchivoEstadoCuenta(razonSocial: string, fecha: string) {
-  const limpio = razonSocial.replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
-  return `Estado de cuenta ${limpio} ${fechaNumerica(fecha).replace(/\//g, "-")}`.slice(0, 120).trim();
+  return `Estado de cuenta ${clienteCorto(razonSocial)} ${fecha.slice(0, 10)}`.slice(0, 100).trim();
 }
 
-export function nombreArchivoFactura(tipo: string, numero: string, razonSocial: string) {
-  return nombreArchivo(tipo, numero, razonSocial);
+/** Nombre del PDF de una factura adjunta a la reclamación: el mismo que en el resto de la app. */
+export function nombreArchivoFactura(tipo: string, numero: string, razonSocial: string, concepto: string | null) {
+  return nombreArchivo({ tipo, numero, razonSocial, descripcion: concepto });
 }
 
 /** Asunto y texto propuestos para el email de reclamación (el administrador los puede cambiar). */
