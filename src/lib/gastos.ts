@@ -9,8 +9,15 @@ export type EstadoGasto = (typeof ESTADOS_GASTO)[number];
 export const FORMAS_PAGO_GASTO = ["efectivo", "tarjeta_empresa", "caja_chica", "transferencia"] as const;
 export type FormaPagoGasto = (typeof FORMAS_PAGO_GASTO)[number];
 
-/** Tipos de IVA del modelo v11 (21 %, 10 %, 4 %). */
-export const TIPOS_IVA = [21, 10, 4] as const;
+/**
+ * Tipos de IVA del modelo v11 (21 %, 10 %, 4 %) más el 0 %: operaciones no sujetas
+ * (nóminas, art. 7.5 Ley 37/1992) o exentas (seguros, art. 20.Uno.16º).
+ */
+export const TIPOS_IVA = [21, 10, 4, 0] as const;
+
+export function etiquetaTipoIva(pct: number) {
+  return pct === 0 ? "0 % (no sujeto / exento)" : `${pct} %`;
+}
 
 export const ETIQUETA_TIPO_GASTO: Record<TipoGasto, string> = {
   deducible: "Deducible",

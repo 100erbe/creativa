@@ -13,6 +13,7 @@ import {
   ETIQUETA_FORMA_PAGO_GASTO,
   ETIQUETA_TIPO_GASTO,
   TONO_ESTADO_GASTO,
+  etiquetaTipoIva,
 } from "@/lib/gastos";
 import { ControlesGasto } from "./controles";
 
@@ -94,7 +95,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         </Dato>
         {deducible ? (
           <>
-            <Dato etiqueta="Tipo de IVA">{gasto.iva_pct != null ? `${Number(gasto.iva_pct)} %` : null}</Dato>
+            <Dato etiqueta="Tipo de IVA">{gasto.iva_pct != null ? etiquetaTipoIva(Number(gasto.iva_pct)) : null}</Dato>
             <Dato etiqueta="Base imponible">{gasto.base_imponible != null ? euros(Number(gasto.base_imponible)) : null}</Dato>
             <Dato etiqueta="Cuota IVA">{gasto.cuota_iva != null ? euros(Number(gasto.cuota_iva)) : null}</Dato>
             <Dato etiqueta="Proveedor">{gasto.proveedor}</Dato>

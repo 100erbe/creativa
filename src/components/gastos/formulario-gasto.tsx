@@ -14,6 +14,7 @@ import {
   TIPOS_IVA,
   aNumero,
   calcularIva,
+  etiquetaTipoIva,
   type TipoGasto,
 } from "@/lib/gastos";
 import { euros } from "@/lib/formato";
@@ -227,7 +228,7 @@ export function FormularioGasto({
               <select name="iva_pct" value={ivaPct} onChange={(e) => setIvaPct(e.target.value)} className={entrada}>
                 {TIPOS_IVA.map((p) => (
                   <option key={p} value={p}>
-                    {p} %
+                    {etiquetaTipoIva(p)}
                   </option>
                 ))}
               </select>

@@ -88,7 +88,7 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
   let ivaCampos: { iva_pct: number | null; base_imponible: number | null; cuota_iva: number | null };
   if (d.tipo === "deducible") {
     if (d.iva_pct == null || !(TIPOS_IVA as readonly number[]).includes(d.iva_pct)) {
-      return { error: "Elige el tipo de IVA (21 %, 10 % o 4 %)." };
+      return { error: "Elige el tipo de IVA (21 %, 10 %, 4 % o 0 %)." };
     }
     if (!d.proveedor) return { error: "El proveedor es obligatorio en un gasto deducible." };
     if (!d.numero_factura) return { error: "El número de factura es obligatorio en un gasto deducible." };
