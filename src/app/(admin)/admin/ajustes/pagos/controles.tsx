@@ -80,6 +80,9 @@ function FormularioForma({ forma, onCerrar }: { forma?: Forma; onCerrar: () => v
         <label className={etiqueta}>
           Días
           <input value={dias} onChange={(e) => setDias(e.target.value)} inputMode="numeric" className={CAMPO} />
+          <span className="text-xs font-normal text-texto-terciario">
+            Al cambiarlos se recalcula el vencimiento de las facturas emitidas con esta forma de pago (salvo plazo o fecha propios).
+          </span>
         </label>
       </div>
       <label className={etiqueta}>

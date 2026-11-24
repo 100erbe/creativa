@@ -845,6 +845,7 @@ export type Database = {
           fecha_operacion: string | null
           fecha_vencimiento: string | null
           plazo_dias: number | null
+          vencimiento_origen: string | null
           version: number
           sin_pdf: boolean
           revisar: boolean
@@ -907,6 +908,7 @@ export type Database = {
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
+          vencimiento_origen?: string | null
           version?: number
           sin_pdf?: boolean
           revisar?: boolean
@@ -969,6 +971,7 @@ export type Database = {
           fecha_operacion?: string | null
           fecha_vencimiento?: string | null
           plazo_dias?: number | null
+          vencimiento_origen?: string | null
           version?: number
           sin_pdf?: boolean
           revisar?: boolean

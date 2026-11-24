@@ -247,7 +247,7 @@ export function FormularioCliente({
         </Campo>
         <Campo
           etiqueta="Vencimiento por defecto"
-          ayuda="Se aplica a todos los documentos de este cliente si no se indica otro al emitir."
+          ayuda="Se aplica a las facturas de este cliente que no tienen un plazo o una fecha propios, también a las ya emitidas: al cambiarlo se recalcula su vencimiento."
         >
           <input type="hidden" name="dias_vencimiento" value={valorDiasVencimiento} />
           <div className="flex gap-esp2">

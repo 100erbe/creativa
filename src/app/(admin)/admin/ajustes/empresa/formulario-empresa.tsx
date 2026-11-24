@@ -109,7 +109,8 @@ export function FormularioEmpresa({ inicial }: { inicial: Datos }) {
             className={CAMPO}
           />
           <span className="text-xs text-texto-terciario">
-            Se aplica al emitir si ni el documento, ni el cliente ni la forma de pago fijan otro (0 = al contado).
+            Se aplica si ni el documento, ni el cliente ni la forma de pago fijan otro (0 = al contado). Al
+            cambiarlo se recalcula también el vencimiento de las facturas ya emitidas que lo usan.
           </span>
         </label>
       </div>
