@@ -194,7 +194,7 @@ export function CabeceraMovil({
     <header
       ref={headerRef}
       className={cn(
-        "sticky top-0 z-30 flex min-h-14 items-center gap-esp2 px-esp3 py-esp2",
+        "sticky top-0 z-30 flex min-h-14 items-center gap-esp2 px-esp3 py-esp2 pt-[max(theme(spacing.esp2),env(safe-area-inset-top))]",
         className,
       )}
     >

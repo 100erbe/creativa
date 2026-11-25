@@ -25,6 +25,9 @@ export const viewport: Viewport = {
   themeColor: colorMarca,
   width: "device-width",
   initialScale: 1,
+  // Ocupa toda la pantalla (muesca e indicador de inicio incluidos); cabeceras, cajones y hojas
+  // inferiores dejan el margen con env(safe-area-inset-*). Necesario también para la app nativa.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

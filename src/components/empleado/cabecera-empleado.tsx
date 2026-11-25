@@ -10,6 +10,7 @@ import { CabeceraMovil, type ConfigCabeceraMovil } from "@/components/ui/cabecer
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 type EnlaceEmpleado = {
   href: string;
@@ -198,14 +199,14 @@ export function CabeceraEmpleado({
       </nav>
 
       {abierto && (
-        <div className="fixed inset-0 z-[2000]" role="dialog" aria-modal="true" aria-label="Menú">
+        <div ref={atraparFoco} className="fixed inset-0 z-[2000]" role="dialog" aria-modal="true" aria-label="Menú">
           <button
             type="button"
             aria-label="Cerrar menú"
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 pt-[max(theme(spacing.esp4),env(safe-area-inset-top))] pb-[max(theme(spacing.esp4),env(safe-area-inset-bottom))] shadow-elevado">
             <div className="flex items-center pb-esp2">
               <Link
                 href="/app/inicio"

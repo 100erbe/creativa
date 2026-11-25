@@ -122,7 +122,7 @@ export function MapaAgenda({
               type="button"
               onClick={() => setFiltro(f.clave)}
               aria-pressed={activo}
-              className={`tabular-nums inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors ${
+              className={`tabular-nums inline-flex min-h-11 items-center rounded-md px-esp3 text-xs font-medium transition-colors ${
                 activo
                   ? f.clave === "incidencias" && conteos.incidencias > 0
                     ? "bg-fondo-critico text-texto-inverso"

@@ -7,6 +7,7 @@ import { Icono } from "@/components/ui/iconos";
 import { Boton } from "@/components/ui/boton";
 import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type FiltrosDocumentos = {
   tipo?: string;
@@ -212,7 +213,7 @@ export function BarraFiltrosDocumentos({
 
       {/* Bottom Sheet (móvil) / Diálogo compacto (escritorio) para filtros avanzados */}
       {abierto && (
-        <div
+        <div ref={atraparFoco}
           className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-esp4"
           role="dialog"
           aria-modal="true"

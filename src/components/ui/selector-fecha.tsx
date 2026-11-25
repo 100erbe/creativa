@@ -6,6 +6,7 @@ import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 const MESES = [
   "enero",
@@ -170,7 +171,7 @@ export function SelectorFecha({
               onClick={() => setAbierto(false)}
               className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
             />
-            <div
+            <div ref={atraparFoco}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
@@ -181,7 +182,7 @@ export function SelectorFecha({
                   type="button"
                   aria-label="Mes anterior"
                   onClick={() => cambiarMes(-1)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
                 >
                   <Icono nombre="chevron" size={16} className="rotate-180" />
                 </button>
@@ -192,7 +193,7 @@ export function SelectorFecha({
                   type="button"
                   aria-label="Mes siguiente"
                   onClick={() => cambiarMes(1)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-borde-default bg-fondo-superficie text-icono-default transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
                 >
                   <Icono nombre="chevron" size={16} />
                 </button>
@@ -214,7 +215,7 @@ export function SelectorFecha({
                       setAbierto(false);
                     }}
                     className={cn(
-                      "flex h-10 w-full items-center justify-center rounded-lg text-sm tabular-nums transition-colors duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-35",
+                      "flex h-11 w-full items-center justify-center rounded-lg text-sm tabular-nums transition-colors duration-rapida ease-suave active:scale-press disabled:cursor-not-allowed disabled:opacity-35",
                       c.seleccionado
                         ? "bg-fondo-marca font-semibold text-texto-sobre-marca"
                         : c.esHoy

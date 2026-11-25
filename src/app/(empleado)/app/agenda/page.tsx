@@ -73,7 +73,7 @@ export default async function PaginaAgenda({
               key={f.valor}
               href={urlAgenda(f.valor)}
               aria-current={activo ? "true" : undefined}
-              className={`inline-flex min-h-10 items-center rounded-md px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press ${
+              className={`inline-flex min-h-11 items-center rounded-md px-esp3 text-xs font-medium transition-colors duration-rapida ease-suave active:scale-press ${
                 activo
                   ? f.valor === "atrasados" && criticasAll.length > 0
                     ? "bg-fondo-critico text-texto-inverso"

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Boton, clasesBoton } from "@/components/ui/boton";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 // Sustituye a window.confirm / window.alert: tienen el aspecto de la app, no se bloquean en el
 // navegador del móvil instalado como PWA y no tapan la pantalla con el rótulo del navegador.
@@ -92,7 +93,7 @@ export function Dialogos() {
         onClick={() => cerrar(false)}
         className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
       />
-      <div
+      <div ref={atraparFoco}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="dialogo-titulo"

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState } from "r
 import { createPortal } from "react-dom";
 import { Icono, type NombreIcono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type SafeMapCoordinates = {
   lat: number;
@@ -187,7 +188,7 @@ export function SafeMapContainer({
         data-safe-map-container=""
         className={cn(
           modalSiempre
-            ? "relative h-52 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:h-64"
+            ? "relative h-52 overflow-hidden rounded-xl border border-border bg-fondo-sutil max-md:mx-2 max-md:h-48 md:h-64"
             : "relative mx-2 h-48 overflow-hidden rounded-xl border border-border bg-fondo-sutil md:mx-0 md:h-auto md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none",
           className,
         )}
@@ -201,7 +202,9 @@ export function SafeMapContainer({
               : "max-md:isolate max-md:[&>*]:!h-full max-md:[&>*]:!rounded-none max-md:[&>*]:!border-0 max-md:[&_.leaflet-control-zoom]:!hidden max-md:[&_*]:!pointer-events-none max-md:[&_*]:![touch-action:pan-y] md:pointer-events-auto md:h-auto md:select-auto md:touch-auto",
           )}
         >
-          <SafeMapContext.Provider value={inlineCtx}>{children}</SafeMapContext.Provider>
+          {/* Con el mapa a pantalla completa abierto no se monta el de la tarjeta: un solo contexto WebGL
+              a la vez (dos mapas MapLibre/Leaflet a la vez agotan memoria en móviles modestos). */}
+          {open ? null : <SafeMapContext.Provider value={inlineCtx}>{children}</SafeMapContext.Provider>}
         </div>
 
         <button
@@ -218,7 +221,7 @@ export function SafeMapContainer({
         >
           <span
             className={cn(
-              "inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg px-esp4 py-esp2 text-xs font-semibold shadow-md transition-all duration-rapida ease-salida group-hover:scale-[1.02] group-active:scale-press",
+              "inline-flex min-h-11 items-center justify-center gap-esp2 rounded-lg px-esp4 py-esp2 text-xs font-semibold shadow-md transition-[transform,background-color] duration-rapida ease-salida group-hover:scale-[1.02] group-active:scale-press",
               varianteTrigger === "primario"
                 ? "bg-fondo-marca text-texto-sobre-marca group-hover:bg-fondo-marca-hover"
                 : "border border-borde-campo bg-fondo-superficie text-texto-primario",
@@ -268,13 +271,15 @@ export function SafeMapContainer({
               onClick={() => void solicitarCierre()}
               className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
             />
-            <div
+            <div ref={atraparFoco}
               role="dialog"
               aria-modal="true"
               aria-labelledby={titleId}
               className={cn(
                 "animate-hoja-subir relative flex w-full flex-col overflow-hidden bg-fondo-superficie shadow-elevado",
-                tamanoMaximo ? "h-[100dvh] rounded-none border-0" : "h-[90dvh] rounded-xl border border-border",
+                tamanoMaximo
+                  ? "h-[100dvh] rounded-none border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                  : "mb-[env(safe-area-inset-bottom)] h-[90dvh] rounded-xl border border-border",
               )}
             >
               <div className="relative z-10 flex items-center justify-between gap-esp2 border-b border-border bg-fondo-superficie px-esp4 py-esp3">

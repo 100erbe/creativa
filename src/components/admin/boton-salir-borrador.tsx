@@ -3,9 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 import { eliminarBorrador } from "@/app/(admin)/admin/documentos/[id]/acciones";
 import { desenvolver } from "@/lib/accion";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 /**
  * Botón «Salir» unificado para todos los pasos del asistente de documentos.
@@ -39,10 +40,8 @@ export function BotonSalirBorrador({
 
   if (!documentoId) {
     return (
-      <Link href={destino}>
-        <Boton type="button" variante="secundario">
-          Salir
-        </Boton>
+      <Link href={destino} className={clasesBoton("secundario", "m")}>
+        Salir
       </Link>
     );
   }
@@ -99,7 +98,7 @@ export function BotonSalirBorrador({
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
           />
-          <div
+          <div ref={atraparFoco}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="salir-borrador-titulo"

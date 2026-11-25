@@ -18,6 +18,7 @@ import {
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
 import { useAccion } from "@/lib/use-accion";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type ArticuloModalData = {
   id: number;
@@ -321,13 +322,13 @@ export function ModalDetallesPunto({
         onClick={onCerrar}
         className="animate-velo-entrar absolute inset-0 cursor-default bg-fondo-velo"
       />
-      <div
+      <div ref={atraparFoco}
         role="dialog"
         aria-modal="true"
         aria-labelledby="titulo-modal-punto"
         className="animate-hoja-subir sm:animate-modal-entrar relative flex h-[100dvh] w-full flex-col overflow-hidden bg-fondo-superficie shadow-elevado sm:h-auto sm:max-h-[90dvh] sm:max-w-xl sm:rounded-xl sm:border sm:border-borde-default"
       >
-        <div className="flex shrink-0 items-center justify-between gap-esp3 border-b border-borde-default px-esp4 py-esp3 sm:px-esp6 sm:py-esp4">
+        <div className="flex shrink-0 items-center justify-between gap-esp3 border-b border-borde-default px-esp4 py-esp3 pt-[max(theme(spacing.esp3),env(safe-area-inset-top))] sm:px-esp6 sm:py-esp4">
           <div className="flex min-w-0 items-center gap-esp2">
             <h3 id="titulo-modal-punto" className="min-w-0 truncate text-titulo-panel text-texto-primario">
               {nombre}
@@ -367,7 +368,7 @@ export function ModalDetallesPunto({
           />
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-esp2 border-t border-borde-default bg-fondo-superficie px-esp4 py-esp3 sm:px-esp6 sm:py-esp4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-esp2 border-t border-borde-default bg-fondo-superficie px-esp4 py-esp3 pb-[max(theme(spacing.esp3),env(safe-area-inset-bottom))] sm:px-esp6 sm:py-esp4">
           {onEliminar && (
             <button
               type="button"

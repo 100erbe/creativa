@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 import {
   REGIMENES_IVA,
   TIPOS_CLIENTE,
@@ -348,10 +348,8 @@ export function FormularioCliente({
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-esp3 border-t border-borde-default pt-esp4">
-        <Link href={editando ? `/admin/clientes/${inicial?.id}` : "/admin/clientes"}>
-          <Boton type="button" variante="secundario">
-            Cancelar
-          </Boton>
+        <Link href={editando ? `/admin/clientes/${inicial?.id}` : "/admin/clientes"} className={clasesBoton("secundario", "m")}>
+          Cancelar
         </Link>
         <Boton type="submit" cargando={pendiente}>
           {editando ? "Guardar cambios" : "Crear cliente"}

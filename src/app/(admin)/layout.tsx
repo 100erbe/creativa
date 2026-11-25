@@ -58,7 +58,7 @@ export default async function LayoutAdmin({
       <main
         id="contenido-principal"
         tabIndex={-1}
-        className="min-w-0 flex-1 px-esp4 py-esp5 pb-24 outline-none md:px-esp8 md:py-esp6 md:pb-esp6 print:p-0"
+        className="min-w-0 flex-1 px-esp4 py-esp5 pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none md:px-esp8 md:py-esp6 md:pb-esp6 print:p-0"
       >
         {children}
       </main>

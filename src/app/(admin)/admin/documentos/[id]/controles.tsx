@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
 import {
@@ -175,11 +175,9 @@ export function AccionesDocumento({
 
   return (
     <div className="flex flex-col gap-esp3">
-      <Link href={`/admin/documentos/${documentoId}/imprimir`} className="contents">
-        <Boton variante="secundario">
-          <Icono nombre="descargar" size={16} />
-          Imprimir / PDF
-        </Boton>
+      <Link href={`/admin/documentos/${documentoId}/imprimir`} className={clasesBoton("secundario", "m")}>
+        <Icono nombre="descargar" size={16} />
+        Imprimir / PDF
       </Link>
 
       <BotonCompartir documentoId={documentoId} {...compartir} alCompartir={alEnviar} />
@@ -339,9 +337,7 @@ export function AccionesDocumento({
 
       {versionEnBorradorId && presupuestoVivo && (
         <div className="flex flex-col gap-1">
-          <Link href={`/admin/documentos/${versionEnBorradorId}`} className="contents">
-            <Boton>Continuar la nueva versión en borrador</Boton>
-          </Link>
+          <Link href={`/admin/documentos/${versionEnBorradorId}`} className={clasesBoton("primario", "m")}>Continuar la nueva versión en borrador</Link>
           <p className="text-xs text-texto-terciario">
             Este presupuesto pasará a «Sustituido» cuando emitas la versión nueva. Si eliminas ese borrador, sigue
             vigente.
@@ -351,9 +347,7 @@ export function AccionesDocumento({
 
       {facturaEnBorradorId && estado !== "facturado" && (
         <div className="flex flex-col gap-1">
-          <Link href={`/admin/documentos/${facturaEnBorradorId}`} className="contents">
-            <Boton>Continuar la factura en borrador</Boton>
-          </Link>
+          <Link href={`/admin/documentos/${facturaEnBorradorId}`} className={clasesBoton("primario", "m")}>Continuar la factura en borrador</Link>
           <p className="text-xs text-texto-terciario">
             Pasará a «Facturado» cuando emitas la factura. Si eliminas el borrador, podrás volver a convertirlo.
           </p>
@@ -671,11 +665,9 @@ export function Cobros({
               <p className="text-xs text-texto-terciario">
                 Si el cliente pide un justificante, saca la factura con el sello «PAGADA».
               </p>
-              <Link href={`/admin/documentos/${documentoId}/imprimir?pagada=1`} className="contents">
-                <Boton variante="secundario">
-                  <Icono nombre="descargar" size={16} />
-                  Imprimir con sello «PAGADA»
-                </Boton>
+              <Link href={`/admin/documentos/${documentoId}/imprimir?pagada=1`} className={clasesBoton("secundario", "m")}>
+                <Icono nombre="descargar" size={16} />
+                Imprimir con sello «PAGADA»
               </Link>
               <BotonCompartir
                 documentoId={documentoId}

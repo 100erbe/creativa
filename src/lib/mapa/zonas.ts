@@ -1,3 +1,4 @@
+import { cabecerasOSM } from "@/lib/mapa/osm";
 export type TipoUbicacion = "punto" | "radio" | "poligono";
 
 export type GeometriaZona =
@@ -212,7 +213,7 @@ export async function obtenerPoligonoOSM(
 
   try {
     const url = `https://nominatim.openstreetmap.org/lookup?osm_ids=${encodeURIComponent(clave)}&format=json&polygon_geojson=1&polygon_threshold=0.0004&accept-language=es`;
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: cabecerasOSM() });
     if (!r.ok) {
       cachePoligonoOSM.set(clave, null);
       return null;
@@ -336,7 +337,7 @@ export async function obtenerDistritosEnVista(bbox: {
   try {
     const resp = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+      headers: { ...cabecerasOSM(), "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
       body: `data=${encodeURIComponent(consulta)}`,
       signal: control.signal,
     });

@@ -11,6 +11,7 @@ import { abrirPaletaComandos } from "@/components/admin/paleta-comandos";
 import { createClient } from "@/lib/supabase/client";
 import { liberarDispositivo } from "@/lib/push/cliente";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 // Barra lateral del sistema "Documentos" ("Navigation / Sidebar" de Figma): 232 px, superficie blanca,
 // padding 24/16/16/16. Logo · búsqueda ⌘K · Resumen · GESTIÓN · FINANZAS · (espacio) · Ajustes, Ayuda ·
@@ -373,14 +374,14 @@ export function BarraLateral({
 
       {/* Móvil: cajón lateral completo */}
       {abierto && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menú completo">
+        <div ref={atraparFoco} className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menú completo">
           <button
             type="button"
             aria-label="Cerrar menú"
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />
-          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 shadow-elevado">
+          <aside className="animate-cajon-entrar absolute inset-y-0 right-0 flex w-[min(82vw,300px)] flex-col gap-esp2 overflow-y-auto bg-fondo-superficie px-esp4 py-esp4 pt-[max(theme(spacing.esp4),env(safe-area-inset-top))] pb-[max(theme(spacing.esp4),env(safe-area-inset-bottom))] shadow-elevado">
             <div className="flex items-center pb-esp2">
               <Link
                 href="/admin/panel"

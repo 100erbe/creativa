@@ -146,7 +146,7 @@ export function PopupAviso() {
         <button
           onClick={cerrar}
           aria-label="Cerrar aviso"
-          className="absolute right-esp2 top-esp2 flex h-8 w-8 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
+          className="absolute right-esp2 top-esp2 flex h-11 w-11 md:h-8 md:w-8 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press"
         >
           <Icono nombre="cerrar" size={16} />
         </button>

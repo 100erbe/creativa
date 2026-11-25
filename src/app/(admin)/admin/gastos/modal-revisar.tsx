@@ -18,6 +18,7 @@ import {
 } from "@/lib/gastos";
 import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
 import { cambiarEstadoGasto } from "./acciones";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type GastoRevision = {
   id: number;
@@ -54,7 +55,13 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && router.push(cerrarHref);
     window.addEventListener("keydown", alTeclear);
-    return () => window.removeEventListener("keydown", alTeclear);
+    // La página de detrás no se desplaza mientras el panel está abierto.
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", alTeclear);
+      document.body.style.overflow = anterior;
+    };
   }, [router, cerrarHref]);
 
   function decidir(estado: EstadoGasto, texto?: string) {
@@ -66,8 +73,8 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
   }
 
   return (
-    <div className="fixed inset-0 z-[2500] flex items-end justify-center sm:items-center sm:p-esp4" role="dialog" aria-modal="true" aria-label="Revisar gasto">
-      <Link href={cerrarHref} aria-label="Cerrar" className="animate-velo-entrar absolute inset-0 bg-fondo-velo" />
+    <div ref={atraparFoco} className="fixed inset-0 z-[2500] flex items-end justify-center sm:items-center sm:p-esp4" role="dialog" aria-modal="true" aria-label="Revisar gasto">
+      <Link href={cerrarHref} aria-label="Cerrar" tabIndex={-1} className="animate-velo-entrar absolute inset-0 bg-fondo-velo" />
       <div className="animate-hoja-subir sm:animate-modal-entrar relative flex max-h-[92dvh] w-full flex-col gap-esp4 overflow-y-auto rounded-t-xl border border-borde-default bg-fondo-superficie p-esp5 shadow-elevado sm:max-w-lg sm:rounded-xl">
         <div className="flex items-start gap-esp3">
           <div className="min-w-0 flex-1">

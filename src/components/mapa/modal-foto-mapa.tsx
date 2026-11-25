@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Icono } from "@/components/ui/iconos";
 import type { FotoMapa } from "@/lib/mapa/zonas";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 function etiquetaOrigenUbicacion(origen?: string | null): string | null {
   switch (origen) {
@@ -59,7 +60,7 @@ export function ModalFotoMapa({
   const origen = etiquetaOrigenUbicacion(foto.origenUbicacion);
 
   return createPortal(
-    <div
+    <div ref={atraparFoco}
       role="dialog"
       aria-modal="true"
       aria-label={foto.puntoNombre ? `Foto de ${foto.puntoNombre}` : "Foto de la campaña"}

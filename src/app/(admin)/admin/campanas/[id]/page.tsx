@@ -1,5 +1,6 @@
 import { BotonAvisos } from "@/components/ui/boton-avisos";
 import { headers } from "next/headers";
+import { urlPublicaApp } from "@/lib/url-publica";
 import { notFound } from "next/navigation";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { createClient } from "@/lib/supabase/server";
@@ -178,10 +179,12 @@ export default async function PaginaCampana({
   const totalFotos = (fotos ?? []).length;
   const porcentaje = lista.length > 0 ? Math.round((hechos / lista.length) * 100) : 0;
 
+  // Enlace para el cliente con la dirección pública fija de la app; la de la petición solo como último recurso.
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const protocolo = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const urlEnlace = enlace ? `${protocolo}://${host}/c/${enlace.token}` : null;
+  const base = urlPublicaApp() ?? `${protocolo}://${host}`;
+  const urlEnlace = enlace ? `${base}/c/${enlace.token}` : null;
 
   return (
     <div className="flex flex-col gap-esp5">

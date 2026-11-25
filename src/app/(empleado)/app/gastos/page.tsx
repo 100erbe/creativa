@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { Insignia } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_ESTADO_GASTO, ETIQUETA_TIPO_GASTO, TONO_ESTADO_GASTO } from "@/lib/gastos";
@@ -53,11 +53,9 @@ export default async function PaginaMisGastos({
           <h1 className="text-2xl font-bold text-texto-primario">Mis gastos</h1>
           <p className="text-xs text-texto-secundario">Tickets y pequeños gastos de campo.</p>
         </div>
-        <Link href="/app/gastos/nuevo" className="shrink-0">
-          <Boton>
-            <Icono nombre="camara" size={16} />
-            Escanear ticket
-          </Boton>
+        <Link href="/app/gastos/nuevo" className={clasesBoton("primario", "m", "shrink-0")}>
+          <Icono nombre="camara" size={16} />
+          Escanear ticket
         </Link>
       </div>
 
@@ -77,10 +75,8 @@ export default async function PaginaMisGastos({
               Total por corregir: <strong className="text-texto-critico">{euros(suma(rechazados))}</strong>
             </p>
           </div>
-          <Link href={filtroEstado === "rechazado" ? "/app/gastos" : "/app/gastos?estado=rechazado"}>
-            <Boton variante={filtroEstado === "rechazado" ? "secundario" : "critico"} tamano="s">
-              {filtroEstado === "rechazado" ? "Ver todos" : "Corregir ahora"}
-            </Boton>
+          <Link href={filtroEstado === "rechazado" ? "/app/gastos" : "/app/gastos?estado=rechazado"} className={clasesBoton(filtroEstado === "rechazado" ? "secundario" : "critico", "s")}>
+            {filtroEstado === "rechazado" ? "Ver todos" : "Corregir ahora"}
           </Link>
         </div>
       )}

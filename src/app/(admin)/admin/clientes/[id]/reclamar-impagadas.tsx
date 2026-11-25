@@ -10,6 +10,7 @@ import { desenvolver } from "@/lib/accion";
 import { euros, fechaNumerica } from "@/lib/formato";
 import { separarEmails } from "@/lib/reclamacion";
 import { crearBorradorReclamacion } from "./acciones-reclamacion";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type FacturaInsoluta = { id: number; numero: string; fecha: string; saldo: number; vencimiento: string; archivo: string };
 
@@ -118,7 +119,7 @@ export function ReclamarImpagadas(p: Props) {
       </Boton>
 
       {abierto && (
-        <div
+        <div ref={atraparFoco}
           className="fixed inset-0 z-[2500] flex items-end justify-center sm:items-center sm:p-esp4"
           role="dialog"
           aria-modal="true"

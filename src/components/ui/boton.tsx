@@ -22,7 +22,7 @@ const variantes: Record<Variante, string> = {
 // Figma: alto 42 (padding 12/16, texto 12/18 seminegrita). En móvil, mínimo 44 px de objetivo táctil.
 const tamanos: Record<Tamano, string> = {
   m: "min-h-11 h-11 md:min-h-[42px] md:h-[42px] px-esp4 text-etiqueta",
-  s: "min-h-9 h-9 md:min-h-8 md:h-8 px-esp3 text-etiqueta",
+  s: "min-h-11 h-11 md:min-h-8 md:h-8 px-esp3 text-etiqueta",
 };
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {

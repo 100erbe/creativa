@@ -474,7 +474,7 @@ function ContenidoMapaCampana({
             <div
               role="group"
               aria-label="Modo de selección"
-              className="pointer-events-auto inline-flex h-10 items-center rounded-lg border border-borde-default bg-fondo-superficie p-0.5 shadow-elevado"
+              className="pointer-events-auto inline-flex h-11 items-center rounded-lg border border-borde-default bg-fondo-superficie p-0.5 shadow-elevado md:h-10"
             >
               {(
                 [
@@ -506,7 +506,7 @@ function ContenidoMapaCampana({
                 type="button"
                 aria-pressed={mostrarDistritos}
                 onClick={onAlternarDistritos}
-                className={`pointer-events-auto inline-flex h-10 items-center rounded-lg border px-esp3 text-xs font-semibold shadow-elevado transition-colors ${
+                className={`pointer-events-auto inline-flex h-11 items-center rounded-lg border px-esp3 text-xs font-semibold shadow-elevado transition-colors md:h-10 ${
                   mostrarDistritos
                     ? "border-borde-marca bg-fondo-marca-sutil text-texto-marca"
                     : "border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil hover:text-texto-primario"
@@ -528,14 +528,14 @@ function ContenidoMapaCampana({
                     type="button"
                     onClick={onConfirmarZona}
                     disabled={pendiente}
-                    className="inline-flex min-h-9 items-center rounded-md bg-fondo-marca px-esp3 text-xs font-semibold text-texto-sobre-marca transition-colors hover:bg-fondo-marca-hover disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center rounded-md bg-fondo-marca px-esp3 text-xs font-semibold text-texto-sobre-marca transition-colors hover:bg-fondo-marca-hover disabled:opacity-50"
                   >
                     Añadir zona
                   </button>
                   <button
                     type="button"
                     onClick={onCancelarZona}
-                    className="inline-flex min-h-9 items-center rounded-md px-esp2 text-xs font-medium text-texto-secundario transition-colors hover:bg-fondo-hover hover:text-texto-primario"
+                    className="inline-flex min-h-11 items-center rounded-md px-esp2 text-xs font-medium text-texto-secundario transition-colors hover:bg-fondo-hover hover:text-texto-primario"
                   >
                     Cancelar
                   </button>

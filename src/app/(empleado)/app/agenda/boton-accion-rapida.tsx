@@ -10,6 +10,7 @@ import { ModalFotoRapida, type CapturaFoto } from "@/components/empleado/modal-f
 import type { PuntoActivoAgenda } from "@/lib/distancia";
 import { obtenerUbicacion } from "@/lib/ubicacion";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 const CLAVE_UBICACION = "creativa.incluirUbicacion";
 
@@ -123,7 +124,7 @@ export function BotonAccionRapida({ puntosActivos }: { puntosActivos: PuntoActiv
 
       {abierto &&
         createPortal(
-          <div
+          <div ref={atraparFoco}
             className="fixed inset-0 z-[3000] flex items-end justify-center p-esp4 sm:items-center"
             role="dialog"
             aria-modal="true"

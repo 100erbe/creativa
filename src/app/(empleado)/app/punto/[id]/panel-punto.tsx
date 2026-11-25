@@ -547,7 +547,7 @@ export function PanelPunto({
                     onClick={() => eliminarFoto(f.id)}
                     disabled={eliminando === f.id}
                     aria-label="Eliminar foto"
-                    className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso shadow-sm disabled:opacity-50"
+                    className="absolute right-1 top-1 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso shadow-sm disabled:opacity-50"
                   >
                     {eliminando === f.id ? "…" : "✕"}
                   </button>

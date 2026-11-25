@@ -9,6 +9,7 @@ import { Bandeja, type NotificacionBandeja } from "@/components/avisos/bandeja";
 import { desenvolver } from "@/lib/accion";
 import { cargarAvisosRecientes } from "@/lib/push/acciones";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 /**
  * Campana de la cabecera: muestra cuántos avisos hay sin leer y abre un modal con los últimos.
@@ -96,7 +97,7 @@ export function Campana({
       */}
       {abierto &&
         createPortal(
-        <div
+        <div ref={atraparFoco}
           className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-start sm:justify-end sm:p-esp4"
           role="dialog"
           aria-modal="true"
@@ -106,6 +107,8 @@ export function Campana({
         >
           <button
             aria-label="Cerrar avisos"
+            // El velo se puede tocar para cerrar, pero no entra en el orden de tabulación (ya está «Cerrar»).
+            tabIndex={-1}
             onClick={() => setAbierto(false)}
             className="animate-velo-entrar absolute inset-0 bg-fondo-velo"
           />

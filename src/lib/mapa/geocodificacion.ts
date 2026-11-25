@@ -1,10 +1,12 @@
 import type { Posicion } from "@/components/mapa/mapa-selector";
+import { cabecerasOSM } from "@/lib/mapa/osm";
 
 /** Obtiene la dirección aproximada de unas coordenadas vía OpenStreetMap (Nominatim). */
 export async function direccionDe(p: Posicion): Promise<string> {
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&accept-language=es&lat=${p.latitud}&lon=${p.longitud}`,
+      { headers: cabecerasOSM() },
     );
     const d = (await r.json()) as { display_name?: string; address?: Record<string, string> };
     const a = d.address ?? {};

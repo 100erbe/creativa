@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { etiquetaReglaVencimiento, reglaVencimiento } from "@/lib/documentos";
@@ -210,15 +210,11 @@ export default async function PaginaCliente({
 
           <div className="flex flex-wrap items-center gap-esp2 xl:max-w-[55%] xl:justify-end">
             <BotonAvisos />
-            <Link href={`/admin/clientes/${clienteId}/editar`}>
-              <Boton variante="secundario">Editar</Boton>
-            </Link>
+            <Link href={`/admin/clientes/${clienteId}/editar`} className={clasesBoton("secundario", "m")}>Editar</Link>
             {(estadoCuenta?.estado.lineas.length ?? 0) > 0 && (
-              <Link href={`/admin/clientes/${clienteId}/estado-cuenta`}>
-                <Boton variante="secundario">
-                  <Icono nombre="documentos" size={16} />
-                  Estado de cuenta
-                </Boton>
+              <Link href={`/admin/clientes/${clienteId}/estado-cuenta`} className={clasesBoton("secundario", "m")}>
+                <Icono nombre="documentos" size={16} />
+                Estado de cuenta
               </Link>
             )}
             {estadoCuenta && textoReclamacion && insolutas.length > 0 && (
@@ -243,14 +239,10 @@ export default async function PaginaCliente({
             )}
             {cliente.activo && (
               <>
-                <Link href={`/admin/campanas/nueva?cliente=${clienteId}`}>
-                  <Boton variante="secundario">Nueva campaña</Boton>
-                </Link>
-                <Link href={`/admin/documentos/nuevo?cliente=${clienteId}`}>
-                  <Boton>
-                    <Icono nombre="mas" size={16} />
-                    Nuevo documento
-                  </Boton>
+                <Link href={`/admin/campanas/nueva?cliente=${clienteId}`} className={clasesBoton("secundario", "m")}>Nueva campaña</Link>
+                <Link href={`/admin/documentos/nuevo?cliente=${clienteId}`} className={clasesBoton("primario", "m")}>
+                  <Icono nombre="mas" size={16} />
+                  Nuevo documento
                 </Link>
               </>
             )}
@@ -278,10 +270,8 @@ export default async function PaginaCliente({
               hace {maxDiasVencido} días).
             </p>
           </div>
-          <Link href={`/admin/clientes/${clienteId}/estado-cuenta`}>
-            <Boton variante="critico" tamano="s">
-              Ver estado de cuenta
-            </Boton>
+          <Link href={`/admin/clientes/${clienteId}/estado-cuenta`} className={clasesBoton("critico", "s")}>
+            Ver estado de cuenta
           </Link>
         </div>
       )}

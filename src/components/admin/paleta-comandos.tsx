@@ -8,6 +8,7 @@ import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { euros, fechaCorta } from "@/lib/formato";
 import { cn } from "@/lib/cn";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 type GrupoResultado =
   | "Documentos"
@@ -572,7 +573,7 @@ export function PaletaComandos() {
   const itemActivo = filtrados[indiceActivo];
 
   return (
-    <div
+    <div ref={atraparFoco}
       className="fixed inset-0 z-[200] flex items-start justify-center p-esp3 pt-[10vh] sm:p-esp6 sm:pt-[14vh]"
       role="dialog"
       aria-modal="true"

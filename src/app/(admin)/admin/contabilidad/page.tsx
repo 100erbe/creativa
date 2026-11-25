@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton } from "@/components/ui/boton";
+import { Boton, clasesBoton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { BuscadorAdmin } from "@/components/admin/buscador-admin";
@@ -279,11 +279,9 @@ export default async function PaginaContabilidad({
       <div className="flex flex-col gap-esp3">
         <div className="flex flex-wrap items-center gap-esp3">
           <h2 className="flex-1 text-titulo-panel text-texto-primario">Libro registro</h2>
-          <a href={exportar} download>
-            <Boton variante="secundario">
-              <Icono nombre="descargar" size={16} />
-              Exportar CSV{trimestre ? ` (T${trimestre})` : ""}
-            </Boton>
+          <a href={exportar} download className={clasesBoton("secundario", "m")}>
+            <Icono nombre="descargar" size={16} />
+            Exportar CSV{trimestre ? ` (T${trimestre})` : ""}
           </a>
         </div>
 

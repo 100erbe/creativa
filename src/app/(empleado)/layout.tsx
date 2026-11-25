@@ -70,7 +70,7 @@ export default async function LayoutEmpleado({
         atrasadosCount={atrasadosCount}
         gastosRechazadosCount={gastosRechazadosCount}
       />
-      <main id="contenido-empleado" tabIndex={-1} className="flex-1 overflow-y-auto pb-24 outline-none">
+      <main id="contenido-empleado" tabIndex={-1} className="flex-1 overflow-y-auto pb-[calc(6rem+env(safe-area-inset-bottom))] outline-none">
         <div className="mx-auto w-full max-w-3xl">
           <SincronizadorVivo usuarioId={usuario.id} esAdmin={false} />
           <IniciarAvisos />

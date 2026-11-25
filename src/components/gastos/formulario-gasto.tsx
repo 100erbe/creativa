@@ -666,10 +666,8 @@ export function FormularioGasto({
       )}
 
       <div className="flex gap-esp3">
-        <Link href={cancelarHref}>
-          <Boton type="button" variante="secundario">
-            Cancelar
-          </Boton>
+        <Link href={cancelarHref} className={clasesBoton("secundario", "m")}>
+          Cancelar
         </Link>
         <Boton type="submit" cargando={pendiente} disabled={subiendo || leyendo}>
           {editando ? "Guardar cambios" : "Guardar gasto"}

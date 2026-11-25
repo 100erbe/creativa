@@ -147,7 +147,7 @@ export function TarjetaDeslizablePunto({
               opacity: Math.max(0.25, progresoAccion),
               transform: `scale(${0.76 + 0.24 * progresoAccion})`,
             }}
-            className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-texto-inverso transition-all duration-rapida ease-salida hover:bg-fondo-peligro-hover active:scale-press disabled:opacity-50"
+            className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-texto-inverso transition-[opacity,transform,background-color] duration-rapida ease-salida hover:bg-fondo-peligro-hover active:scale-press disabled:opacity-50"
           >
             <Icono nombre="eliminar" size={18} />
             <span className="text-micro font-medium">Eliminar</span>
@@ -155,21 +155,14 @@ export function TarjetaDeslizablePunto({
         </div>
       )}
 
+      {/* La tarjeta no es un botón (dentro hay otros controles: no se anidan elementos interactivos).
+          Para teclado y lectores de pantalla, «Ver detalles» es un botón propio que se ve al enfocarlo. */}
       <div
-        role="button"
-        tabIndex={0}
         onPointerDown={alIniciarPuntero}
         onPointerMove={alMoverPuntero}
         onPointerUp={alTerminarPuntero}
         onPointerCancel={alTerminarPuntero}
         onWheel={alRueda}
-        onKeyDown={(e) => {
-          if (esElementoInteractivo(e.target)) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onAbrirModal();
-          }
-        }}
         onClick={(e) => {
           if (suprimirClicRef.current) return;
           if (esElementoInteractivo(e.target)) return;
@@ -181,11 +174,21 @@ export function TarjetaDeslizablePunto({
         }}
         style={{ transform: `translate3d(${desplazamiento}px, 0, 0)` }}
         className={cn(
-          "relative z-10 cursor-pointer bg-fondo-superficie touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-borde-foco focus-visible:ring-inset",
+          "relative z-10 cursor-pointer bg-fondo-superficie touch-pan-y",
           arrastreActivo ? "select-none" : "transition-transform duration-rapida ease-salida",
           className,
         )}
       >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAbrirModal();
+          }}
+          className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:inset-0 focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-borde-foco"
+        >
+          <span className="sr-only">Ver detalles de {nombreVisible}</span>
+        </button>
         {children}
         {error && <p className="px-esp4 pb-esp2 text-xs text-texto-peligro">{error}</p>}
       </div>

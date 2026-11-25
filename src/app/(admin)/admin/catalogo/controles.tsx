@@ -20,6 +20,7 @@ import {
   guardarFormato,
   guardarProducto,
 } from "./acciones";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type CategoriaAdmin = {
   id: number;
@@ -864,7 +865,7 @@ function ModalProducto({
   }, [onCerrar]);
 
   return (
-    <div
+    <div ref={atraparFoco}
       className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-esp4"
       role="dialog"
       aria-modal="true"
@@ -1193,7 +1194,7 @@ function ModalCategoria({
   }, [onCerrar]);
 
   return (
-    <div
+    <div ref={atraparFoco}
       className="fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-esp4"
       role="dialog"
       aria-modal="true"

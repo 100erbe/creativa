@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
-import { Boton, clasesBoton } from "@/components/ui/boton";
+import { clasesBoton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { PestanasEnlace } from "@/components/ui/pestanas";
 import { Icono } from "@/components/ui/iconos";
@@ -359,18 +359,15 @@ export default async function PaginaDocumentos({
             </p>
           </div>
           {cobro === "vencida_90" ? (
-            <Link href={enlace(actual, { cobro: "", pagina: "" })}>
-              <Boton variante="secundario" tamano="s">
-                Ver todos
-              </Boton>
+            <Link href={enlace(actual, { cobro: "", pagina: "" })} className={clasesBoton("secundario", "s")}>
+              Ver todos
             </Link>
           ) : (
             <Link
               href={enlace(actual, { cobro: "vencida_90", estado: "", tipo: "factura", pagina: "" })}
+              className={clasesBoton("critico", "s")}
             >
-              <Boton variante="critico" tamano="s">
-                Filtrar 90+ días
-              </Boton>
+              Filtrar 90+ días
             </Link>
           )}
         </div>

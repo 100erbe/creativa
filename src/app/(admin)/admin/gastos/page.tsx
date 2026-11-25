@@ -213,9 +213,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
           <p className="flex-1 text-sm text-texto-primario">
             {pendientes.length} gasto(s) esperan tu revisión.
           </p>
-          <Link href={enlace(actual, { revisar: String(primeraPendiente.id) })}>
-            <Boton tamano="s">Revisar el más antiguo</Boton>
-          </Link>
+          <Link href={enlace(actual, { revisar: String(primeraPendiente.id) })} className={clasesBoton("primario", "s")}>Revisar el más antiguo</Link>
         </div>
       )}
 
@@ -415,11 +413,13 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
       )}
 
       <div>
-        <a href={`/admin/gastos/exportar?ejercicio=${ejercicio}${trimestre ? `&trimestre=${trimestre}` : ""}`} download>
-          <Boton variante="secundario">
-            <Icono nombre="descargar" size={16} />
-            Exportar CSV{trimestre ? ` (T${trimestre})` : ""}
-          </Boton>
+        <a
+          href={`/admin/gastos/exportar?ejercicio=${ejercicio}${trimestre ? `&trimestre=${trimestre}` : ""}`}
+          download
+          className={clasesBoton("secundario", "m")}
+        >
+          <Icono nombre="descargar" size={16} />
+          Exportar CSV{trimestre ? ` (T${trimestre})` : ""}
         </a>
       </div>
     </div>

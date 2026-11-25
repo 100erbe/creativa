@@ -20,6 +20,7 @@ import { subirOEncolarFotoPunto } from "@/lib/subir-foto-punto";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
 import { desenvolver } from "@/lib/accion";
 import { marcarPuntoInstalado, marcarPuntoRetirado } from "@/app/(empleado)/app/punto/[id]/acciones";
+import { atraparFoco } from "@/lib/trampa-foco";
 
 export type CapturaFoto = {
   archivo: File;
@@ -315,7 +316,7 @@ export function ModalFotoRapida({
   }
 
   return createPortal(
-    <div
+    <div ref={atraparFoco}
       className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-center sm:p-esp4"
       role="dialog"
       aria-modal="true"
@@ -458,7 +459,7 @@ export function ModalFotoRapida({
                       type="button"
                       onClick={() => setCampanaFiltro("")}
                       className={cn(
-                        "min-h-8 rounded-completo px-esp3 text-micro font-medium transition-colors duration-rapida ease-suave active:scale-press",
+                        "min-h-11 md:min-h-8 rounded-completo px-esp3 text-micro font-medium transition-colors duration-rapida ease-suave active:scale-press",
                         !campanaFiltro
                           ? "bg-fondo-marca text-texto-sobre-marca"
                           : "border border-borde-default bg-fondo-superficie text-texto-secundario hover:bg-fondo-sutil",

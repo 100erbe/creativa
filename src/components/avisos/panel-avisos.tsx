@@ -201,16 +201,21 @@ export function BannerAvisos() {
   return (
     <div
       role="status"
-      className="animate-estado-entrar mx-esp4 mt-esp3 flex items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp2 text-xs text-texto-primario"
+      className="animate-estado-entrar mx-esp4 mt-esp3 flex items-center gap-esp3 rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp1 text-xs text-texto-primario"
     >
       <Icono nombre="avisos" size={16} className="text-texto-aviso" />
       <span className="min-w-0 flex-1">
         Activa los avisos para recibir el trabajo de mañana y los cambios de plan.
       </span>
-      <Link href="/app/ajustes" className="shrink-0 font-semibold text-texto-marca">
+      <Link href="/app/ajustes" className="inline-flex min-h-11 shrink-0 items-center px-esp1 font-semibold text-texto-marca">
         Activar
       </Link>
-      <button onClick={posponer} aria-label="Recordármelo más tarde" className="shrink-0 text-texto-terciario">
+      <button
+        type="button"
+        onClick={posponer}
+        aria-label="Recordármelo más tarde"
+        className="-mr-esp2 inline-flex h-11 w-11 shrink-0 items-center justify-center text-texto-terciario"
+      >
         <Icono nombre="cerrar" size={16} />
       </button>
     </div>
