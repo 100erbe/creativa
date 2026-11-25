@@ -2,7 +2,7 @@
 // Se ejecutan en el navegador con el cliente de Supabase: la RLS limita los datos al usuario.
 
 import { createClient } from "@/lib/supabase/client";
-import type { Sugerencia } from "@/components/ui/autocompletar";
+import type { Sugerencia } from "@/lib/tipos-ui";
 import { ETIQUETA_ESTADO_DOC, ETIQUETA_TIPO } from "@/lib/documentos";
 import { ETIQUETA_ESTADO_GASTO, type EstadoGasto } from "@/lib/gastos";
 import { euros, fechaCorta } from "@/lib/formato";

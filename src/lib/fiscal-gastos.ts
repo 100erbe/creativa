@@ -1,4 +1,5 @@
 import { CONCEPTOS_SIN_FACTURA, cuotaDeducible, trimestreDe } from "@/lib/gastos";
+import { redondearCentimos } from "@/lib/redondeo";
 
 /** Campos de un gasto que usa la lectura fiscal por trimestre. */
 export type GastoFiscal = {
@@ -22,7 +23,7 @@ export type GastoFiscal = {
 };
 
 const n = (v: number | string | null | undefined) => Number(v) || 0;
-const r2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+const r2 = redondearCentimos;
 
 /** Cuenta para impuestos: deducible ya aprobado o reembolsado (lo mismo que v_gastos_iva_trimestral). */
 export const cuentaParaImpuestos = (g: GastoFiscal) =>

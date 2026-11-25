@@ -8,14 +8,8 @@ import { cn } from "@/lib/cn";
 import { desenvolver } from "@/lib/accion";
 import { marcarLeidas } from "@/lib/push/acciones";
 
-export type NotificacionBandeja = {
-  id: number;
-  titulo: string;
-  cuerpo: string;
-  url: string | null;
-  creada: string; // ya formateada ("15 nov, 20:05")
-  leida: boolean;
-};
+import type { NotificacionBandeja } from "@/lib/tipos-ui";
+export type { NotificacionBandeja };
 
 /**
  * Lista de los últimos avisos. Al abrirla se marcan como leídos (con un pequeño retraso, para que se vea

@@ -693,6 +693,7 @@ export function PanelPunto({
             value={notaIncidencia}
             onChange={(e) => setNotaIncidencia(e.target.value)}
             placeholder="¿Qué ha pasado?"
+            aria-label="Describe la incidencia"
             rows={3}
             className="rounded-lg border border-borde-campo px-esp3 py-esp2 text-sm outline-none focus:border-borde-foco"
           />

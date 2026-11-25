@@ -223,10 +223,10 @@ export default async function PaginaCampanas({
                       <div className="flex items-center gap-esp2">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                           <div
-                            className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
+                            className={`h-full w-full origin-left rounded-completo transition-transform duration-lenta ease-salida motion-reduce:transition-none ${
                               c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
                             }`}
-                            style={{ width: `${c.porcentaje}%` }}
+                            style={{ transform: `scaleX(${c.porcentaje / 100})` }}
                           />
                         </div>
                         <span className="tabular-nums text-micro font-medium text-texto-secundario">
@@ -281,10 +281,10 @@ export default async function PaginaCampanas({
                   <div className="flex flex-1 items-center gap-esp2 sm:w-[150px] sm:flex-none">
                     <div className="h-1.5 flex-1 overflow-hidden rounded-completo bg-fondo-sutil">
                       <div
-                        className={`h-full rounded-completo transition-[width] duration-lenta ease-salida ${
+                        className={`h-full w-full origin-left rounded-completo transition-transform duration-lenta ease-salida motion-reduce:transition-none ${
                           c.incidencias > 0 ? "bg-fondo-peligro" : "bg-fondo-marca"
                         }`}
-                        style={{ width: `${c.porcentaje}%` }}
+                        style={{ transform: `scaleX(${c.porcentaje / 100})` }}
                       />
                     </div>
                     <span className="tabular-nums text-xs text-texto-secundario">

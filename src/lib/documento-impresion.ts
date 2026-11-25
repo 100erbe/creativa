@@ -2,8 +2,9 @@
 // para poder probarla aparte.
 
 import { ETIQUETA_TIPO, PREFIJO_ARCHIVO } from "./documentos";
+import { redondearCentimos } from "@/lib/redondeo";
 
-const redondear = (n: number) => Math.round(n * 100) / 100;
+const redondear = redondearCentimos;
 
 const LARGO_MAXIMO_NOMBRE = 100;
 const LARGO_MAXIMO_CONCEPTO = 45;

@@ -12,14 +12,12 @@ import { BannerAvisos, IniciarAvisos } from "@/components/avisos/panel-avisos";
 import { SincronizadorVivo } from "@/components/shared/sincronizador-vivo";
 import { urlAvatar } from "@/lib/avatar";
 import { marcaEmpleado } from "@/design/tokens";
+import { hoyEnEspana } from "@/lib/redondeo";
 
 export const viewport: Viewport = {
   themeColor: marcaEmpleado.fondo,
 };
 
-function hoyEnEspana() {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
-}
 
 export default async function LayoutEmpleado({
   children,

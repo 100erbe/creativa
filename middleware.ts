@@ -11,6 +11,7 @@ export const config = {
      * Aplica a todas las rutas excepto archivos estáticos e imágenes,
      * para no gastar una llamada a Supabase en cada asset.
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons/|manifest.json|sw.js).*)",
+    // También fuera: logos (brand/), worker de MapLibre, iconos de la app y cualquier imagen/fuente.
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|icons/|brand/|maplibre/|figma/|manifest.json|sw.js|.*\\.(?:svg|png|jpg|jpeg|webp|gif|ico|woff2?)$).*)",
   ],
 };

@@ -150,6 +150,7 @@ export function ModalRevisarGasto({ gasto, cerrarHref }: { gasto: GastoRevision;
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                   placeholder="Motivo del rechazo (lo verá el empleado)"
+                  aria-label="Motivo del rechazo"
                   className="h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm outline-none focus:border-borde-foco"
                 />
                 <div className="flex gap-esp2">

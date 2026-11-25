@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { NotificacionBandeja } from "@/components/avisos/bandeja";
+import type { NotificacionBandeja } from "@/lib/tipos-ui";
 
 const formato = new Intl.DateTimeFormat("es-ES", {
   day: "numeric",

@@ -159,7 +159,7 @@ export function CabeceraMovil({
   };
 
   const clasesCapa =
-    "col-start-1 row-start-1 min-w-0 origin-left will-change-[transform,opacity] transition-[transform,opacity] duration-100 ease-salida";
+    "col-start-1 row-start-1 min-w-0 origin-left will-change-[transform,opacity] transition-[transform,opacity] duration-rapida ease-salida";
 
   const contenidoVolver = (
     <>
@@ -202,13 +202,13 @@ export function CabeceraMovil({
       <div
         aria-hidden="true"
         style={{ opacity: "var(--cab-reposo-o, 1)" }}
-        className="pointer-events-none absolute inset-0 -z-10 bg-fondo-lienzo will-change-[opacity] transition-opacity duration-100 ease-salida"
+        className="pointer-events-none absolute inset-0 -z-10 bg-fondo-lienzo will-change-[opacity] transition-opacity duration-rapida ease-salida"
       />
       {/* Capa de fondo al hacer scroll (lienzo esmerilado con borde sutil y elevación suave) */}
       <div
         aria-hidden="true"
         style={{ opacity: "var(--cab-p, 0)" }}
-        className="pointer-events-none absolute inset-0 -z-10 border-b border-borde-fuerte/80 bg-fondo-lienzo/85 shadow-[0_4px_16px_-4px_rgb(32_36_53/0.07)] backdrop-blur-md backdrop-saturate-125 will-change-[opacity] transition-opacity duration-100 ease-salida"
+        className="pointer-events-none absolute inset-0 -z-10 border-b border-borde-fuerte/80 bg-fondo-lienzo/85 shadow-[0_4px_16px_-4px_rgb(32_36_53/0.07)] backdrop-blur-md backdrop-saturate-125 will-change-[opacity] transition-opacity duration-rapida ease-salida"
       />
 
       <div className="flex min-w-0 flex-1 items-center gap-esp1">

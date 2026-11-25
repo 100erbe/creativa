@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Boton, clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { BotonSalirBorrador } from "@/components/admin/boton-salir-borrador";
@@ -34,8 +33,10 @@ import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
 import { BotonCompartir } from "./boton-compartir";
+import { hoyEnEspana } from "@/lib/redondeo";
 
-const hoy = () => new Date().toISOString().slice(0, 10);
+// Fecha de hoy en España (antes era la de UTC: de 0 a 2 h salía el día anterior).
+const hoy = () => hoyEnEspana();
 
 /**
  * Cambios de «Condiciones» aún sin guardar. Las condiciones y el botón de emitir son formularios distintos:

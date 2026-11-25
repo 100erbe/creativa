@@ -6,11 +6,10 @@ import { diasDesdeVencimiento } from "@/lib/documentos";
 import { construirSeriesAgenda, ventanaConsultaAgenda } from "@/lib/series-agenda";
 import type { PuntoActivoAgenda } from "@/lib/distancia";
 import type { FilaAgenda, FilaEnriquecida } from "@/components/empleado/tarjeta-punto";
+import { hoyEnEspana } from "@/lib/redondeo";
 
-/** La fecha de "hoy" en España, en formato AAAA-MM-DD (el servidor puede estar en otra zona horaria). */
-export function hoyEnEspana() {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
-}
+/** La fecha de "hoy" en España (AAAA-MM-DD). Se reexporta para quien ya la importaba de aquí. */
+export { hoyEnEspana };
 
 export async function cargarDatosAgenda() {
   const supabase = await createClient();

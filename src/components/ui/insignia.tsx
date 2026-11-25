@@ -2,14 +2,8 @@ import { cn } from "@/lib/cn";
 
 // Corresponde al componente "Insignia" de Figma (Tono).
 // Ver supabase/LEEME.txt para la correspondencia estado → tono.
-export type TonoInsignia =
-  | "neutro"
-  | "marca"
-  | "exito"
-  | "aviso"
-  | "peligro"
-  | "critico"
-  | "info";
+import type { TonoInsignia } from "@/lib/tipos-ui";
+export type { TonoInsignia };
 
 // Sistema "Documentos": etiqueta rectangular (radio 8, padding 4/8, texto 12/18 seminegrita) sin borde,
 // como el estado "Datos parciales" de Figma. Solo la variante crítica conserva un borde para distinguirse.

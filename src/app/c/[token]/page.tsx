@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { after } from "next/server";
+import { createClient as crearClienteSupabase } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Icono } from "@/components/ui/iconos";
@@ -90,8 +92,18 @@ export default async function PaginaPublicaCliente({
 
   if (!filas || filas.length === 0) notFound();
 
-  // Se registra la vista en segundo plano (no bloquea el render).
-  supabase.rpc("registrar_vista_enlace", { p_token: token }).then(() => {});
+  // Se registra la vista después de responder (after): no bloquea el render y, en Vercel, la
+  // función no se corta antes de terminar (una promesa suelta podía perderse).
+  // Cliente anónimo propio: dentro de after() una página no puede leer las cookies de la petición
+  // (y el enlace público no las necesita).
+  after(async () => {
+    const anonimo = crearClienteSupabase<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    await anonimo.rpc("registrar_vista_enlace", { p_token: token });
+  });
 
   const cabecera = filas[0];
   if (!cabecera) notFound();

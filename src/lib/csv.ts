@@ -3,8 +3,9 @@
 
 /** Texto → celda segura. Neutraliza fórmulas (=, +, -, @) para evitar inyección en Excel. */
 function celdaTexto(valor: string): string {
-  let v = valor.replace(/\r?\n/g, " ");
-  if (/^[=+\-@\t]/.test(v)) v = `'${v}`;
+  let v = valor.replace(/\r\n|\r|\n/g, " ");
+  // También con espacios delante: Excel ignora los espacios iniciales al evaluar la fórmula.
+  if (/^\s*[=+\-@\t]/.test(v)) v = `'${v}`;
   return /[;"]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 

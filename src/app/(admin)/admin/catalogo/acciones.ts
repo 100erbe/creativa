@@ -58,7 +58,6 @@ function codigoBaseFormato(nombre: string, anchoCm: number | null, altoCm: numbe
 
 function refrescar() {
   revalidatePath("/admin/catalogo");
-  revalidatePath("/admin/ajustes/catalogo");
   revalidatePath("/admin/documentos/nuevo");
   revalidatePath("/admin/campanas");
 }

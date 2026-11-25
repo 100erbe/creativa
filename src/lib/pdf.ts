@@ -1,6 +1,28 @@
 import "server-only";
 import { existsSync } from "node:fs";
 import type { NextRequest } from "next/server";
+import { urlPublicaApp } from "@/lib/url-publica";
+
+/**
+ * Origen al que se abre el Chrome sin interfaz. Nunca se fía a ciegas de la cabecera Host de la
+ * petición (se le pasan las cookies de sesión): solo se usa si es la app misma (dominio público,
+ * URL de este despliegue de Vercel o localhost); si no, el dominio público.
+ */
+function origenInterno(request: NextRequest): string {
+  const pedido = request.nextUrl.origin;
+  const permitidos = new Set(
+    [
+      urlPublicaApp(),
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+      process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null,
+    ].filter((o): o is string => !!o),
+  );
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(request.nextUrl.hostname);
+  if (permitidos.has(pedido) || (local && process.env.NODE_ENV !== "production")) return pedido;
+  const publica = urlPublicaApp();
+  if (!publica) throw new Error("No se ha podido preparar el PDF (falta la dirección de la app).");
+  return publica;
+}
 
 /** Chrome instalado en el ordenador (solo para desarrollo local; en Vercel se usa el empaquetado). */
 function chromeLocal() {
@@ -21,7 +43,7 @@ function chromeLocal() {
  * imprime. `ruta` es la ruta con su query; si la página redirige a otra (p. ej. al login), falla.
  */
 export async function generarPdf(request: NextRequest, ruta: string): Promise<Buffer> {
-  const origen = request.nextUrl.origin;
+  const origen = origenInterno(request);
   const puppeteer = (await import("puppeteer-core")).default;
   let ejecutable = chromeLocal();
   let args: string[] = ["--no-sandbox"];
@@ -34,10 +56,11 @@ export async function generarPdf(request: NextRequest, ruta: string): Promise<Bu
   const navegador = await puppeteer.launch({ executablePath: ejecutable, args, headless: true });
   try {
     const pagina = await navegador.newPage();
+    // Solo las cookies de sesión de Supabase (sb-…): es lo único que necesita la página de impresión.
     const cookies = (request.headers.get("cookie") ?? "")
       .split(";")
       .map((c) => c.trim())
-      .filter(Boolean)
+      .filter((c) => c.startsWith("sb-") && c.includes("="))
       .map((c) => {
         const i = c.indexOf("=");
         return { name: c.slice(0, i), value: c.slice(i + 1), url: origen };

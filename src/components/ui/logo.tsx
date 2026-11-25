@@ -8,7 +8,7 @@ export function Logo({ alto = 40, className }: { alto?: number; className?: stri
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/brand/logo-creativa.svg"
+      src="/brand/logo-creativa-ui.svg"
       alt="Creativa Producciones"
       width={Math.round(alto * PROPORCION)}
       height={alto}

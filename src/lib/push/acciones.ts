@@ -6,6 +6,7 @@ import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { revalidatePath } from "next/cache";
 import { accion } from "@/lib/accion";
+import { exigirLimite } from "@/lib/limite-uso";
 import { endpointPermitido, enviarPush, type ResultadoEnvio } from "./enviar";
 
 /** Pantalla que se abre al tocar un aviso, según quién lo recibe. */
@@ -74,13 +75,15 @@ async function guardarPruebaEnBandeja(usuarioId: string, titulo: string, cuerpo:
 export const enviarPrueba = accion(async (): Promise<ResultadoEnvio> => {
   const usuario = await obtenerUsuarioActual();
   if (!usuario) throw new Error("Sesión no válida.");
+  await exigirLimite(`push-prueba:${usuario.id}`, 5, 600, "Has hecho demasiadas pruebas seguidas. Espera unos minutos.");
   await guardarPruebaEnBandeja(usuario.id, AVISO_PRUEBA.titulo, AVISO_PRUEBA.cuerpo, pantallaInicial(usuario.rol));
   return enviarPush([usuario.id], { ...AVISO_PRUEBA, url: pantallaInicial(usuario.rol) }, { tipo: "prueba", ttlSegundos: 120 });
 });
 
 /** El administrador manda una prueba a una persona del equipo para comprobar que le llegan los avisos. */
 export const enviarPruebaA = accion(async (usuarioId: string): Promise<ResultadoEnvio> => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
+  await exigirLimite(`push-prueba:${admin.id}`, 10, 600, "Has hecho demasiadas pruebas seguidas. Espera unos minutos.");
   const supabase = await createClient();
   const { data: persona } = await supabase.from("usuarios").select("id, rol").eq("id", usuarioId).maybeSingle();
   if (!persona) throw new Error("No se ha encontrado a la persona.");

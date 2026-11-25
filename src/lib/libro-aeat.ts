@@ -7,6 +7,7 @@
 
 import { cuotaDeducible } from "@/lib/gastos";
 import { esSinFactura, gastoDeducibleIrpf, type GastoFiscal } from "@/lib/fiscal-gastos";
+import { redondearCentimos } from "@/lib/redondeo";
 
 type Celda = string | null;
 
@@ -32,7 +33,7 @@ export type FacturaEmitida = {
 };
 
 const num = (v: number | string | null | undefined) => Number(v) || 0;
-const r2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+const r2 = redondearCentimos;
 
 /** 1234.5 → "1234,50" (sin separador de miles, signo "-" delante). */
 export const importe = (v: number) => r2(v).toFixed(2).replace(".", ",");

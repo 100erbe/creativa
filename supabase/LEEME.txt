@@ -1,3 +1,8 @@
+AVISO (25/11/2026): este archivo describe la carga inicial de 2026 y está desfasado.
+La fuente de verdad del esquema son las migraciones de supabase/migrations/ (0001 → 0047),
+aplicadas en orden en el proyecto de Supabase. Para un entorno nuevo, aplica esas migraciones;
+los .sql sueltos de 05_Database solo sirven como referencia histórica.
+
 CREATIVA — Base de datos (PostgreSQL / Supabase)
 ==================================================
 

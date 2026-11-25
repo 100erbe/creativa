@@ -12,6 +12,28 @@ function esControlDeFlujo(e: unknown) {
   return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"));
 }
 
+const GENERICO = "No se pudo completar la acción.";
+
+/**
+ * Los mensajes escritos para la persona (en español) pasan tal cual. Los errores internos de
+ * Postgres/PostgREST/red (nombres de tablas, columnas, restricciones…) no se enseñan: se registran
+ * en el servidor y se muestra un texto genérico.
+ */
+export function mensajeSeguro(e: unknown): string {
+  const texto = e instanceof Error ? e.message : "";
+  if (!texto) return GENERICO;
+  const interno =
+    /violates|constraint|relation "|column "|syntax error|duplicate key|permission denied|row-level security|JWT|PGRST|invalid input syntax|null value in column|foreign key|does not exist|fetch failed|ECONN/i.test(
+      texto,
+    );
+  if (!interno) return texto;
+  console.error("[accion]", texto);
+  if (/duplicate key/i.test(texto)) return "Ya existe un registro con esos datos.";
+  if (/foreign key/i.test(texto)) return "No se puede completar: hay otros datos que dependen de este.";
+  if (/row-level security|permission denied/i.test(texto)) return "No tienes permiso para hacer esto.";
+  return GENERICO;
+}
+
 /** Servidor: envuelve el cuerpo de una Server Action para que devuelva `Resultado`. */
 export function accion<A extends unknown[], T>(fn: (...args: A) => Promise<T>) {
   return async (...args: A): Promise<Resultado<T>> => {
@@ -19,7 +41,7 @@ export function accion<A extends unknown[], T>(fn: (...args: A) => Promise<T>) {
       return { ok: true, data: await fn(...args) };
     } catch (e) {
       if (esControlDeFlujo(e)) throw e;
-      return { ok: false, error: e instanceof Error && e.message ? e.message : "No se pudo completar la acción." };
+      return { ok: false, error: mensajeSeguro(e) };
     }
   };
 }

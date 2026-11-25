@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { zip } from "fflate";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { desenvolver } from "@/lib/accion";
@@ -26,6 +25,8 @@ export function BotonZipFacturas({ ejercicio, trimestre }: { ejercicio: number; 
         contenido[a.nombre] = new Uint8Array(await respuesta.arrayBuffer());
       }
       setEstado("Comprimiendo…");
+      // fflate se carga solo al pulsar (no pesa en la página de gastos).
+      const { zip } = await import("fflate");
       // Los PDF e imágenes ya van comprimidos: se guardan tal cual (level 0) para ir más rápido.
       const datos = await new Promise<Uint8Array>((ok, mal) =>
         zip(contenido, { level: 0 }, (e, r) => (e ? mal(e) : ok(r))),

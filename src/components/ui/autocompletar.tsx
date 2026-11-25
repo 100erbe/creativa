@@ -6,18 +6,8 @@ import { Icono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
 
 /** Un resultado sugerido mientras se escribe. */
-export type Sugerencia = {
-  /** Clave única dentro de la lista. */
-  id: string;
-  /** Texto principal (nombre, número de documento…). */
-  titulo: string;
-  /** Línea secundaria opcional (fecha, importe, NIF…). */
-  detalle?: string;
-  /** Etiqueta corta a la derecha (tipo o estado). */
-  insignia?: string;
-  /** Ruta que se abre al elegirla, salvo que se pase `onElegir`. */
-  href?: string;
-};
+import type { Sugerencia } from "@/lib/tipos-ui";
+export type { Sugerencia };
 
 type Props = {
   /** Devuelve las sugerencias para el texto dado; se muestran como mucho `limite`. */

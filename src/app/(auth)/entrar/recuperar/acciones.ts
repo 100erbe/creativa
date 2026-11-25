@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { accion } from "@/lib/accion";
 import { urlPublicaApp } from "@/lib/url-publica";
+import { exigirLimite } from "@/lib/limite-uso";
 
 /**
  * Envía el email de recuperación. La respuesta es siempre la misma, exista o no la cuenta,
@@ -12,6 +14,11 @@ import { urlPublicaApp } from "@/lib/url-publica";
 export const solicitarRecuperacion = accion(async (email: string) => {
   const analisis = z.string().trim().toLowerCase().email().safeParse(email);
   if (!analisis.success) throw new Error("Escribe un correo electrónico válido.");
+
+  // Límite por dirección IP (además del de Supabase por correo): evita usar el formulario para
+  // mandar emails en masa a direcciones ajenas.
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "desconocida";
+  await exigirLimite(`recuperar:${ip}`, 5, 3600, "Has pedido demasiados enlaces seguidos. Espera un rato y vuelve a probar.");
 
   // Dirección pública fija de la app (nunca la cabecera Origin de la petición).
   // Supabase además solo acepta las URL de su lista «Redirect URLs».

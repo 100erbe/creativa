@@ -1,3 +1,4 @@
+import { redondearCentimos } from "@/lib/redondeo";
 // Estado de cuenta de un cliente: todas sus facturas emitidas con su situación de cobro,
 // y cuáles están vencidas. Lógica pura, sin acceso a datos, para poder probarla aparte.
 //
@@ -69,7 +70,7 @@ export type EstadoCuenta = {
   totalAReclamar: number;
 };
 
-const redondear = (n: number) => Math.round(n * 100) / 100;
+const redondear = redondearCentimos;
 const CENTIMO = 0.01;
 
 export function diasEntre(desde: string, hasta: string) {
@@ -90,10 +91,8 @@ export function vencimientoEfectivo(fecha: string, fechaVencimiento: string | nu
   return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : sumarDias(fecha.slice(0, 10), DIAS_VENCIMIENTO_DEFECTO);
 }
 
-/** Fecha de hoy en España (AAAA-MM-DD), aunque el servidor esté en UTC. */
-export function hoyEnEspana(ahora = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(ahora);
-}
+/** Fecha de hoy en España (AAAA-MM-DD): una sola implementación, en lib/redondeo.ts. */
+export { hoyEnEspana } from "@/lib/redondeo";
 
 /** Estado de algo que se debe (factura, o «abono» con importe positivo) según su saldo y los días desde su vencimiento. */
 function estadoDeuda(saldo: number, diasVencida: number, algoCobrado: boolean): EstadoLinea {

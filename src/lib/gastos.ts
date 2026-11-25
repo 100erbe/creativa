@@ -1,4 +1,5 @@
-import type { TonoInsignia } from "@/components/ui/insignia";
+import type { TonoInsignia } from "@/lib/tipos-ui";
+import { redondearCentimos } from "@/lib/redondeo";
 
 export const TIPOS_GASTO = ["deducible", "menor"] as const;
 export type TipoGasto = (typeof TIPOS_GASTO)[number];
@@ -126,7 +127,7 @@ export const cuotaDeducible = (cuota: number | null | undefined, pct: number | n
 export const importeRetencion = (base: number | null | undefined, pct: number | null | undefined) =>
   redondear((Number(base) || 0) * (Number(pct) || 0) / 100);
 
-const redondear = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const redondear = redondearCentimos;
 
 /** A partir del total con IVA incluido: base = total / (1 + iva), cuota = total − base. */
 export function calcularIva(total: number, ivaPct: number) {

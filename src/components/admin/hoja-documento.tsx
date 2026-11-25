@@ -114,7 +114,6 @@ function FilaTotal({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 
 export function HojaDocumento({ d }: { d: DatosHoja }) {
   const esBorrador = d.estado === "borrador";
-  const esFactura = d.tipo === "factura" || d.tipo === "rectificativa";
   const esPresupuesto = d.tipo === "presupuesto";
   const esAlbaran = d.tipo === "albaran";
   const esRecibo = d.tipo === "recibo";

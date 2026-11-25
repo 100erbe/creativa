@@ -12,7 +12,8 @@
     "predev": "npm run copiar-worker",
     "prebuild": "npm run copiar-worker",
     "postinstall": "node scripts/copiar-worker-maplibre.mjs",
-    "contraste": "jiti scripts/comprobar-contraste.ts"
+    "contraste": "jiti scripts/comprobar-contraste.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
@@ -45,6 +46,7 @@
     "eslint-config-next": "^15.5.29",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.7"
   }
 }

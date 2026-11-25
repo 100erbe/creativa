@@ -18,6 +18,4 @@ export async function cargarOpcionesGasto(supabase: Awaited<ReturnType<typeof cr
   };
 }
 
-export function hoyEnEspana() {
-  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Madrid" }).format(new Date());
-}
+export { hoyEnEspana } from "@/lib/redondeo";

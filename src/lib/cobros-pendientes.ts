@@ -1,5 +1,6 @@
 import { clasificarAgingCobro, type ResultadoAging } from "./documentos";
 import { SALDO_MINIMO } from "./estado-cuenta";
+import { redondearCentimos } from "@/lib/redondeo";
 
 export type FilaEstadoCobro = {
   id: number | null;
@@ -25,7 +26,7 @@ export type FilaConSaldo<T extends FilaEstadoCobro> = T & {
 };
 
 const ESTADOS_ABIERTOS = new Set(["pendiente", "parcial", "vencida"]);
-const redondear = (n: number) => Math.round(n * 100) / 100;
+const redondear = redondearCentimos;
 
 /**
  * Resume los cobros abiertos aplicando las reglas acordadas por la empresa:

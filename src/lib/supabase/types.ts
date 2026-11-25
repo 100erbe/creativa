@@ -2364,6 +2364,10 @@ export type Database = {
         Args: { p_usuario: string }
         Returns: undefined
       }
+      consumir_limite: {
+        Args: { p_clave: string; p_max: number; p_segundos: number }
+        Returns: boolean
+      }
       compensar_rectificativa: {
         Args: { p_factura?: number; p_fecha?: string; p_rectificativa: number }
         Returns: number
