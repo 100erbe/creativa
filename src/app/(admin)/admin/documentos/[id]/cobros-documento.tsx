@@ -7,6 +7,7 @@ import { Icono } from "@/components/ui/iconos";
 import { METODOS_COBRO, type MetodoCobro } from "@/lib/documentos";
 import { registrarCobro, eliminarCobro, compensarRectificativa } from "./acciones";
 import { desenvolver } from "@/lib/accion";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
 import { BotonCompartir } from "./boton-compartir";
@@ -16,7 +17,7 @@ import { hoy } from "./condiciones-documento";
 export function Cobros({
   documentoId,
   pendiente: importePendiente,
-  cobros,
+  cobros: cobrosServidor,
   compartir,
   esRectificativa = false,
   compensables = [],
@@ -32,6 +33,7 @@ export function Cobros({
   compartir?: { archivo: string; titulo: string; texto: string };
 }) {
   const { router, pendiente, error, ejecutar } = useAccion();
+  const cobros = useSinOcultos(cobrosServidor, (c) => `cobro:${c.id}`);
   const abierto = Math.abs(importePendiente);
   // En una rectificativa lo pendiente es a favor del cliente: se registra una devolución.
   const esDevolucion = importePendiente < -0.005;
@@ -64,10 +66,9 @@ export function Cobros({
                 disabled={pendiente}
                 onClick={async () => {
                   if (!(await confirmar("¿Eliminar este cobro?"))) return;
-                  ejecutar(async () => {
-                    await desenvolver(eliminarCobro(documentoId, c.id));
+                  if (await eliminarOptimista(`cobro:${c.id}`, () => desenvolver(eliminarCobro(documentoId, c.id)))) {
                     router.refresh();
-                  });
+                  }
                 }}
                 className="text-icono-secundario hover:text-texto-peligro disabled:opacity-50"
               >

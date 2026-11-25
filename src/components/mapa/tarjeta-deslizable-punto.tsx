@@ -5,6 +5,7 @@ import { confirmar } from "@/components/ui/dialogos";
 import { Icono } from "@/components/ui/iconos";
 import { cn } from "@/lib/cn";
 import { useAccion } from "@/lib/use-accion";
+import { eliminarOptimista, useOculto } from "@/lib/eliminacion-optimista";
 
 const ANCHO_ACCION_ELIMINAR = 80;
 
@@ -14,6 +15,7 @@ const ANCHO_ACCION_ELIMINAR = 80;
  * - Gesto o scroll horizontal hacia la izquierda (en móvil y trackpad/ratón) para revelar la papelera animada de borrado.
  */
 export function TarjetaDeslizablePunto({
+  clave,
   nombreVisible,
   eliminable,
   swipeAbierto,
@@ -24,6 +26,8 @@ export function TarjetaDeslizablePunto({
   className,
   children,
 }: {
+  /** Clave de eliminación optimista (p. ej. `punto:12`): la tarjeta desaparece al confirmar el borrado. */
+  clave: string;
   nombreVisible: string;
   eliminable: boolean;
   swipeAbierto: boolean;
@@ -34,7 +38,8 @@ export function TarjetaDeslizablePunto({
   className?: string;
   children: React.ReactNode;
 }) {
-  const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
+  const { router, pendiente, error } = useAccion();
+  const oculto = useOculto(clave);
   const [desplazamientoDrag, setDesplazamientoDrag] = useState<number | null>(null);
   const gestoRef = useRef<{
     pointerId: number;
@@ -124,11 +129,11 @@ export function TarjetaDeslizablePunto({
       onCerrarSwipe();
       return;
     }
-    ejecutar(async () => {
-      await onEliminar();
-      onCerrarSwipe();
-    });
+    onCerrarSwipe();
+    if (await eliminarOptimista(clave, onEliminar)) router.refresh();
   }
+
+  if (oculto) return null;
 
   return (
     <div className="relative overflow-hidden">

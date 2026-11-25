@@ -19,6 +19,7 @@ import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { LimpiarBorradores } from "./limpiar-borradores";
 import { BarraFiltrosDocumentos, type FiltrosDocumentos } from "./barra-filtros";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { Ocultable } from "@/lib/eliminacion-optimista";
 
 export const dynamic = "force-dynamic";
 
@@ -458,8 +459,8 @@ export default async function PaginaDocumentos({
                   const es90 = d.aging?.esCritica90 ?? false;
                   const cobroEstado = d.cobroDoc?.estado_cobro;
                   return (
+                    <Ocultable key={d.id} clave={`documento:${d.id}`}>
                     <Link
-                      key={d.id}
                       href={`/admin/documentos/${d.id}`}
                       className={
                         es90
@@ -505,6 +506,7 @@ export default async function PaginaDocumentos({
                         )}
                       </div>
                     </Link>
+                    </Ocultable>
                   );
                 })}
                 {col.items.length === 0 && (
@@ -563,8 +565,8 @@ export default async function PaginaDocumentos({
               }
 
               return (
+                <Ocultable key={d.id} clave={`documento:${d.id}`}>
                 <Link
-                  key={d.id}
                   href={`/admin/documentos/${d.id}`}
                   className={`grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1.5 px-esp4 py-esp3 transition-colors duration-rapida ease-suave md:px-esp6 lg:flex lg:gap-esp4 ${
                     es90
@@ -653,6 +655,7 @@ export default async function PaginaDocumentos({
                     )}
                   </div>
                 </Link>
+                </Ocultable>
               );
             })}
             {filas.length === 0 && (

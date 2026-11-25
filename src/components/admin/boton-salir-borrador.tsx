@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Boton, clasesBoton } from "@/components/ui/boton";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { eliminarBorrador } from "@/app/(admin)/admin/documentos/[id]/acciones";
 import { desenvolver } from "@/lib/accion";
 import { atraparFoco } from "@/lib/trampa-foco";
@@ -63,19 +64,16 @@ export function BotonSalirBorrador({
   }
 
   function eliminarYSalir() {
+    // Optimista: se sale al instante y el borrador ya no aparece en el listado; si el servidor
+    // falla, vuelve a aparecer y se avisa.
+    const id = documentoId!;
     setError(null);
-    setAccionEnCurso("eliminar");
-    iniciar(async () => {
-      try {
-        await desenvolver(eliminarBorrador(documentoId!));
-        setAbierto(false);
-        router.push(destino);
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo eliminar el borrador.");
-      } finally {
-        setAccionEnCurso(null);
-      }
+    setAbierto(false);
+    router.push(destino);
+    void eliminarOptimista(`documento:${id}`, () => desenvolver(eliminarBorrador(id)), {
+      mensajeError: "No se pudo eliminar el borrador.",
+    }).then((ok) => {
+      if (!ok) router.refresh();
     });
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Ocultable } from "@/lib/eliminacion-optimista";
 import { useMemo, useState } from "react";
 import { Boton } from "@/components/ui/boton";
 import { CabeceraPaginaBase } from "@/components/ui/cabecera-pagina-base";
@@ -234,13 +235,14 @@ export function VistaCatalogo({
 
           <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default overflow-hidden">
             {items.map((p) => (
-              <FilaProducto
-                key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.instalableEnCampana}-${p.admiteMedidaLibre}-${p.formatos.length}`}
-                producto={p}
-                expandido={expandidoId === p.id}
-                onAlternar={() => setExpandidoId(expandidoId === p.id ? null : p.id)}
-                onEditarFicha={() => setModalProducto({ abierto: true, producto: p })}
-              />
+              <Ocultable key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.instalableEnCampana}-${p.admiteMedidaLibre}-${p.formatos.length}`} clave={`producto:${p.id}`}>
+                <FilaProducto
+                  producto={p}
+                  expandido={expandidoId === p.id}
+                  onAlternar={() => setExpandidoId(expandidoId === p.id ? null : p.id)}
+                  onEditarFicha={() => setModalProducto({ abierto: true, producto: p })}
+                />
+              </Ocultable>
             ))}
           </Tarjeta>
         </section>

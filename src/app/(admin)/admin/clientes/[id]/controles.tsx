@@ -7,6 +7,7 @@ import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { actualizarContacto, anadirContacto, eliminarCliente, eliminarContacto, cambiarActivo } from "../acciones";
 import { desenvolver } from "@/lib/accion";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { confirmar } from "@/components/ui/dialogos";
 import { inicialesCliente } from "@/lib/clientes";
 
@@ -19,8 +20,9 @@ type Contacto = {
   recibe_facturas: boolean;
 };
 
-export function Contactos({ clienteId, contactos }: { clienteId: number; contactos: Contacto[] }) {
+export function Contactos({ clienteId, contactos: contactosServidor }: { clienteId: number; contactos: Contacto[] }) {
   const router = useRouter();
+  const contactos = useSinOcultos(contactosServidor, (c) => `contacto:${c.id}`);
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
@@ -107,7 +109,7 @@ export function Contactos({ clienteId, contactos }: { clienteId: number; contact
                   disabled={pendiente}
                   onClick={async () => {
                     if (!(await confirmar(`¿Eliminar el contacto ${c.nombre}?`))) return;
-                    ejecutar(() => desenvolver(eliminarContacto(clienteId, c.id)));
+                    void eliminarOptimista(`contacto:${c.id}`, () => desenvolver(eliminarContacto(clienteId, c.id)));
                   }}
                   className="flex min-h-9 min-w-9 items-center justify-center rounded-md text-icono-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-peligro-sutil hover:text-texto-peligro active:scale-press disabled:opacity-50"
                 >
@@ -223,15 +225,14 @@ export function BotonEliminarCliente({ clienteId, puedeEliminar }: { clienteId: 
         cargando={pendiente}
         onClick={async () => {
           if (!(await confirmar("¿Eliminar este cliente y sus contactos? No se puede deshacer."))) return;
+          // Optimista: se vuelve al listado (ya sin el cliente) mientras el servidor lo borra.
           setError(null);
+          router.push("/admin/clientes");
           iniciar(async () => {
-            try {
-              await desenvolver(eliminarCliente(clienteId));
-              router.push("/admin/clientes");
-              router.refresh();
-            } catch (e) {
-              setError(e instanceof Error ? e.message : "No se pudo eliminar el cliente.");
-            }
+            const ok = await eliminarOptimista(`cliente:${clienteId}`, () => desenvolver(eliminarCliente(clienteId)), {
+              mensajeError: "No se pudo eliminar el cliente.",
+            });
+            if (!ok) router.refresh();
           });
         }}
       >

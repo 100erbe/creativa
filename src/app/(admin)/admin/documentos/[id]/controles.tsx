@@ -6,6 +6,7 @@ import { Boton, clasesBoton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { MOTIVOS_RECTIFICACION, textoMotivoRectificacion } from "@/lib/documentos";
 import { emitirDocumento, convertirDocumento, duplicarDocumento, nuevaVersionPresupuesto, eliminarBorrador, cambiarEstadoPresupuesto, anularDocumento } from "./acciones";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 import { useAccion } from "@/lib/use-accion";
@@ -406,10 +407,11 @@ export function AccionesDocumento({
           disabled={pendiente}
           onClick={async () => {
             if (!(await confirmar("¿Eliminar este borrador? No se puede deshacer."))) return;
-            ejecutar(async () => {
-              await desenvolver(eliminarBorrador(documentoId));
-              router.push("/admin/documentos");
-            });
+            // Optimista: se vuelve al listado (ya sin el borrador) mientras el servidor lo borra.
+            router.push("/admin/documentos");
+            if (!(await eliminarOptimista(`documento:${documentoId}`, () => desenvolver(eliminarBorrador(documentoId))))) {
+              router.refresh();
+            }
           }}
         >
           Eliminar borrador

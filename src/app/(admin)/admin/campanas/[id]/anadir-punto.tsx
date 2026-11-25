@@ -9,6 +9,7 @@ import {
 } from "@/components/mapa/modal-detalles-punto";
 import { TarjetaDeslizablePunto } from "@/components/mapa/tarjeta-deslizable-punto";
 import { desenvolver } from "@/lib/accion";
+import { useSinOcultos } from "@/lib/eliminacion-optimista";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { nombreVisiblePunto } from "@/lib/mapa/geocodificacion";
 import type { FotoMapa } from "@/lib/mapa/zonas";
@@ -55,7 +56,7 @@ export function ProveedorAnadirPunto({
   campanaId,
   articulos,
   fechasCampana,
-  puntos,
+  puntos: puntosServidor,
   fotos = [],
   children,
 }: {
@@ -66,6 +67,8 @@ export function ProveedorAnadirPunto({
   fotos?: FotoMapa[];
   children: React.ReactNode;
 }) {
+  // Los puntos que se están eliminando desaparecen ya de la lista y del mapa.
+  const puntos = useSinOcultos(puntosServidor, (p) => `punto:${p.id}`);
   const [puntoModal, setPuntoModal] = useState<PuntoCampanaData | null>(null);
   const [swipeAbiertoId, setSwipeAbiertoId] = useState<number | null>(null);
 
@@ -202,6 +205,7 @@ export function TarjetaPuntoCampana({
 
   return (
     <TarjetaDeslizablePunto
+      clave={`punto:${punto.id}`}
       nombreVisible={nombreVisiblePunto(punto.nombre)}
       eliminable={esEliminable(punto)}
       swipeAbierto={swipeAbiertoId === punto.id}

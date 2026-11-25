@@ -7,6 +7,7 @@ import { desenvolver } from "@/lib/accion";
 import { useAccion } from "@/lib/use-accion";
 import type { EstadoGasto } from "@/lib/gastos";
 import { cambiarEstadoGasto, eliminarGasto } from "@/lib/gastos-acciones";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 
 export function ControlesGasto({
   id,
@@ -26,10 +27,9 @@ export function ControlesGasto({
 
   async function borrar() {
     if (!(await confirmar("¿Eliminar este gasto? Se borra también el archivo adjunto."))) return;
-    ejecutar(async () => {
-      await desenvolver(eliminarGasto(id));
-      router.push("/admin/gastos");
-    });
+    // Optimista: se vuelve al listado (ya sin el gasto) mientras el servidor lo borra.
+    router.push("/admin/gastos");
+    if (!(await eliminarOptimista(`gasto:${id}`, () => desenvolver(eliminarGasto(id))))) router.refresh();
   }
 
   return (

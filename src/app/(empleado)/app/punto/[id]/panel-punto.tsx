@@ -16,6 +16,7 @@ import {
   reportarIncidencia,
   type EstadosAnteriores,
 } from "@/lib/campanas/acciones-punto";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { desenvolver } from "@/lib/accion";
 import { avisar, confirmar } from "@/components/ui/dialogos";
 import { Tarjeta } from "@/components/ui/tarjeta";
@@ -46,7 +47,7 @@ function etiquetaUbicacion(f: FotoFicha): { texto: string; ayuda: string } {
 export function PanelPunto({
   punto,
   asignacion,
-  fotos,
+  fotos: fotosServidor,
   usuarioId,
   esAdmin,
 }: {
@@ -63,7 +64,8 @@ export function PanelPunto({
   const [pendiente, iniciar] = useTransition();
   const [mostrarIncidencia, setMostrarIncidencia] = useState(false);
   const [notaIncidencia, setNotaIncidencia] = useState("");
-  const [eliminando, setEliminando] = useState<number | null>(null);
+  // Las fotos que se están eliminando desaparecen ya de la galería.
+  const fotos = useSinOcultos(fotosServidor, (f) => `foto:${f.id}`);
 
   // Añadir fotos
   const [panelAbierto, setPanelAbierto] = useState(false);
@@ -257,15 +259,10 @@ export function PanelPunto({
 
   async function eliminarFoto(fotoId: number) {
     if (!(await confirmar("¿Eliminar esta foto?"))) return;
-    setEliminando(fotoId);
-    try {
-      await desenvolver(eliminarFotoPunto(fotoId, punto.id));
-      router.refresh();
-    } catch (err) {
-      void avisar(err instanceof Error ? err.message : "No se pudo eliminar la foto.");
-    } finally {
-      setEliminando(null);
-    }
+    const ok = await eliminarOptimista(`foto:${fotoId}`, () => desenvolver(eliminarFotoPunto(fotoId, punto.id)), {
+      mensajeError: "No se pudo eliminar la foto.",
+    });
+    if (ok) router.refresh();
   }
 
   // ── Instalado / deshacer ──────────────────────────────────────────────────
@@ -392,11 +389,10 @@ export function PanelPunto({
                   <button
                     type="button"
                     onClick={() => eliminarFoto(f.id)}
-                    disabled={eliminando === f.id}
                     aria-label="Eliminar foto"
                     className="absolute right-1 top-1 flex h-11 w-11 md:h-9 md:w-9 items-center justify-center rounded-full bg-fondo-velo-fuerte text-sm text-texto-inverso shadow-sm disabled:opacity-50"
                   >
-                    {eliminando === f.id ? "…" : "✕"}
+                    ✕
                   </button>
                 )}
               </div>

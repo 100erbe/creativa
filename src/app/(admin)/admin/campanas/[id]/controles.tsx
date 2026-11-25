@@ -22,6 +22,7 @@ import { CAMPO } from "@/components/ui/panel-busqueda";
 import { SelectorFecha } from "@/components/ui/selector-fecha";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 
@@ -37,7 +38,7 @@ export function ControlesPunto({
   puntoId,
   puntoNombre,
   estado,
-  asignados,
+  asignados: asignadosServidor,
   candidatos,
 }: {
   campanaId: number;
@@ -63,6 +64,7 @@ export function ControlesPunto({
     });
   }
 
+  const asignados = useSinOcultos(asignadosServidor, (a) => `asignacion:${a.id}`);
   const libres = candidatos.filter((c) => !asignados.some((a) => a.usuarioId === c.id && a.rol !== "retirador"));
   const instalado = estado === "instalado" || estado === "verificado";
   const retiradaPendiente = asignados.some((a) => a.rol === "retirador" && a.estado !== "completada");
@@ -85,7 +87,7 @@ export function ControlesPunto({
                 type="button"
                 onClick={async () => {
                   if (!(await confirmar(`¿Quitar a ${a.nombre} de este punto?`, { aceptar: "Quitar", peligro: true }))) return;
-                  ejecutar(() => desenvolver(quitarAsignacion(campanaId, a.id)));
+                  void eliminarOptimista(`asignacion:${a.id}`, () => desenvolver(quitarAsignacion(campanaId, a.id)));
                 }}
                 disabled={pendiente}
                 aria-label={`Quitar a ${a.nombre}`}

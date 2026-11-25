@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
-import { avisar, confirmar } from "@/components/ui/dialogos";
+import { confirmar } from "@/components/ui/dialogos";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { desenvolver } from "@/lib/accion";
 import { cn } from "@/lib/cn";
 import { eliminarCampana } from "./[id]/acciones";
@@ -62,7 +63,7 @@ export function BotonEliminarCampana({
   className?: string;
 }) {
   const router = useRouter();
-  const [pendiente, iniciar] = useTransition();
+  const [pendiente, setPendiente] = useState(false);
 
   async function alPulsar(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
@@ -73,15 +74,15 @@ export function BotonEliminarCampana({
     });
     if (!seguro) return;
 
-    iniciar(async () => {
-      try {
-        await desenvolver(eliminarCampana(campanaId));
-        if (redirigirA) router.push(redirigirA);
-        router.refresh();
-      } catch (err) {
-        void avisar(err instanceof Error ? err.message : "No se pudo eliminar la campaña.");
-      }
+    // Optimista: la campaña desaparece de las listas (y se sale de su ficha) al instante;
+    // el borrado sigue en el servidor y, si falla, vuelve a aparecer con el aviso.
+    setPendiente(true);
+    if (redirigirA) router.push(redirigirA);
+    const ok = await eliminarOptimista(`campana:${campanaId}`, () => desenvolver(eliminarCampana(campanaId)), {
+      mensajeError: "No se pudo eliminar la campaña.",
     });
+    setPendiente(false);
+    if (!ok && redirigirA) router.refresh();
   }
 
   if (variante === "icono") {
@@ -107,7 +108,7 @@ export function BotonEliminarCampana({
       type="button"
       variante="peligro"
       tamano="s"
-      cargando={pendiente}
+      disabled={pendiente}
       onClick={alPulsar}
       className={cn("!min-h-10 !h-10 md:!min-h-8 md:!h-8 shrink-0", className)}
     >

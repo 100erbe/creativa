@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { desenvolver } from "@/lib/accion";
 import { euros } from "@/lib/formato";
 import { useAccion } from "@/lib/use-accion";
+import { Ocultable, eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { eliminarFormato, guardarFormato, guardarProducto } from "./acciones";
 import { UNIDAD_CORTA, IVAS, aNumero, aTexto, etiquetaMini } from "./catalogo-comun";
 import type { FormatoAdmin, ProductoAdmin } from "./catalogo-comun";
@@ -222,14 +223,15 @@ export function FilaProducto({
             )}
 
             {p.formatos.map((f) => (
-              <FormularioFormato
-                key={`${f.id}-${f.codigo}-${f.nombre}-${f.anchoCm}-${f.altoCm}-${f.precioFabricacion}-${f.precioInstalacion}-${f.alias.join(",")}-${f.activo}`}
-                productoId={p.id}
-                formato={f}
-                unidad={unidad}
-                permiteFab={p.permiteFabricacion}
-                permiteInst={p.permiteInstalacion}
-              />
+              <Ocultable key={`${f.id}-${f.codigo}-${f.nombre}-${f.anchoCm}-${f.altoCm}-${f.precioFabricacion}-${f.precioInstalacion}-${f.alias.join(",")}-${f.activo}`} clave={`formato:${f.id}`}>
+                <FormularioFormato
+                  productoId={p.id}
+                  formato={f}
+                  unidad={unidad}
+                  permiteFab={p.permiteFabricacion}
+                  permiteInst={p.permiteInstalacion}
+                />
+              </Ocultable>
             ))}
 
             {p.formatos.length === 0 && !nuevoFormato && (
@@ -264,7 +266,7 @@ function FormularioFormato({
   permiteInst: boolean;
   onCerrar?: () => void;
 }) {
-  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+  const { router, pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
   const [guardado, setGuardado] = useState(false);
   const [editando, setEditando] = useState(!f);
   const [nombre, setNombre] = useState(f?.nombre ?? "");
@@ -447,7 +449,7 @@ function FormularioFormato({
             disabled={pendiente}
             onClick={async () => {
               if (!(await confirmar(`¿Eliminar el formato «${f.nombre}»?`))) return;
-              ejecutar(() => desenvolver(eliminarFormato(f.id)));
+              if (await eliminarOptimista(`formato:${f.id}`, () => desenvolver(eliminarFormato(f.id)))) router.refresh();
             }}
             className="ml-auto text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
           >

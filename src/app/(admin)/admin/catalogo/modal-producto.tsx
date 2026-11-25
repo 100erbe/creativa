@@ -7,6 +7,7 @@ import { CAMPO } from "@/components/ui/panel-busqueda";
 import { confirmar } from "@/components/ui/dialogos";
 import { desenvolver } from "@/lib/accion";
 import { useAccion } from "@/lib/use-accion";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { eliminarProducto, guardarProducto } from "./acciones";
 import { atraparFoco } from "@/lib/trampa-foco";
 import { UNIDAD_CORTA, UNIDADES_OPCIONES, IVAS, aNumero, aTexto, etiquetaMini } from "./catalogo-comun";
@@ -23,7 +24,7 @@ export function ModalProducto({
   categoriaPorDefectoId: number;
   onCerrar: () => void;
 }) {
-  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+  const { router, pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
 
   const [nombre, setNombre] = useState(p?.nombre ?? "");
   const [categoriaId, setCategoriaId] = useState(String(p?.categoriaId ?? categoriaPorDefectoId));
@@ -341,10 +342,10 @@ export function ModalProducto({
               disabled={pendiente}
               onClick={async () => {
                 if (!(await confirmar(`¿Eliminar «${p.nombre}» del catálogo? No se puede deshacer.`))) return;
-                ejecutar(async () => {
-                  await desenvolver(eliminarProducto(p.id));
-                  onCerrar();
-                });
+                onCerrar();
+                if (await eliminarOptimista(`producto:${p.id}`, () => desenvolver(eliminarProducto(p.id)))) {
+                  router.refresh();
+                }
               }}
             >
               Eliminar

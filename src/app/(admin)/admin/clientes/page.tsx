@@ -16,6 +16,7 @@ import {
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { Ocultable } from "@/lib/eliminacion-optimista";
 
 export const dynamic = "force-dynamic";
 
@@ -276,8 +277,8 @@ export default async function PaginaClientes({
             const etiquetaTipo = ETIQUETA_TIPO_CLIENTE[c.tipo_cliente] ?? c.tipo_cliente;
 
             return (
+              <Ocultable key={c.id} clave={`cliente:${c.id}`}>
               <Link
-                key={c.id}
                 href={`/admin/clientes/${c.id}`}
                 className={`flex flex-col gap-esp2 px-esp4 py-esp3 transition-colors duration-rapida ease-suave md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] md:items-center md:gap-esp4 md:px-esp5 xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6 ${
                   esCritico90
@@ -368,6 +369,7 @@ export default async function PaginaClientes({
                   )}
                 </div>
               </Link>
+              </Ocultable>
             );
           })}
           {filas.length === 0 && (

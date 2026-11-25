@@ -18,6 +18,7 @@ import {
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
 import { useAccion } from "@/lib/use-accion";
+import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { atraparFoco } from "@/lib/trampa-foco";
 
 export type ArticuloModalData = {
@@ -278,7 +279,7 @@ export function ModalDetallesPunto({
   onEliminar?: () => Promise<void>;
   onCerrar: () => void;
 }) {
-  const { pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
+  const { router, pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
   const [montado, setMontado] = useState(false);
   const formId = "form-detalles-punto";
   const nombre = nombreVisiblePunto(punto.nombre);
@@ -303,10 +304,9 @@ export function ModalDetallesPunto({
   async function manejarEliminar() {
     if (!onEliminar) return;
     if (!(await confirmar(`¿Eliminar el punto «${nombre}»?`))) return;
-    ejecutar(async () => {
-      await onEliminar();
-      onCerrar();
-    });
+    // Optimista: se cierra el modal y el punto desaparece de la lista y del mapa al instante.
+    onCerrar();
+    if (await eliminarOptimista(`punto:${punto.id}`, onEliminar)) router.refresh();
   }
 
   return createPortal(

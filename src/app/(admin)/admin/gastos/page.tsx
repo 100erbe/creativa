@@ -25,6 +25,7 @@ import { ResumenFiscalAnual, ResumenFiscalTrimestre } from "./resumen-fiscal";
 import { hoyEnEspana } from "./opciones";
 import { Tarjeta } from "@/components/ui/tarjeta";
 import { PestanasEnlace } from "@/components/ui/pestanas";
+import { Ocultable } from "@/lib/eliminacion-optimista";
 
 export const dynamic = "force-dynamic";
 
@@ -334,8 +335,8 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </div>
         <div className="flex flex-col divide-y divide-borde-default">
           {visibles.map((g) => (
+            <Ocultable key={g.id} clave={`gasto:${g.id}`}>
             <Link
-              key={g.id}
               // Pendiente → panel de revisión (con enlace a la ficha); el resto → ficha del gasto.
               href={g.estado === "pendiente" ? enlace(actual, { revisar: String(g.id) }) : `/admin/gastos/${g.id}`}
               className="grid grid-cols-[1fr_auto] items-center gap-x-esp3 gap-y-1 px-esp4 py-esp3 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 md:px-esp6 lg:flex lg:gap-esp4"
@@ -377,6 +378,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
                 {!g.ticket_path && <span className="text-xs text-texto-aviso lg:hidden">⚠ Falta ticket</span>}
               </div>
             </Link>
+            </Ocultable>
           ))}
           {visibles.length === 0 && (
             <p className="px-esp4 py-esp5 text-sm text-texto-terciario md:px-esp6">No hay gastos con estos filtros.</p>

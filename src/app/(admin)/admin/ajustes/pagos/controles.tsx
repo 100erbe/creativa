@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { CAMPO } from "@/components/ui/panel-busqueda";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { desenvolver } from "@/lib/accion";
 import { eliminarFormaPago, guardarCuenta, guardarFormaPago } from "./acciones";
 import { confirmar } from "@/components/ui/dialogos";
@@ -17,7 +18,8 @@ const etiqueta = "flex flex-col gap-1 text-xs font-medium text-texto-secundario"
 
 type Forma = { id: number; nombre: string; dias_vencimiento: number; texto_factura: string | null };
 
-export function FormasPago({ formas }: { formas: Forma[] }) {
+export function FormasPago({ formas: formasServidor }: { formas: Forma[] }) {
+  const formas = useSinOcultos(formasServidor, (f) => `forma-pago:${f.id}`);
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
   return (
     <div className="flex flex-col gap-esp2">
@@ -55,7 +57,7 @@ export function FormasPago({ formas }: { formas: Forma[] }) {
 }
 
 function FormularioForma({ forma, onCerrar }: { forma?: Forma; onCerrar: () => void }) {
-  const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
+  const { router, pendiente, error, ejecutar } = useAccion({ refrescar: true });
   const [nombre, setNombre] = useState(forma?.nombre ?? "");
   const [dias, setDias] = useState(String(forma?.dias_vencimiento ?? 0));
   const [texto, setTexto] = useState(forma?.texto_factura ?? "");
@@ -107,10 +109,10 @@ function FormularioForma({ forma, onCerrar }: { forma?: Forma; onCerrar: () => v
             disabled={pendiente}
             onClick={async () => {
               if (!(await confirmar(`¿Eliminar «${forma.nombre}»?`))) return;
-              ejecutar(async () => {
-                await desenvolver(eliminarFormaPago(forma.id));
-                onCerrar();
-              });
+              onCerrar();
+              if (await eliminarOptimista(`forma-pago:${forma.id}`, () => desenvolver(eliminarFormaPago(forma.id)))) {
+                router.refresh();
+              }
             }}
             className="ml-auto text-xs font-medium text-texto-secundario hover:text-texto-peligro disabled:opacity-50"
           >

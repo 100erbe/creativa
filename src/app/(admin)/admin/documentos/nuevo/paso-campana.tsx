@@ -22,6 +22,7 @@ import type { Cabecera } from "./paso-lineas";
 import { actualizarPunto, anadirPunto, crearCampana, eliminarPunto, moverPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 import { useAccion } from "@/lib/use-accion";
+import { useSinOcultos } from "@/lib/eliminacion-optimista";
 import { Tarjeta } from "@/components/ui/tarjeta";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
@@ -221,7 +222,7 @@ function CampanaVinculada({
   documento,
   campana,
   articulos,
-  puntos,
+  puntos: puntosServidor,
 }: {
   documento: Cabecera;
   campana: Campana;
@@ -229,6 +230,8 @@ function CampanaVinculada({
   puntos: Punto[];
 }) {
   const { pendiente, error, ejecutar } = useAccion({ refrescar: true });
+  // Los puntos que se están eliminando desaparecen ya de la lista y del mapa.
+  const puntos = useSinOcultos(puntosServidor, (p) => `punto:${p.id}`);
   const [puntoModal, setPuntoModal] = useState<Punto | null>(null);
   const [swipeAbiertoId, setSwipeAbiertoId] = useState<number | null>(null);
 
@@ -359,6 +362,7 @@ function CampanaVinculada({
             return (
               <TarjetaDeslizablePunto
                 key={p.id}
+                clave={`punto:${p.id}`}
                 nombreVisible={nombreVisiblePunto(p.nombre)}
                 eliminable={p.estado === "pendiente"}
                 swipeAbierto={swipeAbiertoId === p.id}

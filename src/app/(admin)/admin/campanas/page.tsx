@@ -10,6 +10,7 @@ import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO_CAMPANA as ETIQUETA_ESTADO } from "@/lib/etiquetas";
 import { documentosAsociadosACampanas } from "@/lib/campanas/documentos";
 import { BotonEliminarCampana } from "./boton-eliminar-campana";
+import { Ocultable } from "@/lib/eliminacion-optimista";
 import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
@@ -184,8 +185,8 @@ export default async function PaginaCampanas({
 
                 <div className="flex flex-col gap-esp2">
                   {col.items.map((c) => (
+                    <Ocultable key={c.id} clave={`campana:${c.id}`}>
                     <div
-                      key={c.id}
                       className={`group relative flex flex-col gap-esp2 rounded-md border bg-fondo-superficie p-esp3 transition-[border-color,transform] duration-rapida ease-salida hover:-translate-y-[1px] ${
                         c.incidencias > 0
                           ? "border-borde-peligro-sutil border-l-4 border-l-borde-peligro hover:border-borde-peligro"
@@ -244,6 +245,7 @@ export default async function PaginaCampanas({
                         </Insignia>
                       </div>
                     </div>
+                    </Ocultable>
                   ))}
                   {col.items.length === 0 && (
                     <p className="rounded-md border border-dashed border-borde-default px-esp3 py-esp5 text-center text-xs text-texto-terciario">
@@ -258,8 +260,8 @@ export default async function PaginaCampanas({
       ) : (
         <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default overflow-hidden">
           {filas.map((c) => (
+            <Ocultable key={c.id} clave={`campana:${c.id}`}>
             <div
-              key={c.id}
               className={`flex items-center gap-esp2 transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60 ${
                 c.incidencias > 0 ? "border-l-4 border-l-borde-peligro" : ""
               }`}
@@ -310,6 +312,7 @@ export default async function PaginaCampanas({
                 />
               </div>
             </div>
+            </Ocultable>
           ))}
           {filas.length === 0 && (
             <p className="px-esp6 py-esp6 text-sm text-texto-terciario">No hay campañas con este filtro.</p>

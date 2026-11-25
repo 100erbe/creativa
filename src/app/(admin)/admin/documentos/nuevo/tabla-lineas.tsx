@@ -10,6 +10,7 @@ import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 import { UNIDAD, num, texto } from "./lineas-comun";
 import type { Linea } from "./lineas-comun";
+import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { Tarjeta } from "@/components/ui/tarjeta";
 
 /** Lista dinámica y compacta de lo ya añadido; se actualiza con cada router.refresh(). */
@@ -43,7 +44,8 @@ export function ListaCompacta({ lineas }: { lineas: Linea[] }) {
 //  Formulario para añadir un artículo del catálogo (inserción rápida)
 // ---------------------------------------------------------------------
 
-export function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Linea[] }) {
+export function TablaLineas({ documentoId, lineas: lineasServidor }: { documentoId: number; lineas: Linea[] }) {
+  const lineas = useSinOcultos(lineasServidor, (l) => `linea:${l.id}`);
   return (
     <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
       <div>
@@ -196,14 +198,9 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
           disabled={pendiente}
           onClick={async () => {
             if (!(await confirmar(`¿Eliminar «${linea.descripcion}» del documento?`))) return;
-            iniciar(async () => {
-              try {
-                await desenvolver(eliminarLinea(documentoId, linea.id));
-                router.refresh();
-              } catch (e) {
-                setError(e instanceof Error ? e.message : "No se pudo eliminar.");
-              }
-            });
+            if (await eliminarOptimista(`linea:${linea.id}`, () => desenvolver(eliminarLinea(documentoId, linea.id)))) {
+              router.refresh();
+            }
           }}
           aria-label="Eliminar línea"
           className="flex h-11 w-11 items-center justify-center justify-self-end text-icono-secundario hover:text-texto-peligro disabled:opacity-50 md:h-6 md:w-6"
