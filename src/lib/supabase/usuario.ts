@@ -25,6 +25,11 @@ export const obtenerUsuarioActual = cache(async function obtenerUsuarioActual():
 
   if (!user) return null;
 
+  // Con la verificación en dos pasos activada, una sesión sin código (aal1) no vale: cubre las
+  // Server Actions y las rutas que no pasan por el control del middleware.
+  const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (nivel && nivel.nextLevel === "aal2" && nivel.currentLevel !== "aal2") return null;
+
   const { data: fila, error } = await supabase
     .from("usuarios")
     .select("id, nombre, apellidos, email, rol, avatar_url, activo")

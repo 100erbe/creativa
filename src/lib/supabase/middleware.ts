@@ -38,12 +38,17 @@ export async function updateSession(request: NextRequest) {
   const esRutaAdmin = pathname.startsWith("/admin");
   const esRutaEmpleado = pathname.startsWith("/app");
   const esRutaCuenta = pathname.startsWith("/cuenta");
+  // Las tareas programadas (/api/cron) se autentican con su propio secreto, no con la sesión.
+  const esRutaApi = pathname.startsWith("/api") && !pathname.startsWith("/api/cron");
 
   // Verificación en dos pasos: quien la tiene activada (nextLevel = aal2) y aún no ha escrito
-  // el código en esta sesión (currentLevel = aal1) no entra en la app ni en su cuenta.
-  if (user && (esRutaAdmin || esRutaEmpleado || esRutaCuenta)) {
+  // el código en esta sesión (currentLevel = aal1) no entra en la app, ni en su cuenta, ni en la API.
+  if (user && (esRutaAdmin || esRutaEmpleado || esRutaCuenta || esRutaApi)) {
     const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (nivel && nivel.nextLevel === "aal2" && nivel.currentLevel !== "aal2") {
+      if (esRutaApi) {
+        return NextResponse.json({ error: "Falta la verificación en dos pasos." }, { status: 401 });
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/entrar/verificar";
       url.search = "";

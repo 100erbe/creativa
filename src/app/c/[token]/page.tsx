@@ -16,8 +16,24 @@ import {
   type FotoMapa,
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
+import type { Database } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
+
+type FilaGenerada = Database["public"]["Functions"]["obtener_campana_publica_v2"]["Returns"][number];
+/** Fila real de obtener_campana_publica_v2: los campos del punto llegan a null si la campaña no tiene puntos. */
+type FilaCampanaPublica = Omit<
+  FilaGenerada,
+  "punto_id" | "punto_nombre" | "punto_estado" | "tipo_soporte" | "direccion" | "latitud" | "longitud"
+> & {
+  punto_id: number | null;
+  punto_nombre: string | null;
+  punto_estado: FilaGenerada["punto_estado"] | null;
+  tipo_soporte: FilaGenerada["tipo_soporte"] | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
+};
 
 function mensajeCabeceraCliente(datos: {
   estado: string | null;
@@ -79,8 +95,13 @@ export default async function PaginaPublicaCliente({
 
   const cabecera = filas[0];
   if (!cabecera) notFound();
-  // La función SQL no garantiza orden: se muestran siempre en el mismo orden de alta.
-  filas.sort((a, b) => (a.punto_id ?? 0) - (b.punto_id ?? 0));
+  // La función SQL hace LEFT JOIN: una campaña sin puntos devuelve una sola fila con los campos
+  // del punto a null (los tipos generados no lo reflejan). Esa fila solo sirve de cabecera.
+  const puntos = (filas as FilaCampanaPublica[])
+    // Con punto_id, la fila es un punto real: sus campos obligatorios vienen rellenos.
+    .filter((p): p is FilaGenerada => p.punto_id != null)
+    // La función SQL no garantiza orden: se muestran siempre en el mismo orden de alta.
+    .sort((a, b) => a.punto_id - b.punto_id);
   const fotosPorPunto = new Map<number, typeof fotos>();
   for (const f of fotos ?? []) {
     const lista = fotosPorPunto.get(f.punto_id) ?? [];
@@ -88,8 +109,8 @@ export default async function PaginaPublicaCliente({
     fotosPorPunto.set(f.punto_id, lista);
   }
 
-  const puntosTotales = filas.length;
-  const puntosCompletados = filas.filter((p) =>
+  const puntosTotales = puntos.length;
+  const puntosCompletados = puntos.filter((p) =>
     ["instalado", "verificado", "retirado"].includes(p.punto_estado ?? ""),
   ).length;
   const totalFotos = (fotos ?? []).length;
@@ -109,9 +130,7 @@ export default async function PaginaPublicaCliente({
       },
     ];
   });
-  const primerPunto = filas.find(
-    (p) => p.punto_id !== null && p.latitud !== null && p.longitud !== null,
-  );
+  const primerPunto = puntos.find((p) => p.latitud != null && p.longitud != null);
   const mensajeCliente = mensajeCabeceraCliente({
     estado: cabecera.campana_estado,
     fechaInicio: cabecera.fecha_inicio,
@@ -184,10 +203,10 @@ export default async function PaginaPublicaCliente({
         address={primerPunto?.direccion ?? null}
       >
         <MapaPuntos
-          puntos={filas
-            .filter((p) => p.punto_id !== null)
+          puntos={puntos
+            .filter((p) => p.latitud != null && p.longitud != null)
             .map((p) => ({
-              id: p.punto_id!,
+              id: p.punto_id,
               nombre: p.punto_nombre ?? "Punto",
               latitud: Number(p.latitud!),
               longitud: Number(p.longitud!),
@@ -206,7 +225,7 @@ export default async function PaginaPublicaCliente({
       </SafeMapContainer>
 
       <div className="flex flex-col gap-esp4">
-        {filas.map((p) => (
+        {puntos.map((p) => (
           <div
             key={p.punto_id}
             className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 sm:p-esp5"

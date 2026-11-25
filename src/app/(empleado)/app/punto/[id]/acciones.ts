@@ -93,6 +93,7 @@ export const subirFotoPunto = accion(async (formData: FormData) => {
  * no esta función. Si la fila no se borra (no es suya), no se toca el archivo.
  */
 export const eliminarFotoPunto = accion(async (fotoId: number, puntoId: number) => {
+  if (!(await obtenerUsuarioActual())) throw new Error("Sesión no válida.");
   const supabase = await createClient();
 
   const { data: borradas, error } = await supabase
@@ -203,6 +204,7 @@ export const marcarPuntoInstalado = accion(async (
     supabase.from("asignaciones_punto").select("estado, punto_id").eq("id", asignacionId).maybeSingle(),
     obtenerUsuarioActual(),
   ]);
+  if (!usuario) throw new Error("Sesión no válida.");
   if (!punto || !asignacion || asignacion.punto_id !== puntoId) {
     throw new Error("No se encuentra el punto o la asignación.");
   }
@@ -210,26 +212,29 @@ export const marcarPuntoInstalado = accion(async (
     throw new Error("El administrador ya ha verificado este punto.");
   }
 
-  const { error: errorPunto } = await supabase
+  const { data: puntosActualizados, error: errorPunto } = await supabase
     .from("puntos_campana")
     .update({ estado: "instalado" })
-    .eq("id", puntoId);
+    .eq("id", puntoId)
+    .select("id");
   if (errorPunto) throw new Error(errorPunto.message);
+  if (!puntosActualizados || puntosActualizados.length === 0) throw new Error("No puedes modificar este punto.");
 
   const ahoraIso = new Date().toISOString();
-  const { error: errorAsignacion } = await supabase
+  const { data: asignacionesActualizadas, error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
     .update({
       estado: "completada",
       fecha_completada: ahoraIso,
       // Si cierra un admin no hace falta notificarlo después; si es miembro queda pendiente 1 min.
-      cierre_notificado_en: usuario?.rol === "admin" ? ahoraIso : null,
+      cierre_notificado_en: usuario.rol === "admin" ? ahoraIso : null,
     })
-    .eq("id", asignacionId);
-  if (errorAsignacion) {
+    .eq("id", asignacionId)
+    .select("id");
+  if (errorAsignacion || !asignacionesActualizadas || asignacionesActualizadas.length === 0) {
     // Dejar el punto como estaba si la asignación no se pudo actualizar.
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
-    throw new Error(errorAsignacion.message);
+    throw new Error(errorAsignacion?.message ?? "No puedes modificar esta tarea.");
   }
 
   revalidatePath(`/app/punto/${puntoId}`);
@@ -254,6 +259,7 @@ export const reabrirPunto = accion(async (
     supabase.from("asignaciones_punto").select("cierre_notificado_en").eq("id", asignacionId).maybeSingle(),
     obtenerUsuarioActual(),
   ]);
+  if (!usuario) throw new Error("Sesión no válida.");
   if (!punto) throw new Error("No se encuentra el punto.");
   if (punto.estado === "verificado") {
     throw new Error("El administrador ya ha verificado este punto: no se puede reabrir.");
@@ -275,17 +281,19 @@ export const reabrirPunto = accion(async (
   if (errorPunto) throw new Error(errorPunto.message);
   if (!actualizados || actualizados.length === 0) throw new Error("No se pudo reabrir el punto.");
 
-  const { error: errorAsignacion } = await supabase
+  const { data: asignacionesActualizadas, error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
     .update({
       estado: estadoAsignacion as "pendiente",
       fecha_completada: null,
       cierre_notificado_en: null,
     })
-    .eq("id", asignacionId);
+    .eq("id", asignacionId)
+    .select("id");
   if (errorAsignacion) throw new Error(errorAsignacion.message);
+  if (!asignacionesActualizadas || asignacionesActualizadas.length === 0) throw new Error("No puedes modificar esta tarea.");
 
-  if (asignacionAntes?.cierre_notificado_en != null && usuario && usuario.rol !== "admin") {
+  if (asignacionAntes?.cierre_notificado_en != null && usuario.rol !== "admin") {
     enSegundoPlano(() =>
       avisarReaperturaAdministracion(puntoId, usuario.nombre, usuario.apellidos, usuario.id),
     );
@@ -303,25 +311,30 @@ export const reportarIncidencia = accion(async (puntoId: number, notas: string) 
     supabase.from("puntos_campana").select("nombre, campana_id, campanas(nombre)").eq("id", puntoId).maybeSingle(),
     obtenerUsuarioActual(),
   ]);
-  const { error } = await supabase
+  if (!usuario) throw new Error("Sesión no válida.");
+  if (!punto) throw new Error("No se encuentra el punto.");
+  const { data: actualizados, error } = await supabase
     .from("puntos_campana")
     .update({ estado: "incidencia", incidencia: texto, incidencia_en: new Date().toISOString() })
-    .eq("id", puntoId);
+    .eq("id", puntoId)
+    .select("id");
   if (error) throw new Error(error.message);
+  // Sin fila actualizada (punto ajeno) no se avisa a nadie: evita avisos urgentes falsos.
+  if (!actualizados || actualizados.length === 0) throw new Error("No puedes modificar este punto.");
 
   // La administración se entera al momento de lo que pasa en el campo.
-  const campana = Array.isArray(punto?.campanas) ? punto?.campanas[0] : punto?.campanas;
+  const campana = Array.isArray(punto.campanas) ? punto.campanas[0] : punto.campanas;
   enSegundoPlano(() =>
     notificarAdministradores(
       {
         tipo: "incidencia_reportada",
-        titulo: `Incidencia en ${punto?.nombre ?? "un punto"}`,
-        cuerpo: `${usuario?.nombre ?? "Un instalador"}${campana?.nombre ? ` (${campana.nombre})` : ""}: ${texto.slice(0, 140)}`,
-        url: punto ? `/admin/campanas/${punto.campana_id}` : "/admin/campanas",
+        titulo: `Incidencia en ${punto.nombre}`,
+        cuerpo: `${usuario.nombre}${campana?.nombre ? ` (${campana.nombre})` : ""}: ${texto.slice(0, 140)}`,
+        url: `/admin/campanas/${punto.campana_id}`,
         tag: `incidencia-${puntoId}`,
         urgente: true,
       },
-      { excluir: usuario?.id },
+      { excluir: usuario.id },
     ),
   );
 
@@ -333,26 +346,34 @@ export const reportarIncidencia = accion(async (puntoId: number, notas: string) 
 export const marcarPuntoRetirado = accion(async (puntoId: number, asignacionId: number) => {
   const supabase = await createClient();
 
-  const [{ data: punto }, { data: asignacion }] = await Promise.all([
+  const [{ data: punto }, { data: asignacion }, usuario] = await Promise.all([
     supabase.from("puntos_campana").select("estado").eq("id", puntoId).maybeSingle(),
     supabase.from("asignaciones_punto").select("estado, punto_id, rol_asignacion").eq("id", asignacionId).maybeSingle(),
+    obtenerUsuarioActual(),
   ]);
+  if (!usuario) throw new Error("Sesión no válida.");
   if (!punto || !asignacion || asignacion.punto_id !== puntoId) throw new Error("No se encuentra el punto o la tarea.");
   if (asignacion.rol_asignacion !== "retirador") throw new Error("Esta tarea no es una retirada.");
   if (punto.estado === "retirado") return;
   if (!["instalado", "verificado"].includes(punto.estado)) throw new Error("Este punto no está instalado.");
 
-  const { error: errorPunto } = await supabase.from("puntos_campana").update({ estado: "retirado" }).eq("id", puntoId);
+  const { data: puntosActualizados, error: errorPunto } = await supabase
+    .from("puntos_campana")
+    .update({ estado: "retirado" })
+    .eq("id", puntoId)
+    .select("id");
   if (errorPunto) throw new Error(errorPunto.message);
+  if (!puntosActualizados || puntosActualizados.length === 0) throw new Error("No puedes modificar este punto.");
 
   const ahoraIso = new Date().toISOString();
-  const { error: errorAsignacion } = await supabase
+  const { data: asignacionesActualizadas, error: errorAsignacion } = await supabase
     .from("asignaciones_punto")
     .update({ estado: "completada", fecha_completada: ahoraIso, cierre_notificado_en: ahoraIso })
-    .eq("id", asignacionId);
-  if (errorAsignacion) {
+    .eq("id", asignacionId)
+    .select("id");
+  if (errorAsignacion || !asignacionesActualizadas || asignacionesActualizadas.length === 0) {
     await supabase.from("puntos_campana").update({ estado: punto.estado }).eq("id", puntoId);
-    throw new Error(errorAsignacion.message);
+    throw new Error(errorAsignacion?.message ?? "No puedes modificar esta tarea.");
   }
 
   enSegundoPlano(() => avisarCierreAdministracion(puntoId, "retirado"));

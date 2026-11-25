@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { esquemaDatosTicket, type LecturaTicket, type SugerenciaGasto } from "@/lib/datos-ticket";
-import { BUCKET_TICKETS } from "@/lib/gastos";
+import { BUCKET_TICKETS, rutaTicketConFormato } from "@/lib/gastos";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
 
@@ -126,6 +126,8 @@ export function aSugerencia(
  * sugerencia. Si falla no pasa nada: el gasto ya está guardado.
  */
 export async function completarLecturaTicket(gastoId: number, ruta: string) {
+  // Con la clave de servicio se lee cualquier archivo: solo rutas con formato válido (sin «..»).
+  if (!rutaTicketConFormato(ruta)) return;
   const admin = crearClienteAdmin();
   if (!admin || !process.env.GEMINI_API_KEY) return;
   try {

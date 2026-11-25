@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { accion } from "@/lib/accion";
 import { aSugerencia, leerTicketGuardado } from "@/lib/ticket-ia";
+import { rutaTicketConFormato, rutaTicketValida } from "@/lib/gastos";
 import { hoyEnEspana } from "./opciones";
 
 /**
@@ -13,7 +14,10 @@ import { hoyEnEspana } from "./opciones";
 export const leerTicket = accion(async (ruta: string) => {
   const usuario = await obtenerUsuarioActual();
   if (!usuario) throw new Error("Tu sesión ha caducado. Vuelve a entrar.");
-  if (usuario.rol !== "admin" && !ruta.startsWith(`${usuario.id}/`)) throw new Error("El archivo no es válido.");
+  if (typeof ruta !== "string") throw new Error("El archivo no es válido.");
+  // Formato estricto (sin «..»); el empleado solo lee tickets de su propia carpeta.
+  const valida = usuario.rol === "admin" ? rutaTicketConFormato(ruta) : rutaTicketValida(ruta, [usuario.id]);
+  if (!valida) throw new Error("El archivo no es válido.");
 
   const supabase = await createClient();
   const { lectura, categorias } = await leerTicketGuardado(supabase, ruta);

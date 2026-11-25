@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
   // Next no detecta solo los binarios de Chrome (se leen del disco en tiempo de ejecución): hay que incluirlos.
   outputFileTracingIncludes: {
     "/api/documentos/[id]/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/clientes/[id]/reclamacion/pdf": ["./node_modules/@sparticuz/chromium/bin/**"],
   },
   async headers() {
     return [

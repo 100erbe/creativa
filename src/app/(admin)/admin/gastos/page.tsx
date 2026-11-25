@@ -17,9 +17,10 @@ import {
   ETIQUETA_FORMA_PAGO_GASTO,
   ETIQUETA_TIPO_GASTO,
   TONO_ESTADO_GASTO,
+  cuotaDeducible,
   trimestreDe,
 } from "@/lib/gastos";
-import { REVISIONES, cumpleRevision, type Revision } from "@/lib/fiscal-gastos";
+import { REVISIONES, cumpleRevision, esSinFactura, type Revision } from "@/lib/fiscal-gastos";
 import { ResumenFiscalAnual, ResumenFiscalTrimestre } from "./resumen-fiscal";
 import { hoyEnEspana } from "./opciones";
 
@@ -114,10 +115,11 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
   const menoresAnio = delAnio.filter((g) => g.tipo === "menor");
   const porAprobar = delAnio.filter((g) => g.estado === "pendiente");
   const porReembolsar = delAnio.filter((g) => g.estado === "aprobado");
-  const ivaSoportado = suma(
-    deduciblesAnio.filter((g) => g.estado === "aprobado" || g.estado === "reembolsado"),
-    "cuota_iva",
-  );
+  // IVA soportado deducible: solo la parte deducible (pct_deducible_iva) y sin nóminas,
+  // igual que el resumen fiscal del trimestre (casillas 29 + 31 del 303).
+  const ivaSoportado = deduciblesAnio
+    .filter((g) => (g.estado === "aprobado" || g.estado === "reembolsado") && !esSinFactura(g))
+    .reduce((s, g) => s + cuotaDeducible(g.cuota_iva, g.pct_deducible_iva), 0);
 
   const actual: Filtros = {
     tipo: tipo === "todos" ? "" : tipo,

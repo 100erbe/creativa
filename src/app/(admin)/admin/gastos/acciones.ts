@@ -20,6 +20,8 @@ import {
   aNumero,
   calcularIva,
   importeRetencion,
+  rutaTicketConFormato,
+  rutaTicketValida,
   type EstadoGasto,
 } from "@/lib/gastos";
 
@@ -88,6 +90,9 @@ export async function guardarGasto(_previo: EstadoFormulario, formData: FormData
  * gasto, el envío anterior llegó aunque se perdiera la respuesta: no se duplica.
  */
 export const enviarGastoGuardado = accion(async (formData: FormData) => {
+  // Sesión primero: sin ella no se consulta nada.
+  const usuario = await obtenerUsuarioActual();
+  if (!usuario) throw new Error("Tu sesión ha caducado. Vuelve a entrar.");
   const ruta = formData.get("ticket_path");
   if (typeof ruta === "string" && ruta && !formData.get("id")) {
     const supabase = await createClient();
@@ -119,8 +124,17 @@ async function guardar(formData: FormData): Promise<{ error: string } | { id: nu
   const responsable = esAdmin ? d.usuario_id : usuario.id;
   const estado: EstadoGasto = esAdmin ? d.estado : "pendiente";
 
-  if (d.ticket_path && !d.ticket_path.startsWith(`${usuario.id}/`) && !d.ticket_path.startsWith(`${responsable}/`)) {
-    return { error: "El archivo adjunto no es válido. Vuelve a subirlo." };
+  const supabase = await createClient();
+
+  // El adjunto tiene que estar en la carpeta de quien lo sube o del responsable (sin «..»);
+  // al corregir un gasto, también vale el adjunto que ya tenía.
+  if (d.ticket_path && !rutaTicketValida(d.ticket_path, esAdmin ? [usuario.id, responsable] : [usuario.id])) {
+    const { data: actual } = id
+      ? await supabase.from("gastos").select("ticket_path").eq("id", id).maybeSingle()
+      : { data: null };
+    if (!actual || actual.ticket_path !== d.ticket_path) {
+      return { error: "El archivo adjunto no es válido. Vuelve a subirlo." };
+    }
   }
 
   let ivaCampos: { iva_pct: number | null; base_imponible: number | null; cuota_iva: number | null };
@@ -153,7 +167,6 @@ async function guardar(formData: FormData): Promise<{ error: string } | { id: nu
   // Lectura de la IA (solo orientativa): se valida y, si no cuadra, se descarta.
   const lectura = d.ticket_path ? leerLecturaTicket(formData.get("datos_ticket")) : null;
 
-  const supabase = await createClient();
   const datos = {
     tipo: d.tipo,
     fecha: d.fecha,
@@ -283,9 +296,14 @@ export const eliminarGasto = accion(async (id: number) => {
   if (!gasto) throw new Error("No se ha encontrado el gasto.");
   if (gasto.estado === "reembolsado") throw new Error("Un gasto reembolsado no se puede eliminar.");
 
-  const { error } = await supabase.from("gastos").delete().eq("id", id);
+  const { data: borrados, error } = await supabase.from("gastos").delete().eq("id", id).select("id");
   if (error) throw new Error(error.message);
-  if (gasto.ticket_path) await supabase.storage.from(BUCKET_TICKETS).remove([gasto.ticket_path]);
+  // La RLS no da error si no deja borrar: sin fila borrada no se toca el adjunto.
+  if (!borrados || borrados.length === 0) throw new Error("Este gasto ya no se puede eliminar.");
+  // Solo rutas con formato válido (el CHECK de la base de datos lo garantiza también).
+  if (gasto.ticket_path && rutaTicketConFormato(gasto.ticket_path)) {
+    await supabase.storage.from(BUCKET_TICKETS).remove([gasto.ticket_path]);
+  }
 
   revalidatePath("/admin/gastos");
   revalidatePath("/admin/contabilidad");

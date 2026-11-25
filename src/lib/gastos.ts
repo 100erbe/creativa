@@ -47,6 +47,24 @@ export const ETIQUETA_FORMA_PAGO_GASTO: Record<FormaPagoGasto, string> = {
 
 export const BUCKET_TICKETS = "tickets-gastos";
 
+/** Formato de la ruta de un ticket: «<uuid de quien lo sube>/<archivo>.<ext>» (igual que el CHECK de la base de datos). */
+const RUTA_TICKET = /^[0-9a-f-]{36}\/[A-Za-z0-9_-][A-Za-z0-9._-]*\.(webp|jpg|jpeg|png|pdf)$/;
+
+/** ¿La ruta del ticket tiene el formato esperado (una sola carpeta, sin «..»)? */
+export function rutaTicketConFormato(ruta: string): boolean {
+  return RUTA_TICKET.test(ruta);
+}
+
+/**
+ * ¿La ruta del ticket es válida y está en la carpeta de alguna de las personas indicadas?
+ * Evita rutas con «..» que apunten a archivos de otra persona.
+ */
+export function rutaTicketValida(ruta: string, carpetasPermitidas: string[]): boolean {
+  if (!RUTA_TICKET.test(ruta)) return false;
+  const carpeta = ruta.slice(0, ruta.indexOf("/"));
+  return carpetasPermitidas.includes(carpeta);
+}
+
 /** Retenciones IRPF habituales en facturas de profesionales (art. 101 LIRPF). */
 export const TIPOS_RETENCION = [0, 7, 15, 19] as const;
 

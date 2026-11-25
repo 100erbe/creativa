@@ -7,7 +7,8 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
-import { clasificarAgingCobro, etiquetaReglaVencimiento, reglaVencimiento } from "@/lib/documentos";
+import { etiquetaReglaVencimiento, reglaVencimiento } from "@/lib/documentos";
+import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { ETIQUETA_REGIMEN, ETIQUETA_TIPO_CLIENTE, inicialesCliente } from "@/lib/clientes";
 import { componerDireccion } from "@/lib/direccion";
 import { ETIQUETA_ESTADO_CAMPANA } from "@/lib/etiquetas";
@@ -80,13 +81,13 @@ export default async function PaginaCliente({
       .order("id", { ascending: false }),
     supabase
       .from("documentos")
-      .select("total")
+      .select("id, total, estado, documento_origen_id")
       .eq("cliente_id", clienteId)
       .in("tipo", ["factura", "rectificativa"])
       .neq("estado", "borrador"),
     supabase
       .from("v_estado_cobro")
-      .select("id, numero_completo, pendiente, estado_cobro, fecha_vencimiento")
+      .select("id, tipo, fecha, numero_completo, pendiente, estado_cobro, fecha_vencimiento")
       .eq("cliente_id", clienteId),
     supabase
       .from("campanas")
@@ -137,21 +138,17 @@ export default async function PaginaCliente({
   const insolutas = estadoCuenta?.estado.insolutas ?? [];
   const textoReclamacion = estadoCuenta ? mensajeReclamacion(estadoCuenta) : null;
 
-  const facturado = (facturas ?? []).reduce((s, f) => s + Number(f.total), 0);
-  const pendiente = (cobros ?? []).reduce((s, c) => s + Number(c.pendiente ?? 0), 0);
+  // Facturado: sin documentos anulados. Pendiente: mismas reglas que Cobros y el listado de clientes
+  // (sin anulados y con los abonos descontados de su factura).
+  const facturasVigentes = (facturas ?? []).filter((f) => f.estado !== "anulado");
+  const facturado = facturasVigentes.reduce((s, f) => s + Number(f.total), 0);
+  const resumenCobros = resumirCobrosPendientes(cobros ?? [], facturas ?? [], hoy);
+  const pendiente = resumenCobros.totalPendiente;
+  const vencidas = resumenCobros.vencidas;
+  const criticas90 = resumenCobros.criticas90;
 
-  const cobrosConAging = (cobros ?? [])
-    .filter((c) => Number(c.pendiente ?? 0) > 0.01)
-    .map((c) => ({
-      ...c,
-      pendienteNum: Number(c.pendiente ?? 0),
-      aging: clasificarAgingCobro(c.estado_cobro, c.fecha_vencimiento, hoy),
-    }));
-
-  const vencidas = cobrosConAging.filter((c) => c.aging.diasVencido > 0 || c.estado_cobro === "vencida");
-  // Vencidas: sin cobrar y con el vencimiento ya pasado (misma regla que el estado de cuenta).
-  const criticas90 = insolutas;
-  const sumaCriticas90 = estadoCuenta?.estado.totalInsoluto ?? 0;
+  // Vencidas sin cobrar: misma regla que el estado de cuenta (vencimiento ya pasado, ≥ 1 €).
+  const sumaInsoluto = estadoCuenta?.estado.totalInsoluto ?? 0;
   const maxDiasVencido = insolutas.reduce((m, l) => Math.max(m, l.diasVencida), 0);
 
   const direccion = componerDireccion({
@@ -178,7 +175,7 @@ export default async function PaginaCliente({
             <div
               aria-hidden="true"
               className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-sm font-semibold ${
-                criticas90.length > 0
+                insolutas.length > 0
                   ? "bg-fondo-critico text-texto-inverso"
                   : "border border-borde-marca bg-fondo-marca-sutil text-texto-marca"
               }`}
@@ -195,9 +192,9 @@ export default async function PaginaCliente({
                 ) : (
                   <Insignia tono="exito">Activo</Insignia>
                 )}
-                {criticas90.length > 0 && (
+                {insolutas.length > 0 && (
                   <Insignia tono="critico" solido>
-                    90+ días · {maxDiasVencido}d
+                    {criticas90.length > 0 ? "90+ días" : "Vencida"} · {maxDiasVencido}d
                   </Insignia>
                 )}
               </div>
@@ -262,7 +259,7 @@ export default async function PaginaCliente({
       </div>
 
       {/* Banner de facturas vencidas (misma regla que el estado de cuenta) */}
-      {criticas90.length > 0 && (
+      {insolutas.length > 0 && (
         <div
           role="region"
           aria-label="Alerta de facturas vencidas"
@@ -273,11 +270,11 @@ export default async function PaginaCliente({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-texto-critico">
-              {criticas90.length} factura{criticas90.length === 1 ? "" : "s"} vencida
-              {criticas90.length === 1 ? "" : "s"} sin cobrar
+              {insolutas.length} factura{insolutas.length === 1 ? "" : "s"} vencida
+              {insolutas.length === 1 ? "" : "s"} sin cobrar
             </p>
             <p className="tabular-nums text-xs text-texto-primario">
-              Saldo vencido: <strong className="text-texto-critico">{euros(sumaCriticas90)}</strong> (la más antigua, vencida
+              Saldo vencido: <strong className="text-texto-critico">{euros(sumaInsoluto)}</strong> (la más antigua, vencida
               hace {maxDiasVencido} días).
             </p>
           </div>
@@ -293,7 +290,7 @@ export default async function PaginaCliente({
         <TarjetaKpi
           etiqueta="Facturado (total)"
           valor={euros(facturado)}
-          detalle={`${(facturas ?? []).length} factura${(facturas ?? []).length === 1 ? "" : "s"}`}
+          detalle={`${facturasVigentes.length} factura${facturasVigentes.length === 1 ? "" : "s"}`}
           href={`/admin/documentos?cliente=${clienteId}&tipo=factura`}
         />
         <TarjetaKpi
@@ -314,7 +311,7 @@ export default async function PaginaCliente({
                 : "text-texto-exito"
           }
           tono={criticas90.length > 0 ? "critico" : vencidas.length > 0 ? "aviso" : "default"}
-          href={criticas90.length > 0 ? `/admin/clientes/${clienteId}/estado-cuenta` : `/admin/documentos?cliente=${clienteId}&cobro=pendiente`}
+          href={insolutas.length > 0 ? `/admin/clientes/${clienteId}/estado-cuenta` : `/admin/documentos?cliente=${clienteId}&cobro=pendiente`}
         />
         <TarjetaKpi etiqueta="Campañas" valor={String((campanas ?? []).length)} />
         <TarjetaKpi etiqueta="Descuento habitual" valor={`${Number(cliente.descuento_habitual ?? 0)} %`} />
