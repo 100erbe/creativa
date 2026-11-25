@@ -6,7 +6,7 @@ import { confirmar } from "@/components/ui/dialogos";
 import { desenvolver } from "@/lib/accion";
 import { useAccion } from "@/lib/use-accion";
 import type { EstadoGasto } from "@/lib/gastos";
-import { cambiarEstadoGasto, eliminarGasto } from "../acciones";
+import { cambiarEstadoGasto, eliminarGasto } from "@/lib/gastos-acciones";
 
 export function ControlesGasto({
   id,

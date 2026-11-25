@@ -11,7 +11,7 @@ import { desenvolver } from "@/lib/accion";
 import { esErrorDeRed } from "@/lib/cola-indexeddb";
 import { encolarGasto } from "@/lib/cola-gastos";
 import { leerLecturaTicket, type LecturaTicket, type SugerenciaGasto } from "@/lib/datos-ticket";
-import { guardarGasto, type EstadoFormulario } from "@/app/(admin)/admin/gastos/acciones";
+import { guardarGasto, type EstadoFormulario } from "@/lib/gastos-acciones";
 import { leerTicket } from "@/app/(admin)/admin/gastos/acciones-ticket";
 import {
   BUCKET_TICKETS,

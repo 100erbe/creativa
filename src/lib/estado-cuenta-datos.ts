@@ -3,12 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { componerDireccionEnLineas } from "@/lib/direccion";
-import { clienteCorto, etiquetaDocumentoIdentidad, formatoEuros, nombreArchivo } from "@/lib/documento-impresion";
+import { clienteCorto, etiquetaDocumentoIdentidad, formatoEuros, nombreArchivo, LOGO_IMPRESION_PRINCIPAL, LOGO_IMPRESION_SECUNDARIO } from "@/lib/documento-impresion";
 import { fechaNumerica } from "@/lib/formato";
 import { calcularEstadoCuenta, hoyEnEspana, type DocumentoCobro, type EstadoCuenta } from "@/lib/estado-cuenta";
 
-const LOGO_PRINCIPAL = "/brand/logo-creativa.svg";
-const LOGO_SECUNDARIO = "/brand/logo-crea-comunicacion.svg";
 
 export type DatosEstadoCuenta = {
   clienteId: number;
@@ -124,8 +122,8 @@ export async function cargarEstadoCuenta(supabase: Supabase, clienteId: number):
         .join(" · "),
       email: empresa?.email ?? null,
       lema: empresa?.lema ?? null,
-      logoPrincipal: empresa?.logo_url || LOGO_PRINCIPAL,
-      logoSecundario: LOGO_SECUNDARIO,
+      logoPrincipal: empresa?.logo_url || LOGO_IMPRESION_PRINCIPAL,
+      logoSecundario: LOGO_IMPRESION_SECUNDARIO,
     },
     cuenta: cuenta ? { banco: cuenta.banco, iban: cuenta.iban } : null,
     estado: calcularEstadoCuenta(documentos, hoyEnEspana()),

@@ -17,7 +17,7 @@ import {
   type TipoGasto,
 } from "@/lib/gastos";
 import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
-import { cambiarEstadoGasto } from "./acciones";
+import { cambiarEstadoGasto } from "@/lib/gastos-acciones";
 import { atraparFoco } from "@/lib/trampa-foco";
 
 export type GastoRevision = {

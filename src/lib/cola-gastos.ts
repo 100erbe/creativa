@@ -7,7 +7,7 @@ import { desenvolver } from "@/lib/accion";
 import { crearCola, esErrorDeRed } from "@/lib/cola-indexeddb";
 import { createClient } from "@/lib/supabase/client";
 import { BUCKET_TICKETS } from "@/lib/gastos";
-import { enviarGastoGuardado } from "@/app/(admin)/admin/gastos/acciones";
+import { enviarGastoGuardado } from "@/lib/gastos-acciones";
 
 export const EVENTO_COLA_GASTOS = "creativa:cola-gastos";
 const MAX_RECHAZOS = 3;

@@ -4,7 +4,7 @@ import { comprimirImagen } from "@/lib/comprimir-imagen";
 import { encolarFoto, esErrorDeRed } from "@/lib/cola-fotos";
 import type { OrigenFoto, OrigenUbicacion } from "@/lib/foto-metadatos";
 import { desenvolver } from "@/lib/accion";
-import { subirFotoPunto } from "@/app/(empleado)/app/punto/[id]/acciones";
+import { subirFotoPunto } from "@/lib/campanas/acciones-punto";
 
 export type DatosFotoSubida = {
   origenFoto: OrigenFoto;

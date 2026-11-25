@@ -15,7 +15,7 @@ import {
   reabrirPunto,
   reportarIncidencia,
   type EstadosAnteriores,
-} from "./acciones";
+} from "@/lib/campanas/acciones-punto";
 import { desenvolver } from "@/lib/accion";
 import { avisar, confirmar } from "@/components/ui/dialogos";
 import { Tarjeta } from "@/components/ui/tarjeta";

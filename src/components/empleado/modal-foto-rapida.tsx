@@ -19,7 +19,7 @@ import type { OrigenFoto, OrigenUbicacion } from "@/lib/foto-metadatos";
 import { subirOEncolarFotoPunto } from "@/lib/subir-foto-punto";
 import { mensajeSinUbicacion, obtenerUbicacion, type ResultadoUbicacion } from "@/lib/ubicacion";
 import { desenvolver } from "@/lib/accion";
-import { marcarPuntoInstalado, marcarPuntoRetirado } from "@/app/(empleado)/app/punto/[id]/acciones";
+import { marcarPuntoInstalado, marcarPuntoRetirado } from "@/lib/campanas/acciones-punto";
 import { atraparFoco } from "@/lib/trampa-foco";
 
 export type CapturaFoto = {

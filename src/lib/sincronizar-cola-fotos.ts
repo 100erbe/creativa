@@ -8,7 +8,7 @@ import {
   listarPendientes,
   marcarRechazo,
 } from "@/lib/cola-fotos";
-import { subirFotoPunto } from "@/app/(empleado)/app/punto/[id]/acciones";
+import { subirFotoPunto } from "@/lib/campanas/acciones-punto";
 
 const MAX_RECHAZOS = 3;
 

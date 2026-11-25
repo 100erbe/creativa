@@ -83,6 +83,10 @@ export function nombreArchivo(d: DatosNombreArchivo): string {
 }
 
 /** Versión ASCII del nombre para la cabecera Content-Disposition (el nombre completo va en filename*). */
+/** Logos de los documentos impresos y PDF (facturas, estado de cuenta): los originales, no los de la interfaz. */
+export const LOGO_IMPRESION_PRINCIPAL = "/brand/logo-creativa.svg";
+export const LOGO_IMPRESION_SECUNDARIO = "/brand/logo-crea-comunicacion.svg";
+
 export function cabeceraDescarga(nombre: string, modo: "inline" | "attachment" = "attachment"): string {
   const ascii = nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "");
   return `${modo}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nombre)}`;

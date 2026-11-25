@@ -13,15 +13,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Icono } from "@/components/ui/iconos";
 import { HojaDocumento, type DatosHoja } from "@/components/admin/hoja-documento";
 import { componerDireccionEnLineas } from "@/lib/direccion";
-import { etiquetaDocumentoIdentidad } from "@/lib/documento-impresion";
+import { etiquetaDocumentoIdentidad, LOGO_IMPRESION_PRINCIPAL, LOGO_IMPRESION_SECUNDARIO } from "@/lib/documento-impresion";
 import { nombreArchivoDocumento } from "@/lib/nombre-documento";
 import { BotonImprimir } from "./boton-imprimir";
 import { BotonDescargarPdf } from "./boton-descargar";
 
 export const dynamic = "force-dynamic";
 
-const LOGO_PRINCIPAL = "/brand/logo-creativa.svg";
-const LOGO_SECUNDARIO = "/brand/logo-crea-comunicacion.svg";
 
 /** El título de la pestaña es el nombre que propone el navegador al "Guardar como PDF". */
 export async function generateMetadata({
@@ -173,8 +171,8 @@ export default async function PaginaImprimirDocumento({
         .join(" · "),
       email: empresa?.email ?? null,
       lema: empresa?.lema ?? null,
-      logoPrincipal: empresa?.logo_url || LOGO_PRINCIPAL,
-      logoSecundario: LOGO_SECUNDARIO,
+      logoPrincipal: empresa?.logo_url || LOGO_IMPRESION_PRINCIPAL,
+      logoSecundario: LOGO_IMPRESION_SECUNDARIO,
     },
     cliente: {
       razonSocial: doc.cliente_razon_social ?? cliente?.razon_social ?? "",
