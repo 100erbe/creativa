@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Boton } from "@/components/ui/boton";
 import { CabeceraPaginaBase } from "@/components/ui/cabecera-pagina-base";
 import { Icono } from "@/components/ui/iconos";
+import { Autocompletar } from "@/components/ui/autocompletar";
 import { Insignia } from "@/components/ui/insignia";
 import { TarjetaKpi } from "@/components/ui/tarjeta-kpi";
 import { CAMPO } from "@/components/ui/panel-busqueda";
@@ -95,6 +96,14 @@ const aTexto = (n: number | null) => (n == null ? "" : String(n).replace(".", ",
 
 const etiquetaMini = "flex flex-col gap-1 text-xs font-medium text-texto-secundario";
 
+/** ¿El producto coincide con la búsqueda (q ya en minúsculas)? Nombre, código, categoría, descripción, material, formatos y alias. */
+function coincideProducto(p: ProductoAdmin, q: string) {
+  const textoFormatos = p.formatos.map((f) => `${f.nombre} ${f.codigo} ${f.alias.join(" ")}`).join(" ");
+  return `${p.nombre} ${p.codigo} ${p.categoriaNombre} ${p.descripcionFactura ?? ""} ${p.material ?? ""} ${textoFormatos}`
+    .toLowerCase()
+    .includes(q);
+}
+
 export function VistaCatalogo({
   categorias,
   productos,
@@ -139,13 +148,7 @@ export function VistaCatalogo({
     const filtrados = productos.filter((p) => {
       if (!verInactivos && !p.activo) return false;
       if (categoriaFiltroId != null && p.categoriaId !== categoriaFiltroId) return false;
-      if (!q) return true;
-      const textoFormatos = p.formatos
-        .map((f) => `${f.nombre} ${f.codigo} ${f.alias.join(" ")}`)
-        .join(" ");
-      return `${p.nombre} ${p.codigo} ${p.categoriaNombre} ${p.descripcionFactura ?? ""} ${p.material ?? ""} ${textoFormatos}`
-        .toLowerCase()
-        .includes(q);
+      return !q || coincideProducto(p, q);
     });
 
     const mapa = new Map<number, { categoria: CategoriaAdmin; items: ProductoAdmin[] }>();
@@ -214,21 +217,32 @@ export function VistaCatalogo({
       {/* Buscador y filtros */}
       <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
         <div className="flex flex-wrap items-center gap-esp3">
-          <div className="relative min-w-[220px] flex-1 md:max-w-md">
-            <Icono
-              nombre="buscar"
-              size={15}
-              className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
-            />
-            <input
-              type="search"
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar producto, servicio, código, formato o alias (70C…)"
-              aria-label="Buscar en el catálogo"
-              className={`${CAMPO} pl-9`}
-            />
-          </div>
+          <Autocompletar
+            value={busqueda}
+            onChange={setBusqueda}
+            buscar={(texto) => {
+              const q = texto.toLowerCase();
+              return productos
+                .filter((p) => (verInactivos || p.activo) && coincideProducto(p, q))
+                .slice(0, 3)
+                .map((p) => ({
+                  id: String(p.id),
+                  titulo: p.nombre,
+                  detalle: [p.codigo, p.categoriaNombre].filter(Boolean).join(" · "),
+                  insignia: p.activo ? undefined : "Inactivo",
+                }));
+            }}
+            onElegir={(s) => {
+              const producto = productos.find((p) => String(p.id) === s.id);
+              if (producto) setModalProducto({ abierto: true, producto });
+            }}
+            pie="Intro para filtrar la lista"
+            retardoMs={120}
+            placeholder="Buscar producto, servicio, código, formato o alias (70C…)"
+            ariaLabel="Buscar en el catálogo"
+            classNameContenedor="min-w-[220px] flex-1 md:max-w-md"
+            className={CAMPO}
+          />
           <label className="inline-flex min-h-10 cursor-pointer items-center gap-esp2 px-esp2 text-xs text-texto-secundario md:min-h-8">
             <input
               type="checkbox"

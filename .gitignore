@@ -16,3 +16,6 @@ next-env.d.ts
 
 # Copia del worker de MapLibre (se genera con npm run copiar-worker)
 /public/maplibre/
+
+# Supabase CLI
+supabase/.temp/

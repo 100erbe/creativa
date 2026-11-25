@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { Boton } from "@/components/ui/boton";
+import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { cn } from "@/lib/cn";
 
 export type FiltrosDocumentos = {
@@ -117,21 +118,15 @@ export function BarraFiltrosDocumentos({
             {actual.revision && <input type="hidden" name="revision" value={actual.revision} />}
             {actual.cliente && <input type="hidden" name="cliente" value={actual.cliente} />}
             {actual.vista === "tablero" && <input type="hidden" name="vista" value="tablero" />}
-            <div className="relative min-w-0 flex-1 md:max-w-md">
-              <Icono
-                nombre="buscar"
-                size={16}
-                className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
-              />
-              <input
-                type="search"
-                name="q"
-                defaultValue={actual.q ?? ""}
-                placeholder="Buscar por número o cliente…"
-                aria-label="Buscar documentos por número o cliente"
-                className="h-11 w-full rounded-xl border border-borde-fuerte bg-fondo-superficie pl-10 pr-esp3 text-base text-texto-primario outline-none transition-colors focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-10 md:text-sm"
-              />
-            </div>
+            <BuscadorAdmin
+              key={actual.q ?? ""}
+              fuente="documentos"
+              defaultValue={actual.q ?? ""}
+              placeholder="Buscar por número o cliente…"
+              ariaLabel="Buscar documentos por número o cliente"
+              classNameContenedor="flex-1 md:max-w-md"
+              className="h-11 w-full rounded-xl border border-borde-fuerte bg-fondo-superficie pr-esp3 text-base text-texto-primario outline-none transition-colors focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:h-10 md:text-sm"
+            />
             <Boton type="submit" variante="secundario" className="hidden sm:inline-flex">
               Buscar
             </Boton>

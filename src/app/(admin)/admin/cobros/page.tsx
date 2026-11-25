@@ -23,8 +23,9 @@ export const dynamic = "force-dynamic";
 // Saldo pendiente, antigüedad desde el vencimiento (mismo cálculo que el panel), facturas con saldo,
 // clientes con más deuda (enlace a su estado de cuenta para reclamar) y últimos cobros registrados.
 
-type Vista = "todas" | "vencidas" | "90" | "sin_vencimiento";
+type Vista = "todas" | "vencidas" | "90" | "sin_vencimiento" | "en_plazo" | "1_30" | "31_89";
 
+// Pestañas visibles sobre la lista
 const VISTAS: { valor: Vista; etiqueta: string }[] = [
   { valor: "todas", etiqueta: "Todas" },
   { valor: "vencidas", etiqueta: "Vencidas" },
@@ -32,12 +33,23 @@ const VISTAS: { valor: Vista; etiqueta: string }[] = [
   { valor: "sin_vencimiento", etiqueta: "Sin vencimiento" },
 ];
 
+// Vistas que solo se abren desde los tramos de antigüedad (no tienen pestaña propia)
+const VISTAS_TRAMO: { valor: Vista; etiqueta: string }[] = [
+  { valor: "en_plazo", etiqueta: "En plazo" },
+  { valor: "1_30", etiqueta: "Vencidas 1–30 días" },
+  { valor: "31_89", etiqueta: "Vencidas 31–89 días" },
+];
+
+const ANCLA_LISTA = "facturas";
+const hrefVista = (v: Vista) => (v === "todas" ? `/admin/cobros#${ANCLA_LISTA}` : `/admin/cobros?ver=${v}#${ANCLA_LISTA}`);
+
 const MAX_FILAS = 40;
 const ETIQUETA_METODO: Record<string, string> = Object.fromEntries(METODOS_COBRO.map((m) => [m.valor, m.etiqueta]));
 
 export default async function PaginaCobros({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
   const { ver } = await searchParams;
-  const vista: Vista = VISTAS.some((v) => v.valor === ver) ? (ver as Vista) : "todas";
+  const vista: Vista = [...VISTAS, ...VISTAS_TRAMO].some((v) => v.valor === ver) ? (ver as Vista) : "todas";
+  const vistaTramo = VISTAS_TRAMO.find((v) => v.valor === vista);
 
   const supabase = await createClient();
   const hoy = new Date();
@@ -84,14 +96,22 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
   const cobradoMes = (cobrosMes ?? []).reduce((s, c) => s + Number(c.importe), 0);
 
   const tramos = [
-    { clave: "al_dia", etiqueta: "En plazo", lista: alDia, color: "bg-texto-info", href: "/admin/documentos?cobro=pendiente" },
-    { clave: "1_30", etiqueta: "1–30 días", lista: v30, color: "bg-texto-aviso", href: "/admin/documentos?cobro=vencida" },
-    { clave: "31_89", etiqueta: "31–89 días", lista: v60, color: "bg-fondo-peligro", href: "/admin/documentos?cobro=vencida" },
-    { clave: "90", etiqueta: "90+ días", lista: v90, color: "bg-fondo-critico", href: "/admin/documentos?cobro=vencida_90" },
+    { clave: "al_dia", etiqueta: "En plazo", lista: alDia, color: "bg-texto-info", vista: "en_plazo" as Vista },
+    { clave: "1_30", etiqueta: "1–30 días", lista: v30, color: "bg-texto-aviso", vista: "1_30" as Vista },
+    { clave: "31_89", etiqueta: "31–89 días", lista: v60, color: "bg-fondo-peligro", vista: "31_89" as Vista },
+    { clave: "90", etiqueta: "90+ días", lista: v90, color: "bg-fondo-critico", vista: "90" as Vista },
   ].map((t) => ({ ...t, importe: suma(t.lista), cantidad: t.lista.length }));
 
-  const listaVista =
-    vista === "vencidas" ? vencidas : vista === "90" ? v90 : vista === "sin_vencimiento" ? sinVenc : conSaldo;
+  const LISTAS: Record<Vista, typeof conSaldo> = {
+    todas: conSaldo,
+    vencidas,
+    "90": v90,
+    sin_vencimiento: sinVenc,
+    en_plazo: alDia,
+    "1_30": v30,
+    "31_89": v60,
+  };
+  const listaVista = LISTAS[vista];
   const filas = [...listaVista].sort(
     (a, b) => b.aging.diasVencido - a.aging.diasVencido || b.saldoNeto - a.saldoNeto,
   );
@@ -145,6 +165,7 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
           valor={euros(totalPendiente)}
           significado={abonosSinAplicar < -0.01 ? "Neto de abonos sin aplicar" : "Saldo de las facturas emitidas"}
           detalle={`${conSaldo.length} factura${conSaldo.length === 1 ? "" : "s"}${abonosSinAplicar < -0.01 ? ` · abonos ${euros(abonosSinAplicar)}` : ""}`}
+          href={hrefVista("todas")}
         />
         <TarjetaKpi
           etiqueta="Vencido"
@@ -152,7 +173,7 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
           significado="Con fecha de vencimiento pasada"
           detalle={`${vencidas.length} vencida${vencidas.length === 1 ? "" : "s"}`}
           tono={vencidas.length > 0 ? "peligro" : "default"}
-          href="/admin/cobros?ver=vencidas"
+          href={hrefVista("vencidas")}
         />
         <TarjetaKpi
           etiqueta="Vencido · más de 90 días"
@@ -160,7 +181,7 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
           significado="Riesgo crítico conocido"
           detalle={v90.length > 0 ? `${v90.length} factura${v90.length === 1 ? "" : "s"}` : "Sin riesgo conocido > 90 días"}
           tono={v90.length > 0 ? "critico" : "default"}
-          href="/admin/cobros?ver=90"
+          href={hrefVista("90")}
         />
         <TarjetaKpi
           etiqueta="Cobrado este mes"
@@ -217,8 +238,12 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
           {tramos.map((t) => (
             <Link
               key={t.clave}
-              href={t.href}
-              className="flex flex-col gap-esp1 rounded-lg bg-fondo-sutil p-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-hover"
+              href={hrefVista(t.vista)}
+              aria-current={vista === t.vista ? "true" : undefined}
+              className={cn(
+                "flex flex-col gap-esp1 rounded-lg bg-fondo-sutil p-esp4 transition-colors duration-rapida ease-suave hover:bg-fondo-hover",
+                vista === t.vista && "ring-2 ring-inset ring-borde-foco",
+              )}
             >
               <span className="flex items-center gap-esp2 text-meta font-medium text-texto-secundario">
                 <span className={cn("h-2 w-2 shrink-0 rounded-full", t.color)} aria-hidden="true" />
@@ -237,7 +262,13 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
 
       <div className="flex flex-col gap-esp5 xl:flex-row xl:items-start">
         {/* Facturas con saldo */}
-        <Tarjeta como="section" relleno="lista" aria-labelledby="titulo-facturas" className="min-w-0 flex-1">
+        <Tarjeta
+          como="section"
+          id={ANCLA_LISTA}
+          relleno="lista"
+          aria-labelledby="titulo-facturas"
+          className="min-w-0 flex-1 scroll-mt-esp5"
+        >
           <div className="px-esp2">
             <CabeceraTarjeta
               id="titulo-facturas"
@@ -253,19 +284,23 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
             etiqueta="Filtrar facturas con saldo"
             className="max-w-[560px]"
             opciones={VISTAS.map((v) => ({
-              href: v.valor === "todas" ? "/admin/cobros" : `/admin/cobros?ver=${v.valor}`,
+              href: hrefVista(v.valor),
               etiqueta: v.etiqueta,
               activa: vista === v.valor,
-              contador:
-                v.valor === "todas"
-                  ? conSaldo.length
-                  : v.valor === "vencidas"
-                    ? vencidas.length
-                    : v.valor === "90"
-                      ? v90.length
-                      : sinVenc.length,
+              contador: LISTAS[v.valor].length,
             }))}
           />
+          {vistaTramo && (
+            <div className="flex items-center gap-esp2 px-esp4 pt-esp2">
+              <span className="text-meta font-medium text-texto-secundario">Filtro:</span>
+              <Insignia tono="info">
+                {vistaTramo.etiqueta} · {listaVista.length}
+              </Insignia>
+              <Link href={hrefVista("todas")} className="text-meta font-medium text-texto-marca hover:underline">
+                Quitar filtro
+              </Link>
+            </div>
+          )}
           {filas.length > 0 ? (
             <div className="flex flex-col">
               {filas.slice(0, MAX_FILAS).map((d) => (

@@ -7,6 +7,7 @@ import { Insignia } from "@/components/ui/insignia";
 import { Boton, clasesBoton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
+import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ModalRevisarGasto, type GastoRevision } from "./modal-revisar";
 import {
@@ -300,11 +301,15 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </div>
         <form action="/admin/gastos" className="ml-auto flex items-center gap-esp2">
           {Object.entries({ ...actual, q: "" }).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
-          <input
-            name="q"
+          <BuscadorAdmin
+            key={filtros.q ?? ""}
+            fuente="gastos"
+            ejercicio={ejercicio}
             defaultValue={filtros.q ?? ""}
             placeholder="Concepto, proveedor, código…"
-            className="h-9 w-[220px] rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+            ariaLabel="Buscar gastos"
+            classNameContenedor="w-[260px]"
+            className="h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie pr-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
           />
           <Boton type="submit" variante="secundario">
             Buscar

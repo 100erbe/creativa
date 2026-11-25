@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Boton } from "@/components/ui/boton";
 import { CAMPO } from "@/components/ui/panel-busqueda";
+import { Autocompletar } from "@/components/ui/autocompletar";
 import { desenvolver } from "@/lib/accion";
 import { euros } from "@/lib/formato";
 import { actualizarFormato, actualizarProducto } from "./acciones";
@@ -40,6 +41,9 @@ function aNumero(v: string): number | null {
 }
 const aTexto = (n: number | null) => (n == null ? "" : String(n).replace(".", ","));
 
+/** ¿El producto coincide con la búsqueda (q ya en minúsculas)? Nombre, código o categoría. */
+const coincide = (p: ProductoAjuste, q: string) => `${p.nombre} ${p.codigo} ${p.categoria}`.toLowerCase().includes(q);
+
 export function Catalogo({ productos }: { productos: ProductoAjuste[] }) {
   const [busqueda, setBusqueda] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
@@ -47,7 +51,7 @@ export function Catalogo({ productos }: { productos: ProductoAjuste[] }) {
   const grupos = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     const filtrados = productos.filter(
-      (p) => (verInactivos || p.activo) && (!q || `${p.nombre} ${p.codigo} ${p.categoria}`.toLowerCase().includes(q)),
+      (p) => (verInactivos || p.activo) && (!q || coincide(p, q)),
     );
     const mapa = new Map<string, ProductoAjuste[]>();
     for (const p of filtrados) mapa.set(p.categoria, [...(mapa.get(p.categoria) ?? []), p]);
@@ -57,13 +61,34 @@ export function Catalogo({ productos }: { productos: ProductoAjuste[] }) {
   return (
     <div className="flex flex-col gap-esp4">
       <div className="flex flex-wrap items-center gap-esp3">
-        <input
-          type="search"
+        <Autocompletar
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={setBusqueda}
+          buscar={(texto) => {
+            const q = texto.toLowerCase();
+            return productos
+              .filter((p) => (verInactivos || p.activo) && coincide(p, q))
+              .slice(0, 3)
+              .map((p) => ({
+                id: String(p.id),
+                titulo: p.nombre,
+                detalle: [p.codigo, p.categoria].filter(Boolean).join(" · "),
+                insignia: p.activo ? undefined : "Inactivo",
+              }));
+          }}
+          onElegir={(s) => {
+            // Despliega la fila del producto (se edita en línea), la muestra y pone el foco en su primer campo.
+            const fila = document.getElementById(`producto-${s.id}`);
+            if (fila instanceof HTMLDetailsElement) fila.open = true;
+            fila?.scrollIntoView({ behavior: "smooth", block: "center" });
+            fila?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+          }}
+          pie="Intro para filtrar la lista"
+          retardoMs={120}
           placeholder="Buscar producto o código…"
-          aria-label="Buscar en el catálogo"
-          className={`${CAMPO} max-w-xs`}
+          ariaLabel="Buscar en el catálogo"
+          classNameContenedor="w-full max-w-xs"
+          className={CAMPO}
         />
         <label className="flex items-center gap-esp2 text-sm text-texto-secundario">
           <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} />
@@ -118,7 +143,7 @@ function Producto({ producto: p }: { producto: ProductoAjuste }) {
   const [activo, setActivo] = useState(p.activo);
 
   return (
-    <details className="group">
+    <details id={`producto-${p.id}`} className="group">
       <summary className="flex cursor-pointer list-none items-center gap-esp3 px-esp4 py-esp3 hover:bg-fondo-sutil">
         <div className="min-w-0 flex-1">
           <p className={`truncate text-sm font-medium ${p.activo ? "text-texto-primario" : "text-texto-terciario"}`}>

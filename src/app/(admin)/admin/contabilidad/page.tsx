@@ -6,6 +6,7 @@ import { Insignia, TONO_POR_ESTADO } from "@/components/ui/insignia";
 import { Boton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
+import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_TIPO } from "@/lib/documentos";
 
@@ -305,11 +306,15 @@ export default async function PaginaContabilidad({
           <form action="/admin/contabilidad" className="ml-auto flex items-center gap-esp2">
             <input type="hidden" name="ejercicio" value={ejercicio} />
             {trimestre ? <input type="hidden" name="trimestre" value={trimestre} /> : null}
-            <input
-              name="q"
+            <BuscadorAdmin
+              key={filtros.q ?? ""}
+              fuente="libro"
+              ejercicio={ejercicio}
               defaultValue={filtros.q ?? ""}
               placeholder="Número, cliente o NIF…"
-              className="h-9 w-[220px] rounded-lg border border-borde-campo bg-fondo-superficie px-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
+              ariaLabel="Buscar en el libro de facturas emitidas"
+              classNameContenedor="w-[260px]"
+              className="h-9 w-full rounded-lg border border-borde-campo bg-fondo-superficie pr-esp3 text-sm text-texto-primario outline-none focus:border-borde-foco"
             />
             <Boton type="submit" variante="secundario">
               Buscar

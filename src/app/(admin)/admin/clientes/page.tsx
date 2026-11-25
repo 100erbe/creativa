@@ -5,6 +5,7 @@ import { Insignia } from "@/components/ui/insignia";
 import { Boton, clasesBoton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
+import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { euros } from "@/lib/formato";
 import {
   ETIQUETA_TIPO_CLIENTE,
@@ -174,21 +175,16 @@ export default async function PaginaClientes({
         <form action="/admin/clientes" className="flex flex-wrap items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {conDeuda && <input type="hidden" name="con_deuda" value="1" />}
-          <div className="relative min-w-[200px] flex-1 md:max-w-sm">
-            <Icono
-              nombre="buscar"
-              size={15}
-              className="pointer-events-none absolute left-esp3 top-1/2 -translate-y-1/2 text-icono-secundario"
-            />
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Nombre, NIF, código o ciudad…"
-              aria-label="Buscar clientes"
-              className="min-h-11 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pl-9 pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
-            />
-          </div>
+          <BuscadorAdmin
+            key={q}
+            fuente="clientes"
+            incluirInactivos={inactivos}
+            defaultValue={q}
+            placeholder="Nombre, NIF, código o ciudad…"
+            ariaLabel="Buscar clientes"
+            classNameContenedor="min-w-[200px] flex-1 md:max-w-sm"
+            className="min-h-11 h-11 w-full rounded-lg border border-borde-campo bg-fondo-superficie pr-esp3 text-base text-texto-primario outline-none focus:border-borde-foco focus:ring-2 focus:ring-borde-foco/20 md:min-h-9 md:h-9 md:text-sm"
+          />
           <Boton type="submit" variante="secundario">
             Buscar
           </Boton>
