@@ -28,6 +28,7 @@ import {
   RevisionDocumento,
 } from "./controles";
 import { lanzarSiError } from "@/lib/supabase/consulta";
+import { EnlaceLista } from "@/components/ui/enlace-lista";
 
 export const dynamic = "force-dynamic";
 
@@ -258,13 +259,13 @@ export default async function PaginaDocumento({
     <ProveedorCondiciones>
     <div className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}>
       <div className="flex flex-col gap-esp2">
-        <Link
+        <EnlaceLista
           href="/admin/documentos"
           className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Documentos
-        </Link>
+        </EnlaceLista>
         {esBorrador && (
           <div className="py-esp2">
             <PasosDocumento actual={4} documentoId={doc.id} />

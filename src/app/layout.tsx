@@ -3,6 +3,7 @@ import { Manrope } from "next/font/google";
 import "./globals.css";
 import { colorMarca } from "@/design/tokens";
 import { Dialogos } from "@/components/ui/dialogos";
+import { RecordarListas } from "@/components/shared/recordar-listas";
 
 // Tipografía del sistema "Documentos" de Figma (pesos 400, 500, 600 y 700).
 const manrope = Manrope({
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body>
         {children}
         <Dialogos />
+        <RecordarListas />
       </body>
     </html>
   );

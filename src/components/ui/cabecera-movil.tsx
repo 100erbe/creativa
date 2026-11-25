@@ -7,6 +7,7 @@ import { Icono } from "@/components/ui/iconos";
 import { Logo } from "@/components/ui/logo";
 import { Campana } from "@/components/avisos/campana";
 import { cn } from "@/lib/cn";
+import { useHrefLista } from "@/lib/ultima-lista";
 
 /** Rango de scroll (px) durante el cual el <h1> se oculta bajo la cabecera y ocurre la transición. */
 const SCROLL_INICIO = 12;
@@ -73,13 +74,15 @@ export function CabeceraMovil({
   const {
     modo,
     titulo,
-    hrefVolver,
+    hrefVolver: hrefVolverBase,
     etiquetaVolver = "Volver",
     revelarTituloAlScroll = false,
     usarHistorial = false,
     mostrarBusqueda = false,
     mostrarAvisos = true,
   } = config;
+  // Si el destino es un listado, vuelve con los filtros con los que el usuario lo dejó.
+  const hrefVolver = useHrefLista(hrefVolverBase);
 
   useEffect(() => {
     const el = headerRef.current;

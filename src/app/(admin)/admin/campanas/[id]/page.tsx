@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { BotonAvisos } from "@/components/ui/boton-avisos";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -21,6 +20,7 @@ import {
 import { BotonEliminarCampana } from "../boton-eliminar-campana";
 import { ProveedorAnadirPunto, TarjetaPuntoCampana, ZonaMapaCampana, type PuntoCampanaData } from "./anadir-punto";
 import { AvisoFinalizar, ControlesPunto, EditarCampana, EnlaceCliente } from "./controles";
+import { EnlaceLista } from "@/components/ui/enlace-lista";
 
 export const dynamic = "force-dynamic";
 
@@ -186,13 +186,13 @@ export default async function PaginaCampana({
   return (
     <div className="flex flex-col gap-esp5">
       <div className="flex flex-col gap-esp3">
-        <Link
+        <EnlaceLista
           href="/admin/campanas"
           className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Campañas
-        </Link>
+        </EnlaceLista>
 
         {/* Bloque 1: Resumen destacado de la campaña (sin el enlace, que va al final) */}
         <section className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">

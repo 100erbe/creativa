@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
@@ -6,6 +5,7 @@ import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { AccionesAviso, BotonReenviar } from "./controles";
+import { EnlaceLista } from "@/components/ui/enlace-lista";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +50,13 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
     <div className="flex max-w-3xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <Link
+          <EnlaceLista
             href="/admin/avisos"
             className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
           >
             <Icono nombre="atras" size={16} />
             Avisos
-          </Link>
+          </EnlaceLista>
         }
         titulo={a.titulo}
         subtitulo={`Enviado el ${fechaHora.format(new Date(a.creado_en))}`}

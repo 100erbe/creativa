@@ -17,6 +17,7 @@ import { cuentaConectada } from "@/lib/gmail";
 import { ReclamarImpagadas } from "./reclamar-impagadas";
 import { ProductosVendidos, type ProductoVendidoItem } from "./productos-vendidos";
 import { DocumentosRecientes } from "./documentos-recientes";
+import { EnlaceLista } from "@/components/ui/enlace-lista";
 
 export const dynamic = "force-dynamic";
 
@@ -164,13 +165,13 @@ export default async function PaginaCliente({
   return (
     <div className="flex flex-col gap-esp6">
       <div className="flex flex-col gap-esp3">
-        <Link
+        <EnlaceLista
           href="/admin/clientes"
           className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
         >
           <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
           Clientes
-        </Link>
+        </EnlaceLista>
 
         <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 items-start gap-esp3 sm:items-center">

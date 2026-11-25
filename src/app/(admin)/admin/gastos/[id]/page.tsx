@@ -19,6 +19,7 @@ import {
 } from "@/lib/gastos";
 import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
 import { ControlesGasto } from "./controles";
+import { EnlaceLista } from "@/components/ui/enlace-lista";
 
 export const dynamic = "force-dynamic";
 
@@ -57,13 +58,13 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
     <div className="flex max-w-3xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <Link
+          <EnlaceLista
             href="/admin/gastos"
             className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
           >
             <Icono nombre="atras" size={16} />
             Gastos
-          </Link>
+          </EnlaceLista>
         }
         titulo={
           <span className="flex flex-wrap items-center gap-esp3">
