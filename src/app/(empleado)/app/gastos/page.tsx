@@ -51,7 +51,7 @@ export default async function PaginaMisGastos({
       <div className="flex items-center gap-esp3">
         <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold text-texto-primario">Mis gastos</h1>
-          <p className="text-xs text-texto-secundario">Tickets y pequeños gastos de campo.</p>
+          <p className="text-xs text-texto-secundario">Gastos de empresa que has registrado.</p>
         </div>
         <Link href="/app/gastos/nuevo" className={clasesBoton("primario", "m", "shrink-0")}>
           <Icono nombre="camara" size={16} />
