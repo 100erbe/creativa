@@ -3,15 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
-import type { Database, Json } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import { soporteDe } from "@/lib/soporte";
 import { esLineaInstalableEnCampana } from "@/lib/campanas/articulos";
 import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
 import {
-  RADIO_DEFECTO_METROS,
-  esGeometriaZona,
-  esTipoUbicacion,
-  simplificarGeometria,
+  COLUMNAS_PUNTO_CREADO,
+  avisarCambiosPunto,
+  cambiosPunto,
+  eliminarPuntoSinTrabajar,
+  puntoCreado,
+  radioActualizable,
+  redondearCoordenada,
+  sincronizarFechaAgenda,
+  ubicacionValidada,
+} from "@/lib/campanas/puntos";
+import {
   type GeometriaZona,
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
@@ -416,17 +423,11 @@ export const anadirPunto = accion(async (
   if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
     throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
-  const tipoUbicacion: TipoUbicacion = esTipoUbicacion(datos.tipo_ubicacion) ? datos.tipo_ubicacion : "punto";
-  let radioMetros: number | null = null;
-  let geometria: Json | null = null;
-  if (tipoUbicacion === "radio") {
-    const r = datos.radio_metros ?? RADIO_DEFECTO_METROS;
-    if (!Number.isFinite(r) || r < 50 || r > 25000) throw new Error("Radio de zona no válido.");
-    radioMetros = Math.round(r);
-  } else if (tipoUbicacion === "poligono") {
-    if (!esGeometriaZona(datos.geometria)) throw new Error("Geometría de zona no válida.");
-    geometria = simplificarGeometria(datos.geometria) as unknown as Json;
-  }
+  const ubicacion = ubicacionValidada({
+    tipoUbicacion: datos.tipo_ubicacion,
+    radioMetros: datos.radio_metros,
+    geometria: datos.geometria,
+  });
 
   const supabase = await createClient();
 
@@ -463,31 +464,19 @@ export const anadirPunto = accion(async (
       linea_id: datos.lineaId,
       piezas: datos.piezas ?? null,
       direccion: datos.direccion?.trim() || null,
-      latitud: Math.round(datos.latitud * 1e7) / 1e7,
-      longitud: Math.round(datos.longitud * 1e7) / 1e7,
-      tipo_ubicacion: tipoUbicacion,
-      radio_metros: radioMetros,
-      geometria,
+      latitud: redondearCoordenada(datos.latitud),
+      longitud: redondearCoordenada(datos.longitud),
+      ...ubicacion,
       fecha_colocacion_prevista: datos.fecha_colocacion_prevista || null,
       fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
       notas: datos.notas?.trim() || null,
     })
-    .select(
-      "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
-    )
+    .select(COLUMNAS_PUNTO_CREADO)
     .single();
   if (error || !creado) throw new Error(error?.message ?? "No se pudo guardar el punto.");
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
-  return {
-    ...creado,
-    piezas: creado.piezas == null ? null : Number(creado.piezas),
-    latitud: Number(creado.latitud),
-    longitud: Number(creado.longitud),
-    tipo_ubicacion: esTipoUbicacion(creado.tipo_ubicacion) ? creado.tipo_ubicacion : ("punto" as TipoUbicacion),
-    radio_metros: creado.radio_metros == null ? null : Number(creado.radio_metros),
-    geometria: esGeometriaZona(creado.geometria) ? creado.geometria : null,
-  };
+  return puntoCreado(creado);
 });
 
 export const moverPunto = accion(async (
@@ -498,22 +487,27 @@ export const moverPunto = accion(async (
   longitud: number,
   direccion?: string,
 ) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) {
     throw new Error("Ubicación no válida.");
   }
   const supabase = await createClient();
   const cambios: { latitud: number; longitud: number; direccion?: string | null } = {
-    latitud: Math.round(latitud * 1e7) / 1e7,
-    longitud: Math.round(longitud * 1e7) / 1e7,
+    latitud: redondearCoordenada(latitud),
+    longitud: redondearCoordenada(longitud),
   };
   if (direccion !== undefined) cambios.direccion = direccion.trim() || null;
-  const { error } = await supabase
+  const { data: movidos, error } = await supabase
     .from("puntos_campana")
     .update(cambios)
     .eq("id", puntoId)
-    .eq("campana_id", campanaId);
+    .eq("campana_id", campanaId)
+    .select("nombre");
   if (error) throw new Error(error.message);
+  const movido = movidos?.[0];
+  if (!movido) throw new Error("No se ha encontrado el punto.");
+  // Mismo aviso que desde la ficha de la campaña: quien lo tiene en su agenda se entera.
+  await avisarCambiosPunto(supabase, puntoId, movido.nombre, ["ubicación"], admin.id);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
 });
@@ -532,7 +526,7 @@ export const actualizarPunto = accion(async (
     radio_metros?: number | null;
   },
 ) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   if (datos.piezas != null && (!Number.isFinite(datos.piezas) || datos.piezas <= 0)) {
     throw new Error("Las unidades del punto deben ser mayores que 0.");
   }
@@ -563,10 +557,11 @@ export const actualizarPunto = accion(async (
 
   const { data: actual } = await supabase
     .from("puntos_campana")
-    .select("tipo_ubicacion")
+    .select("nombre, tipo_ubicacion, tipo_soporte, direccion, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, notas")
     .eq("id", puntoId)
     .eq("campana_id", campanaId)
     .maybeSingle();
+  if (!actual) throw new Error("No se ha encontrado el punto.");
 
   const cambios: Database["public"]["Tables"]["puntos_campana"]["Update"] = {
     tipo_soporte: tipoSoporte,
@@ -577,15 +572,8 @@ export const actualizarPunto = accion(async (
     fecha_retirada_prevista: datos.fecha_retirada_prevista || null,
     notas: datos.notas?.trim() || null,
   };
-  if (
-    actual?.tipo_ubicacion === "radio" &&
-    datos.radio_metros != null &&
-    Number.isFinite(datos.radio_metros) &&
-    datos.radio_metros >= 50 &&
-    datos.radio_metros <= 25000
-  ) {
-    cambios.radio_metros = Math.round(datos.radio_metros);
-  }
+  const radio = radioActualizable(actual.tipo_ubicacion, datos.radio_metros);
+  if (radio !== undefined) cambios.radio_metros = radio;
 
   const { error } = await supabase
     .from("puntos_campana")
@@ -593,20 +581,18 @@ export const actualizarPunto = accion(async (
     .eq("id", puntoId)
     .eq("campana_id", campanaId);
   if (error) throw new Error(error.message);
+  // Igual que en la ficha de la campaña: la agenda sigue a la fecha de colocación y se avisa del cambio.
+  await sincronizarFechaAgenda(supabase, puntoId, cambios.fecha_colocacion_prevista ?? null);
+  await avisarCambiosPunto(supabase, puntoId, actual.nombre, cambiosPunto(actual, cambios), admin.id);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
 });
 
 export const eliminarPunto = accion(async (documentoId: number, campanaId: number, puntoId: number) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("puntos_campana")
-    .delete()
-    .eq("id", puntoId)
-    .eq("campana_id", campanaId)
-    .eq("estado", "pendiente");
-  if (error) throw new Error(error.message);
+  // Misma regla que en la ficha de la campaña: sin trabajar, sin fotos y avisando a la agenda.
+  await eliminarPuntoSinTrabajar(supabase, campanaId, puntoId, admin.id);
   refrescar(documentoId);
   revalidatePath(`/admin/campanas/${campanaId}`);
 });

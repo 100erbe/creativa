@@ -4,30 +4,29 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { accion } from "@/lib/accion";
-import type { Database, Json } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import { ETIQUETA_SOPORTE } from "@/lib/etiquetas";
 import { enSegundoPlano, fechaAviso, notificar } from "@/lib/push/notificar";
 import { soporteDe } from "@/lib/soporte";
 import { articulosDeCampana } from "@/lib/campanas/articulos";
 import { siguienteNombrePunto } from "@/lib/campanas/nombre-punto";
 import {
-  RADIO_DEFECTO_METROS,
-  esGeometriaZona,
-  esTipoUbicacion,
-  simplificarGeometria,
+  COLUMNAS_PUNTO_CREADO,
+  asignadosActivos,
+  avisarCambiosPunto,
+  cambiosPunto,
+  eliminarPuntoSinTrabajar,
+  puntoCreado,
+  radioActualizable,
+  redondearCoordenada,
+  sincronizarFechaAgenda,
+  ubicacionValidada,
+} from "@/lib/campanas/puntos";
+import {
   type GeometriaZona,
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
 
-/** Personas con el punto pendiente o en curso en su agenda (las que hay que avisar de un cambio). */
-async function asignadosActivos(supabase: Awaited<ReturnType<typeof createClient>>, puntoId: number) {
-  const { data } = await supabase
-    .from("asignaciones_punto")
-    .select("usuario_id")
-    .eq("punto_id", puntoId)
-    .in("estado", ["pendiente", "en_curso"]);
-  return (data ?? []).map((a) => a.usuario_id);
-}
 
 function refrescar(campanaId: number) {
   revalidatePath(`/admin/campanas/${campanaId}`);
@@ -218,17 +217,7 @@ export const anadirPuntoCampana = accion(
     for (const f of [d.fechaColocacion, d.fechaRetirada]) {
       if (f && !FECHA.test(f)) throw new Error("Fecha no válida.");
     }
-    const tipoUbicacion: TipoUbicacion = esTipoUbicacion(d.tipoUbicacion) ? d.tipoUbicacion : "punto";
-    let radioMetros: number | null = null;
-    let geometria: Json | null = null;
-    if (tipoUbicacion === "radio") {
-      const r = d.radioMetros ?? RADIO_DEFECTO_METROS;
-      if (!Number.isFinite(r) || r < 50 || r > 25000) throw new Error("Radio de zona no válido.");
-      radioMetros = Math.round(r);
-    } else if (tipoUbicacion === "poligono") {
-      if (!esGeometriaZona(d.geometria)) throw new Error("Geometría de zona no válida.");
-      geometria = simplificarGeometria(d.geometria) as unknown as Json;
-    }
+    const ubicacion = ubicacionValidada(d);
 
     const supabase = await createClient();
     const articulos = await articulosDeCampana(supabase, campanaId);
@@ -249,30 +238,18 @@ export const anadirPuntoCampana = accion(
         tipo_soporte: tipoSoporte,
         linea_id: unico ? unico.id : null,
         direccion: d.direccion.trim() || null,
-        latitud: Math.round(d.latitud * 1e7) / 1e7,
-        longitud: Math.round(d.longitud * 1e7) / 1e7,
-        tipo_ubicacion: tipoUbicacion,
-        radio_metros: radioMetros,
-        geometria,
+        latitud: redondearCoordenada(d.latitud),
+        longitud: redondearCoordenada(d.longitud),
+        ...ubicacion,
         fecha_colocacion_prevista: d.fechaColocacion || null,
         fecha_retirada_prevista: d.fechaRetirada || null,
       })
-      .select(
-        "id, nombre, tipo_soporte, linea_id, piezas, direccion, latitud, longitud, tipo_ubicacion, radio_metros, geometria, fecha_colocacion_prevista, fecha_retirada_prevista, estado, notas",
-      )
+      .select(COLUMNAS_PUNTO_CREADO)
       .single();
     if (error || !creado) throw new Error(error?.message ?? "No se pudo añadir el punto.");
 
     refrescar(campanaId);
-    return {
-      ...creado,
-      piezas: creado.piezas == null ? null : Number(creado.piezas),
-      latitud: Number(creado.latitud),
-      longitud: Number(creado.longitud),
-      tipo_ubicacion: esTipoUbicacion(creado.tipo_ubicacion) ? creado.tipo_ubicacion : ("punto" as TipoUbicacion),
-      radio_metros: creado.radio_metros == null ? null : Number(creado.radio_metros),
-      geometria: esGeometriaZona(creado.geometria) ? creado.geometria : null,
-    };
+    return puntoCreado(creado);
   },
 );
 
@@ -293,8 +270,8 @@ export const moverPuntoCampana = accion(
     if (!antes) throw new Error("No se ha encontrado el punto.");
 
     const cambios: { latitud: number; longitud: number; direccion?: string | null } = {
-      latitud: Math.round(latitud * 1e7) / 1e7,
-      longitud: Math.round(longitud * 1e7) / 1e7,
+      latitud: redondearCoordenada(latitud),
+      longitud: redondearCoordenada(longitud),
     };
     if (direccion !== undefined) cambios.direccion = direccion.trim() || null;
 
@@ -305,20 +282,7 @@ export const moverPuntoCampana = accion(
       .eq("campana_id", campanaId);
     if (error) throw new Error(error.message);
 
-    const destinatarios = await asignadosActivos(supabase, puntoId);
-    enSegundoPlano(() =>
-      notificar(
-        destinatarios,
-        {
-          tipo: "punto_modificado",
-          titulo: `Cambios en ${antes.nombre}`,
-          cuerpo: "Cambia: ubicación.",
-          url: `/app/punto/${puntoId}`,
-          tag: `punto-${puntoId}`,
-        },
-        { excluir: admin.id },
-      ),
-    );
+    await avisarCambiosPunto(supabase, puntoId, antes.nombre, ["ubicación"], admin.id);
 
     refrescar(campanaId);
   },
@@ -358,8 +322,8 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
     tipo_soporte: tipoSoporte,
     linea_id: lineaId,
     direccion: d.direccion.trim() || null,
-    latitud: Math.round(d.latitud * 1e7) / 1e7,
-    longitud: Math.round(d.longitud * 1e7) / 1e7,
+    latitud: redondearCoordenada(d.latitud),
+    longitud: redondearCoordenada(d.longitud),
     piezas: d.piezas,
     fecha_colocacion_prevista: d.fechaColocacion || null,
     fecha_retirada_prevista: d.fechaRetirada || null,
@@ -381,10 +345,8 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
       .select("nombre, tipo_soporte, direccion, latitud, longitud, tipo_ubicacion, radio_metros, piezas, fecha_colocacion_prevista, fecha_retirada_prevista, notas")
       .eq("id", puntoId)
       .maybeSingle();
-    const filaUpdate =
-      antes?.tipo_ubicacion === "radio" && d.radioMetros != null && Number.isFinite(d.radioMetros) && d.radioMetros >= 50 && d.radioMetros <= 25000
-        ? { ...fila, radio_metros: Math.round(d.radioMetros) }
-        : fila;
+    const radio = radioActualizable(antes?.tipo_ubicacion, d.radioMetros);
+    const filaUpdate = radio !== undefined ? { ...fila, radio_metros: radio } : fila;
     const { data, error } = await supabase
       .from("puntos_campana")
       .update(filaUpdate)
@@ -394,45 +356,10 @@ export const guardarPunto = accion(async (campanaId: number, puntoId: number | n
     if (error) throw new Error(error.message);
     if (!data || data.length === 0) throw new Error("No se ha encontrado el punto.");
     // Si cambia la fecha de colocación, la agenda de quien lo tiene asignado la sigue.
-    await supabase
-      .from("asignaciones_punto")
-      .update({ fecha_programada: fila.fecha_colocacion_prevista })
-      .eq("punto_id", puntoId)
-      .in("estado", ["pendiente", "en_curso"]);
+    await sincronizarFechaAgenda(supabase, puntoId, fila.fecha_colocacion_prevista);
 
     // Se avisa de lo que ha cambiado a quien tiene el punto en su agenda.
-    if (antes) {
-      const cambios: string[] = [];
-      if (antes.fecha_colocacion_prevista !== fila.fecha_colocacion_prevista) {
-        cambios.push(`colocación ${fechaAviso(fila.fecha_colocacion_prevista)}`);
-      }
-      if (antes.fecha_retirada_prevista !== fila.fecha_retirada_prevista) {
-        cambios.push(`retirada ${fechaAviso(fila.fecha_retirada_prevista)}`);
-      }
-      const seMovio =
-        Math.abs(Number(antes.latitud) - fila.latitud) > 1e-5 || Math.abs(Number(antes.longitud) - fila.longitud) > 1e-5;
-      if (seMovio || (antes.direccion ?? null) !== fila.direccion) cambios.push("ubicación");
-      if ((antes.notas ?? null) !== fila.notas) cambios.push("instrucciones");
-      if (antes.tipo_soporte !== fila.tipo_soporte) cambios.push("soporte");
-      if ((antes.piezas == null ? null : Number(antes.piezas)) !== fila.piezas) cambios.push("unidades");
-
-      if (cambios.length > 0) {
-        const destinatarios = await asignadosActivos(supabase, puntoId);
-        enSegundoPlano(() =>
-          notificar(
-            destinatarios,
-            {
-              tipo: "punto_modificado",
-              titulo: `Cambios en ${antes.nombre}`,
-              cuerpo: `Cambia: ${cambios.join(", ")}.`,
-              url: `/app/punto/${puntoId}`,
-              tag: `punto-${puntoId}`,
-            },
-            { excluir: admin.id },
-          ),
-        );
-      }
-    }
+    if (antes) await avisarCambiosPunto(supabase, puntoId, antes.nombre, cambiosPunto(antes, fila), admin.id);
   }
 
   refrescar(campanaId);
@@ -443,34 +370,7 @@ export const eliminarPuntoCampana = accion(async (campanaId: number, puntoId: nu
   const admin = await exigirAdmin();
   const supabase = await createClient();
 
-  const { data: punto } = await supabase
-    .from("puntos_campana")
-    .select("estado, nombre")
-    .eq("id", puntoId)
-    .eq("campana_id", campanaId)
-    .maybeSingle();
-  if (!punto) throw new Error("No se ha encontrado el punto.");
-  if (!["pendiente", "incidencia"].includes(punto.estado)) {
-    throw new Error("Este punto ya está instalado: no se puede eliminar.");
-  }
-  const { count } = await supabase.from("fotos_punto").select("id", { count: "exact", head: true }).eq("punto_id", puntoId);
-  if ((count ?? 0) > 0) throw new Error("Este punto tiene fotos: elimínalas antes de borrar el punto.");
-
-  const destinatarios = await asignadosActivos(supabase, puntoId); // antes de borrar: las asignaciones caen en cascada
-  const { error } = await supabase.from("puntos_campana").delete().eq("id", puntoId).eq("campana_id", campanaId);
-  if (error) throw new Error(error.message);
-  enSegundoPlano(() =>
-    notificar(
-      destinatarios,
-      {
-        tipo: "punto_eliminado",
-        titulo: `Punto eliminado: ${punto.nombre}`,
-        cuerpo: "Ya no hay que hacerlo.",
-        url: "/app/agenda",
-      },
-      { excluir: admin.id },
-    ),
-  );
+  await eliminarPuntoSinTrabajar(supabase, campanaId, puntoId, admin.id);
 
   refrescar(campanaId);
 });
