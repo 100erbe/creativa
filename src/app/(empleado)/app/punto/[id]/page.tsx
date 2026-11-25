@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { esGeometriaZona, esTipoUbicacion, type TipoUbicacion } from "@/lib/mapa/zonas";
 import { PanelPunto } from "./panel-punto";
+import { FichaPunto } from "./ficha-punto";
 
 export const dynamic = "force-dynamic";
 
@@ -68,21 +69,26 @@ export default async function PaginaPunto({
       geometria: esGeometriaZona(o.geometria) ? o.geometria : null,
     }));
 
+  const puntoFicha = {
+    ...punto,
+    latitud: Number(punto.latitud),
+    longitud: Number(punto.longitud),
+    tipo_ubicacion: esTipoUbicacion(punto.tipo_ubicacion) ? punto.tipo_ubicacion : ("punto" as TipoUbicacion),
+    radio_metros: punto.radio_metros == null ? null : Number(punto.radio_metros),
+    geometria: esGeometriaZona(punto.geometria) ? punto.geometria : null,
+  };
+
   return (
-    <PanelPunto
-      punto={{
-        ...punto,
-        latitud: Number(punto.latitud),
-        longitud: Number(punto.longitud),
-        tipo_ubicacion: esTipoUbicacion(punto.tipo_ubicacion) ? punto.tipo_ubicacion : ("punto" as TipoUbicacion),
-        radio_metros: punto.radio_metros == null ? null : Number(punto.radio_metros),
-        geometria: esGeometriaZona(punto.geometria) ? punto.geometria : null,
-      }}
-      otrosPuntosCampana={otrosPuntosCampana}
-      asignacion={asignacion}
-      fotos={fotosConUrl}
-      usuarioId={usuario?.id ?? null}
-      esAdmin={usuario?.rol === "admin"}
-    />
+    <div className="flex flex-col gap-esp5 px-esp4 pt-esp5">
+      {/* Solo lectura, desde el servidor (no viaja como JS al móvil). */}
+      <FichaPunto punto={puntoFicha} otrosPuntosCampana={otrosPuntosCampana} fotos={fotosConUrl} />
+      <PanelPunto
+        punto={puntoFicha}
+        asignacion={asignacion}
+        fotos={fotosConUrl}
+        usuarioId={usuario?.id ?? null}
+        esAdmin={usuario?.rol === "admin"}
+      />
+    </div>
   );
 }
