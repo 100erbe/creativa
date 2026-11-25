@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { Icono } from "@/components/ui/iconos";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { FormularioCampana } from "./formulario-campana";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { EnlaceVolver } from "@/components/shared/detail-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +25,7 @@ export default async function PaginaNuevaCampana({
     <div className="flex max-w-2xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <EnlaceLista
-            href="/admin/campanas"
-            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
-          >
-            <Icono nombre="atras" size={16} />
-            Campañas
-          </EnlaceLista>
+          <EnlaceVolver href="/admin/campanas" etiqueta="Campañas" />
         }
         titulo="Nueva campaña"
         subtitulo={

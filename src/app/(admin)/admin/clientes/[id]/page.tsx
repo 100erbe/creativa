@@ -18,7 +18,8 @@ import { cuentaConectada } from "@/lib/gmail";
 import { ReclamarImpagadas } from "./reclamar-impagadas";
 import { ProductosVendidos, type ProductoVendidoItem } from "./productos-vendidos";
 import { DocumentosRecientes } from "./documentos-recientes";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { DetailLayout } from "@/components/shared/detail-layout";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -160,17 +161,14 @@ export default async function PaginaCliente({
   const webUrl = cliente.web ? normalizarWeb(cliente.web) : null;
 
   return (
-    <div className="flex flex-col gap-esp6">
-      <div className="flex flex-col gap-esp3">
-        <EnlaceLista
-          href="/admin/clientes"
-          className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
-        >
-          <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
-          Clientes
-        </EnlaceLista>
+    <DetailLayout
+      className="flex flex-col gap-esp6"
+      claseCabecera="flex flex-col gap-esp3"
+      volver={{ href: "/admin/clientes", etiqueta: "Clientes" }}
+      cabecera={
+        <>
 
-        <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 md:p-esp5 xl:flex-row xl:items-center">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp4 p-esp4 md:p-esp5 xl:flex-row xl:items-center">
           <div className="flex min-w-0 flex-1 items-start gap-esp3 sm:items-center">
             <div
               aria-hidden="true"
@@ -247,8 +245,10 @@ export default async function PaginaCliente({
               </>
             )}
           </div>
-        </div>
-      </div>
+        </Tarjeta>
+      </>
+      }
+    >
 
       {/* Banner de facturas vencidas (misma regla que el estado de cuenta) */}
       {insolutas.length > 0 && (
@@ -316,7 +316,7 @@ export default async function PaginaCliente({
           <ProductosVendidos items={productosVendidos} />
 
           {(campanas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
               <h2 className="text-titulo-panel text-texto-primario">Campañas</h2>
               <div className="flex flex-col divide-y divide-borde-default">
                 {(campanas ?? []).map((c) => (
@@ -337,11 +337,11 @@ export default async function PaginaCliente({
                   </Link>
                 ))}
               </div>
-            </div>
+            </Tarjeta>
           )}
 
           {(tarifas ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
               <h2 className="text-titulo-panel text-texto-primario">Tarifas especiales</h2>
               <div className="flex flex-col divide-y divide-borde-default">
                 {(tarifas ?? []).map((t) => {
@@ -369,12 +369,12 @@ export default async function PaginaCliente({
                   );
                 })}
               </div>
-            </div>
+            </Tarjeta>
           )}
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-titulo-panel text-texto-primario">Ficha fiscal y comercial</h2>
             <dl className="grid grid-cols-1 gap-esp3 sm:grid-cols-2 xl:grid-cols-1">
               <Dato
@@ -427,15 +427,15 @@ export default async function PaginaCliente({
                 <p className="whitespace-pre-line">{cliente.notas}</p>
               </div>
             )}
-          </div>
+          </Tarjeta>
 
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-titulo-panel text-texto-primario">Contactos</h2>
             <Contactos clienteId={clienteId} contactos={contactos ?? []} />
-          </div>
+          </Tarjeta>
 
           {(reclamaciones ?? []).length > 0 && (
-            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
               <h2 className="text-titulo-panel text-texto-primario">Reclamaciones de impagados</h2>
               <ul className="flex flex-col divide-y divide-borde-default">
                 {(reclamaciones ?? []).map((r) => (
@@ -453,10 +453,10 @@ export default async function PaginaCliente({
               <p className="text-xs text-texto-terciario">
                 Borradores creados en Gmail ({(reclamaciones ?? [])[0]?.remitente}) desde la app.
               </p>
-            </div>
+            </Tarjeta>
           )}
 
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp5 md:px-esp6">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp5 md:px-esp6">
             <h2 className="text-titulo-panel text-texto-primario">Estado de la cuenta</h2>
             <BotonActivo clienteId={clienteId} activo={cliente.activo} />
             <BotonEliminarCliente
@@ -467,10 +467,10 @@ export default async function PaginaCliente({
               Los clientes con documentos no se pueden eliminar; al desactivarlos dejan de aparecer al crear
               documentos nuevos.
             </p>
-          </div>
+          </Tarjeta>
         </div>
       </div>
-    </div>
+    </DetailLayout>
   );
 }
 

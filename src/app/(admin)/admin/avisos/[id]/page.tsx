@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { AccionesAviso, BotonReenviar } from "./controles";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { EnlaceVolver } from "@/components/shared/detail-layout";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -50,13 +50,7 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
     <div className="flex max-w-3xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <EnlaceLista
-            href="/admin/avisos"
-            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
-          >
-            <Icono nombre="atras" size={16} />
-            Avisos
-          </EnlaceLista>
+          <EnlaceVolver href="/admin/avisos" etiqueta="Avisos" />
         }
         titulo={a.titulo}
         subtitulo={`Enviado el ${fechaHora.format(new Date(a.creado_en))}`}
@@ -77,7 +71,7 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
         {!a.cerrado_en && <AccionesAviso avisoId={a.id} />}
       </div>
 
-      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp5">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default px-esp5">
         {filas.map((f) => {
           const sinDispositivo = !cuenta[f.usuario_id];
           return (
@@ -105,7 +99,7 @@ export default async function PaginaAviso({ params }: { params: Promise<{ id: st
             </div>
           );
         })}
-      </div>
+      </Tarjeta>
     </div>
   );
 }

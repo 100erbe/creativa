@@ -18,6 +18,7 @@ import {
 } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 import { avisar, confirmar } from "@/components/ui/dialogos";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 const MAX_FOTOS_GALERIA = 10;
 const SEGUNDOS_DESHACER = 8;
@@ -415,7 +416,7 @@ export function PanelPunto({
         </div>
 
         {panelAbierto && (
-          <div className="animate-estado-entrar flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="animate-estado-entrar flex flex-col gap-esp3 p-esp4">
             <label className="flex items-start gap-esp3">
               <input
                 type="checkbox"
@@ -447,7 +448,7 @@ export function PanelPunto({
               ¿Olvidaste hacer una foto desde la app? Elige hasta {MAX_FOTOS_GALERIA} de la galería: se guardará la fecha
               en que se hicieron.
             </p>
-          </div>
+          </Tarjeta>
         )}
 
         {aviso && (
@@ -534,7 +535,7 @@ export function PanelPunto({
       )}
 
       {mostrarIncidencia && (
-        <div className="animate-estado-entrar flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie p-esp4">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="animate-estado-entrar flex flex-col gap-esp2 p-esp4">
           <textarea
             value={notaIncidencia}
             onChange={(e) => setNotaIncidencia(e.target.value)}
@@ -546,7 +547,7 @@ export function PanelPunto({
           <Boton variante="peligro" onClick={enviarIncidencia} cargando={pendiente} disabled={!notaIncidencia}>
             Enviar incidencia
           </Boton>
-        </div>
+        </Tarjeta>
       )}
 
       {/* Aviso "Deshacer" de unos segundos tras marcar como instalado */}

@@ -19,6 +19,7 @@ import {
   type TipoUbicacion,
 } from "@/lib/mapa/zonas";
 import type { Database } from "@/lib/supabase/types";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -238,10 +239,9 @@ export default async function PaginaPublicaCliente({
 
       <div className="flex flex-col gap-esp4">
         {puntos.map((p) => (
-          <div
+          <Tarjeta disposicion="libre" relleno="ninguno"
             key={p.punto_id}
-            className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 sm:p-esp5"
-          >
+            className="flex flex-col gap-esp3 p-esp4 sm:p-esp5">
             <div className="flex items-start gap-esp3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-esp2">
@@ -316,7 +316,7 @@ export default async function PaginaPublicaCliente({
                 })}
               </div>
             )}
-          </div>
+          </Tarjeta>
         ))}
       </div>
 

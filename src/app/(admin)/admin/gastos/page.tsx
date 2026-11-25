@@ -23,6 +23,8 @@ import {
 import { REVISIONES, cumpleRevision, esSinFactura, type Revision } from "@/lib/fiscal-gastos";
 import { ResumenFiscalAnual, ResumenFiscalTrimestre } from "./resumen-fiscal";
 import { hoyEnEspana } from "./opciones";
+import { Tarjeta } from "@/components/ui/tarjeta";
+import { PestanasEnlace } from "@/components/ui/pestanas";
 
 export const dynamic = "force-dynamic";
 
@@ -166,11 +168,6 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
   }
   const primeraPendiente = pendientes.at(-1);
 
-  const chip = (activo: boolean) =>
-    activo
-      ? "inline-flex min-h-10 items-center rounded-md bg-fondo-marca px-esp3 text-xs font-medium text-texto-sobre-marca transition-colors duration-rapida ease-suave active:scale-press md:min-h-8"
-      : "inline-flex min-h-10 items-center rounded-md border border-borde-default bg-fondo-superficie px-esp3 text-xs text-texto-secundario transition-colors duration-rapida ease-suave hover:bg-fondo-sutil active:scale-press md:min-h-8";
-
   return (
     <div className="flex flex-col gap-esp6">
       {revision && <ModalRevisarGasto gasto={revision} cerrarHref={enlace(actual, {})} />}
@@ -272,35 +269,42 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
-        <div className="flex flex-wrap gap-esp2">
-          {[
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-wrap items-center gap-esp3 p-esp3 md:p-esp4">
+        {/* Filtros por URL con las pestañas segmentadas del sistema (PestanasEnlace). */}
+        <PestanasEnlace
+          etiqueta="Tipo de gasto"
+          className="sm:w-[300px]"
+          opciones={[
             { v: "", e: "Todos" },
             { v: "deducible", e: "Deducibles" },
             { v: "menor", e: "Menores" },
-          ].map((t) => (
-            <Link key={t.v} href={enlace(actual, { tipo: t.v, pagina: "" })} className={chip((tipo === "todos" ? "" : tipo) === t.v)}>
-              {t.e}
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-esp2">
-          <Link href={enlace(actual, { estado: "", pagina: "" })} className={chip(!estado)}>
-            Cualquier estado
-          </Link>
-          {ESTADOS_GASTO.map((e) => (
-            <Link key={e} href={enlace(actual, { estado: e, pagina: "" })} className={chip(estado === e)}>
-              {ETIQUETA_ESTADO_GASTO[e]}
-            </Link>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-esp2">
-          {[{ n: 0, e: "Año" }, ...TRIMESTRES.map((n) => ({ n, e: `T${n}` }))].map((t) => (
-            <Link key={t.n} href={enlace(actual, { trimestre: t.n ? String(t.n) : "", pagina: "" })} className={chip(trimestre === t.n)}>
-              {t.e}
-            </Link>
-          ))}
-        </div>
+          ].map((t) => ({
+            href: enlace(actual, { tipo: t.v, pagina: "" }),
+            etiqueta: t.e,
+            activa: (tipo === "todos" ? "" : tipo) === t.v,
+          }))}
+        />
+        <PestanasEnlace
+          etiqueta="Estado del gasto"
+          className="lg:w-[560px]"
+          opciones={[
+            { href: enlace(actual, { estado: "", pagina: "" }), etiqueta: "Todos", activa: !estado },
+            ...ESTADOS_GASTO.map((e) => ({
+              href: enlace(actual, { estado: e, pagina: "" }),
+              etiqueta: ETIQUETA_ESTADO_GASTO[e],
+              activa: estado === e,
+            })),
+          ]}
+        />
+        <PestanasEnlace
+          etiqueta="Periodo"
+          className="sm:w-[280px]"
+          opciones={[{ n: 0, e: "Año" }, ...TRIMESTRES.map((n) => ({ n, e: `T${n}` }))].map((t) => ({
+            href: enlace(actual, { trimestre: t.n ? String(t.n) : "", pagina: "" }),
+            etiqueta: t.e,
+            activa: trimestre === t.n,
+          }))}
+        />
         <form action="/admin/gastos" className="ml-auto flex items-center gap-esp2">
           {Object.entries({ ...actual, q: "" }).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
           <BuscadorAdmin
@@ -317,9 +321,9 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
             Buscar
           </Boton>
         </form>
-      </div>
+      </Tarjeta>
 
-      <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="overflow-hidden">
         <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-etiqueta uppercase text-texto-secundario lg:flex">
           <span className="flex-1">Concepto y responsable</span>
           <span className="w-[100px]">Fecha</span>
@@ -388,7 +392,7 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
             </div>
           )}
         </div>
-      </div>
+      </Tarjeta>
 
       {paginas > 1 && (
         <div className="flex items-center justify-center gap-esp4 text-sm text-texto-secundario">

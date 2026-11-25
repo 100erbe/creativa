@@ -22,6 +22,7 @@ import type { Cabecera } from "./paso-lineas";
 import { actualizarPunto, anadirPunto, crearCampana, eliminarPunto, moverPunto, vincularCampana } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 import { useAccion } from "@/lib/use-accion";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 type Campana = { id: number; nombre: string; fecha_inicio: string | null; fecha_fin: string | null; estado: string };
 type Articulo = { id: number; descripcion: string; nombre: string; artista: string | null; piezas: number; unidad: string };
@@ -172,7 +173,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
         </Boton>
       </form>
 
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
         <h3 className="text-base font-semibold text-texto-primario">O usar una existente</h3>
         {campanas.length === 0 ? (
           <p className="text-sm text-texto-terciario">Este cliente aún no tiene campañas.</p>
@@ -211,7 +212,7 @@ function ElegirCampana({ documento, campanas }: { documento: Cabecera; campanas:
             </Boton>
           </>
         )}
-      </div>
+      </Tarjeta>
     </div>
   );
 }
@@ -241,7 +242,7 @@ function CampanaVinculada({
 
   return (
     <div className="flex flex-col gap-esp4">
-      <div className="flex flex-wrap items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-wrap items-center gap-esp3 px-esp5 py-esp3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fondo-marca-sutil text-texto-marca">
           <Icono nombre="campanas" size={18} />
         </div>
@@ -263,7 +264,7 @@ function CampanaVinculada({
         >
           Desvincular
         </button>
-      </div>
+      </Tarjeta>
       {error && <p className="text-sm text-texto-peligro">{error}</p>}
 
       <div className="flex flex-col gap-esp3">
@@ -313,7 +314,7 @@ function CampanaVinculada({
         />
       </div>
 
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:px-esp6 md:py-esp5">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp4 md:px-esp6 md:py-esp5">
         <div className="flex flex-wrap items-baseline justify-between gap-esp2">
           <h3 className="text-base font-semibold text-texto-primario">Puntos de la campaña · {puntos.length}</h3>
           {puntos.length > 0 && (
@@ -409,7 +410,7 @@ function CampanaVinculada({
             );
           })}
         </div>
-      </div>
+      </Tarjeta>
 
       {puntoModalActual && (
         <ModalDetallesPunto

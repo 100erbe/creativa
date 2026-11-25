@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { Icono } from "@/components/ui/iconos";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { FormularioAviso } from "./formulario-aviso";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { EnlaceVolver } from "@/components/shared/detail-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +21,7 @@ export default async function PaginaNuevoAviso() {
     <div className="flex max-w-2xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <EnlaceLista
-            href="/admin/avisos"
-            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
-          >
-            <Icono nombre="atras" size={16} />
-            Avisos
-          </EnlaceLista>
+          <EnlaceVolver href="/admin/avisos" etiqueta="Avisos" />
         }
         titulo="Nuevo aviso"
       />

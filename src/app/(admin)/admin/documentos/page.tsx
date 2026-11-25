@@ -18,6 +18,7 @@ import { cargarCobrosAbiertos, cargarMetaDocumentosCobro } from "@/lib/cobros-ab
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { LimpiarBorradores } from "./limpiar-borradores";
 import { BarraFiltrosDocumentos, type FiltrosDocumentos } from "./barra-filtros";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -516,7 +517,7 @@ export default async function PaginaDocumentos({
           ))}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="overflow-hidden">
           <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp6 py-esp2 text-etiqueta uppercase text-texto-secundario lg:flex">
             <span className="flex-1">Documento y cliente</span>
             <span className="w-[100px]">Tipo</span>
@@ -658,7 +659,7 @@ export default async function PaginaDocumentos({
               <p className="px-esp6 py-esp6 text-sm text-texto-terciario">No hay documentos con estos filtros.</p>
             )}
           </div>
-        </div>
+        </Tarjeta>
       )}
 
       {vista === "lista" && paginas > 1 && (

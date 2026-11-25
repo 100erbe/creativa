@@ -6,6 +6,7 @@ import { ALTURA_MAPA_FICHA } from "@/components/mapa/config-mapa";
 import { ETIQUETA_SOPORTE, etiquetaEstado } from "@/lib/etiquetas";
 import { fechaMedia } from "@/lib/formato";
 import { campanaDe, type FotoFicha, type OtroPuntoContexto, type PuntoFicha } from "./tipos-punto";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 /**
  * Parte de solo lectura de la ficha del punto (Server Component): cabecera, mapa, dirección,
@@ -112,7 +113,7 @@ export function FichaPunto({
         punto.fecha_colocacion_prevista ||
         punto.fecha_retirada_prevista ||
         campana?.descripcion) && (
-        <div className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp2 px-esp4 py-esp3">
           <h2 className="text-etiqueta uppercase text-texto-secundario">Trabajo a realizar</h2>
           {punto.notas && <p className="whitespace-pre-line text-sm text-texto-primario">{punto.notas}</p>}
           {(punto.piezas != null || punto.fecha_colocacion_prevista || punto.fecha_retirada_prevista) && (
@@ -131,7 +132,7 @@ export function FichaPunto({
               Campaña: {campana.descripcion}
             </p>
           )}
-        </div>
+        </Tarjeta>
       )}
     </>
   );

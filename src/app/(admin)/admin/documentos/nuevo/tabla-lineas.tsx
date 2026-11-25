@@ -10,6 +10,7 @@ import { desenvolver } from "@/lib/accion";
 import { confirmar } from "@/components/ui/dialogos";
 import { UNIDAD, num, texto } from "./lineas-comun";
 import type { Linea } from "./lineas-comun";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 /** Lista dinámica y compacta de lo ya añadido; se actualiza con cada router.refresh(). */
 export function ListaCompacta({ lineas }: { lineas: Linea[] }) {
@@ -44,7 +45,7 @@ export function ListaCompacta({ lineas }: { lineas: Linea[] }) {
 
 export function TablaLineas({ documentoId, lineas }: { documentoId: number; lineas: Linea[] }) {
   return (
-    <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
+    <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
       <div>
         <h2 className="text-titulo-panel text-texto-primario">Artículos · {lineas.length}</h2>
         {lineas.length > 0 && (
@@ -67,7 +68,7 @@ export function TablaLineas({ documentoId, lineas }: { documentoId: number; line
           <p className="py-esp4 text-sm text-texto-terciario">Todavía no has añadido ningún artículo.</p>
         )}
       </div>
-    </div>
+    </Tarjeta>
   );
 }
 

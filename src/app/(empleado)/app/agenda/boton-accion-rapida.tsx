@@ -11,6 +11,7 @@ import type { PuntoActivoAgenda } from "@/lib/distancia";
 import { obtenerUbicacion } from "@/lib/ubicacion";
 import { cn } from "@/lib/cn";
 import { atraparFoco } from "@/lib/trampa-foco";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 const CLAVE_UBICACION = "creativa.incluirUbicacion";
 
@@ -136,7 +137,7 @@ export function BotonAccionRapida({ puntosActivos }: { puntosActivos: PuntoActiv
               onClick={() => setAbierto(false)}
               className="animate-velo-entrar fixed inset-0 bg-fondo-velo"
             />
-            <div className="animate-hoja-subir sm:animate-modal-entrar relative flex w-full max-w-sm flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp4 shadow-elevado">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="animate-hoja-subir sm:animate-modal-entrar relative flex w-full max-w-sm flex-col gap-esp3 p-esp4 shadow-elevado">
               <div className="flex items-center">
                 <h2 className="flex-1 text-titulo-panel text-texto-primario">Nueva acción</h2>
                 <button
@@ -203,7 +204,7 @@ export function BotonAccionRapida({ puntosActivos }: { puntosActivos: PuntoActiv
                   )}
                 </button>
               </div>
-            </div>
+            </Tarjeta>
           </div>,
           document.body,
         )}

@@ -6,6 +6,7 @@ import { BotonVolver } from "@/components/ui/boton-volver";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function PaginaAvisos() {
         }
       />
 
-      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp4 md:px-esp6">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default px-esp4 md:px-esp6">
         {avisos.map((a) => {
           const destinatarios = a.avisos_destinatarios ?? [];
           const total = destinatarios.length;
@@ -68,7 +69,7 @@ export default async function PaginaAvisos() {
           );
         })}
         {avisos.length === 0 && <p className="py-esp5 text-sm text-texto-terciario">Todavía no has enviado ningún aviso.</p>}
-      </div>
+      </Tarjeta>
 
       <p className="text-xs text-texto-terciario">
         ¿Quieres recibir tú los avisos del campo en tu móvil?{" "}

@@ -10,6 +10,7 @@ import { desenvolver } from "@/lib/accion";
 import { actualizarPersona, cambiarContrasena, crearPersona } from "./acciones";
 import { enviarPruebaA } from "@/lib/push/acciones";
 import { MIN_CONTRASENA } from "@/lib/contrasena";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 type Persona = {
   id: string;
@@ -61,7 +62,7 @@ export function Equipo({ personas, yoId, dispositivos }: { personas: Persona[]; 
         </Boton>
       )}
 
-      <div className="flex flex-col divide-y divide-borde-default rounded-xl border border-borde-default bg-fondo-superficie px-esp5">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default px-esp5">
         {personas.map((p) =>
           editando === p.id ? (
             <div key={p.id} className="py-esp3">
@@ -88,7 +89,7 @@ export function Equipo({ personas, yoId, dispositivos }: { personas: Persona[]; 
             </div>
           ),
         )}
-      </div>
+      </Tarjeta>
     </div>
   );
 }

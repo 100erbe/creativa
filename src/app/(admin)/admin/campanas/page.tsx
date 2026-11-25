@@ -10,6 +10,7 @@ import { fechaCorta } from "@/lib/formato";
 import { ETIQUETA_ESTADO_CAMPANA as ETIQUETA_ESTADO } from "@/lib/etiquetas";
 import { documentosAsociadosACampanas } from "@/lib/campanas/documentos";
 import { BotonEliminarCampana } from "./boton-eliminar-campana";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -255,7 +256,7 @@ export default async function PaginaCampanas({
           })}
         </div>
       ) : (
-        <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default overflow-hidden">
           {filas.map((c) => (
             <div
               key={c.id}
@@ -313,7 +314,7 @@ export default async function PaginaCampanas({
           {filas.length === 0 && (
             <p className="px-esp6 py-esp6 text-sm text-texto-terciario">No hay campañas con este filtro.</p>
           )}
-        </div>
+        </Tarjeta>
       )}
     </div>
   );

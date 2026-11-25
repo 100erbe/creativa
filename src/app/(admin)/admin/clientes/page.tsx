@@ -15,6 +15,7 @@ import {
 } from "@/lib/clientes";
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -171,7 +172,7 @@ export default async function PaginaClientes({
       />
 
       {/* Barra de búsqueda y filtros compacta */}
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 p-esp3 md:p-esp4">
         <form action="/admin/clientes" className="flex flex-wrap items-center gap-esp2">
           {tipo && <input type="hidden" name="tipo" value={tipo} />}
           {conDeuda && <input type="hidden" name="con_deuda" value="1" />}
@@ -253,10 +254,10 @@ export default async function PaginaClientes({
             </Link>
           </div>
         )}
-      </div>
+      </Tarjeta>
 
       {/* Data Grid estilo Attio con anchura garantizada para el nombre en tablet/desktop */}
-      <div className="overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="overflow-hidden">
         <div className="hidden items-center gap-esp4 border-b border-borde-default bg-fondo-sutil/70 px-esp5 py-esp2 text-etiqueta uppercase text-texto-secundario md:grid md:grid-cols-[minmax(220px,1fr)_115px_145px] xl:grid-cols-[minmax(260px,1.8fr)_170px_130px_120px_155px] xl:px-esp6">
           <span>Cliente</span>
           <span className="hidden xl:block">Segmento</span>
@@ -373,7 +374,7 @@ export default async function PaginaClientes({
             <p className="px-esp6 py-esp6 text-sm text-texto-terciario">No hay clientes con estos filtros.</p>
           )}
         </div>
-      </div>
+      </Tarjeta>
 
       {paginas > 1 && (
         <div className="flex items-center justify-center gap-esp4 text-sm text-texto-secundario [&_a]:inline-flex [&_a]:min-h-10 [&_a]:items-center">

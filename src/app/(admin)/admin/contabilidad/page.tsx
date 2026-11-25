@@ -9,6 +9,8 @@ import { Icono } from "@/components/ui/iconos";
 import { BuscadorAdmin } from "@/components/admin/buscador-admin";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_COBRO, ETIQUETA_TIPO } from "@/lib/documentos";
+import { DataTable } from "@/components/shared/data-table";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -175,10 +177,9 @@ export default async function PaginaContabilidad({
             const base = filas.reduce((s, r) => s + Number(r.base_imponible ?? 0), 0);
             const cuota = filas.reduce((s, r) => s + Number(r.cuota_iva ?? 0), 0);
             return (
-              <div
+              <Tarjeta disposicion="libre" relleno="ninguno"
                 key={t.n}
-                className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4"
-              >
+                className="flex flex-col gap-esp2 px-esp5 py-esp4">
                 <div className="flex items-baseline gap-esp2">
                   <h3 className="text-sm font-semibold text-texto-primario">T{t.n}</h3>
                   <span className="text-xs text-texto-terciario">
@@ -215,7 +216,7 @@ export default async function PaginaContabilidad({
                     </div>
                   </>
                 )}
-              </div>
+              </Tarjeta>
             );
           })}
         </div>
@@ -244,10 +245,9 @@ export default async function PaginaContabilidad({
               .filter((g) => g.fecha.startsWith(String(ejercicio)) && Math.ceil(Number(g.fecha.slice(5, 7)) / 3) === t.n)
               .reduce((s, g) => s + Number(g.total), 0);
             return (
-              <div
+              <Tarjeta disposicion="libre" relleno="ninguno"
                 key={t.n}
-                className="tabular-nums flex flex-col gap-esp1 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp4 text-sm"
-              >
+                className="tabular-nums flex flex-col gap-esp1 px-esp5 py-esp4 text-sm">
                 <h3 className="font-semibold text-texto-primario">T{t.n}</h3>
                 <span className="flex text-texto-secundario">
                   <span className="flex-1">Repercutido</span>
@@ -266,7 +266,7 @@ export default async function PaginaContabilidad({
                   <span className="flex-1">Gastos menores (no deducibles)</span>
                   <span>{euros(menor)}</span>
                 </span>
-              </div>
+              </Tarjeta>
             );
           })}
         </div>
@@ -320,77 +320,93 @@ export default async function PaginaContabilidad({
           </form>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-borde-default bg-fondo-superficie">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-borde-default bg-fondo-sutil/70 text-etiqueta uppercase text-texto-secundario">
-                <th className="px-esp4 py-esp3 font-semibold">Fecha</th>
-                <th className="px-esp3 py-esp3 font-semibold">Número</th>
-                <th className="px-esp3 py-esp3 font-semibold">Destinatario</th>
-                <th className="px-esp3 py-esp3 text-right font-semibold">Base</th>
-                <th className="px-esp3 py-esp3 text-right font-semibold">IVA</th>
-                <th className="px-esp3 py-esp3 text-right font-semibold">Total</th>
-                <th className="px-esp4 py-esp3 font-semibold">Cobro</th>
+        <DataTable
+          etiqueta="Libro registro de facturas emitidas"
+          anchoMinimo={860}
+          filas={visibles}
+          clave={(f) => `${f.serie}-${f.numero}`}
+          vacio="No hay facturas con estos filtros."
+          columnas={[
+            {
+              id: "fecha",
+              cabecera: "Fecha",
+              clase: "tabular-nums whitespace-nowrap text-texto-secundario",
+              celda: (f) => (f.fecha_expedicion ? fechaMedia(f.fecha_expedicion) : "—"),
+            },
+            {
+              id: "numero",
+              cabecera: "Número",
+              clase: "tabular-nums whitespace-nowrap",
+              celda: (f) => (
+                <>
+                  <Link
+                    href={`/admin/documentos?q=${encodeURIComponent(f.numero ?? "")}`}
+                    className="font-medium text-texto-marca hover:underline"
+                  >
+                    {f.numero}
+                  </Link>
+                  {f.tipo === "rectificativa" && (
+                    <span className="ml-1 text-xs text-texto-terciario">{ETIQUETA_TIPO.rectificativa}</span>
+                  )}
+                </>
+              ),
+            },
+            {
+              id: "destinatario",
+              cabecera: "Destinatario",
+              celda: (f) => (
+                <>
+                  <p className="text-texto-primario">{f.destinatario ?? "—"}</p>
+                  <p className="tabular-nums text-xs text-texto-terciario">{f.nif_destinatario ?? "Sin NIF"}</p>
+                </>
+              ),
+            },
+            {
+              id: "base",
+              cabecera: "Base",
+              alinear: "derecha",
+              clase: "tabular-nums text-texto-primario",
+              celda: (f) => euros(Number(f.base_imponible)),
+            },
+            {
+              id: "iva",
+              cabecera: "IVA",
+              alinear: "derecha",
+              clase: "tabular-nums text-texto-primario",
+              celda: (f) => euros(Number(f.cuota_iva)),
+            },
+            {
+              id: "total",
+              cabecera: "Total",
+              alinear: "derecha",
+              clase: "tabular-nums font-medium text-texto-primario",
+              celda: (f) => euros(Number(f.total)),
+            },
+            {
+              id: "cobro",
+              cabecera: "Cobro",
+              celda: (f) =>
+                f.estado_cobro && (
+                  <Insignia tono={TONO_POR_ESTADO[f.estado_cobro] ?? "neutro"}>
+                    {ETIQUETA_COBRO[f.estado_cobro] ?? f.estado_cobro}
+                  </Insignia>
+                ),
+            },
+          ]}
+          pie={
+            filtradas.length > 0 && (
+              <tr className="tabular-nums border-t border-borde-default bg-fondo-sutil font-semibold text-texto-primario">
+                <td className="px-esp4 py-esp3" colSpan={3}>
+                  Total ({filtradas.length} documento{filtradas.length === 1 ? "" : "s"})
+                </td>
+                <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "base_imponible"))}</td>
+                <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "cuota_iva"))}</td>
+                <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "total"))}</td>
+                <td />
               </tr>
-            </thead>
-            <tbody className="divide-y divide-borde-default">
-              {visibles.map((f) => (
-                <tr key={`${f.serie}-${f.numero}`} className="transition-colors duration-rapida ease-suave hover:bg-fondo-sutil/60">
-                  <td className="tabular-nums whitespace-nowrap px-esp4 py-esp2 text-texto-secundario">
-                    {f.fecha_expedicion ? fechaMedia(f.fecha_expedicion) : "—"}
-                  </td>
-                  <td className="tabular-nums whitespace-nowrap px-esp3 py-esp2">
-                    <Link
-                      href={`/admin/documentos?q=${encodeURIComponent(f.numero ?? "")}`}
-                      className="font-medium text-texto-marca hover:underline"
-                    >
-                      {f.numero}
-                    </Link>
-                    {f.tipo === "rectificativa" && (
-                      <span className="ml-1 text-xs text-texto-terciario">{ETIQUETA_TIPO.rectificativa}</span>
-                    )}
-                  </td>
-                  <td className="px-esp3 py-esp2">
-                    <p className="text-texto-primario">{f.destinatario ?? "—"}</p>
-                    <p className="tabular-nums text-xs text-texto-terciario">{f.nif_destinatario ?? "Sin NIF"}</p>
-                  </td>
-                  <td className="tabular-nums px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.base_imponible))}</td>
-                  <td className="tabular-nums px-esp3 py-esp2 text-right text-texto-primario">{euros(Number(f.cuota_iva))}</td>
-                  <td className="tabular-nums px-esp3 py-esp2 text-right font-medium text-texto-primario">
-                    {euros(Number(f.total))}
-                  </td>
-                  <td className="px-esp4 py-esp2">
-                    {f.estado_cobro && (
-                      <Insignia tono={TONO_POR_ESTADO[f.estado_cobro] ?? "neutro"}>
-                        {ETIQUETA_COBRO[f.estado_cobro] ?? f.estado_cobro}
-                      </Insignia>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {visibles.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-esp4 py-esp5 text-texto-terciario">
-                    No hay facturas con estos filtros.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {filtradas.length > 0 && (
-              <tfoot>
-                <tr className="tabular-nums border-t border-borde-default bg-fondo-sutil font-semibold text-texto-primario">
-                  <td className="px-esp4 py-esp3" colSpan={3}>
-                    Total ({filtradas.length} documento{filtradas.length === 1 ? "" : "s"})
-                  </td>
-                  <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "base_imponible"))}</td>
-                  <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "cuota_iva"))}</td>
-                  <td className="px-esp3 py-esp3 text-right">{euros(suma(filtradas, "total"))}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+            )
+          }
+        />
 
         {paginas > 1 && (
           <div className="flex items-center justify-center gap-esp4 text-sm text-texto-secundario">

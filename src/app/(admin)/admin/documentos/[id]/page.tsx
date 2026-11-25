@@ -28,7 +28,8 @@ import {
   RevisionDocumento,
 } from "./controles";
 import { lanzarSiError } from "@/lib/supabase/consulta";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { DetailLayout } from "@/components/shared/detail-layout";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -260,15 +261,12 @@ export default async function PaginaDocumento({
 
   return (
     <ProveedorCondiciones>
-    <div className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}>
-      <div className="flex flex-col gap-esp2">
-        <EnlaceLista
-          href="/admin/documentos"
-          className="group hidden w-fit items-center gap-esp1 text-sm text-texto-secundario transition-colors duration-rapida ease-suave hover:text-texto-primario md:flex"
-        >
-          <Icono nombre="atras" size={16} className="transition-transform duration-rapida ease-salida group-hover:-translate-x-0.5" />
-          Documentos
-        </EnlaceLista>
+    <DetailLayout
+      className={esBorrador ? "flex flex-col gap-esp6 pb-24 xl:pb-0" : "flex flex-col gap-esp6"}
+      claseCabecera="flex flex-col gap-esp2"
+      volver={{ href: "/admin/documentos", etiqueta: "Documentos" }}
+      cabecera={
+        <>
         {esBorrador && (
           <div className="py-esp2">
             <PasosDocumento actual={4} documentoId={doc.id} />
@@ -429,7 +427,9 @@ export default async function PaginaDocumento({
             Esta factura no tiene fecha de vencimiento: se considera vencida a los 30 días de su emisión.
           </p>
         )}
-      </div>
+      </>
+      }
+    >
 
       {(doc.revisar || doc.sin_pdf || doc.origen_datos || doc.archivo_origen) && (
         <RevisionDocumento
@@ -445,15 +445,15 @@ export default async function PaginaDocumento({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
-          <div className="flex flex-col gap-1 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-1 px-esp6 py-esp4">
             <p className="text-xs text-texto-terciario">Cliente</p>
             <p className="text-sm font-medium text-texto-primario">{razonSocial}</p>
             {nif && <p className="text-xs text-texto-secundario">{nif}</p>}
             {direccion && <p className="text-xs text-texto-secundario">{direccion}</p>}
-          </div>
+          </Tarjeta>
 
           {(campanaVinculada || esBorrador) && (
-            <div className="flex items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex items-center gap-esp3 px-esp6 py-esp4">
               <div className="flex-1">
                 <p className="text-xs text-texto-terciario">Campaña</p>
                 {campanaVinculada ? (
@@ -483,10 +483,10 @@ export default async function PaginaDocumento({
                   Abrir
                 </Link>
               )}
-            </div>
+            </Tarjeta>
           )}
 
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
             <h2 className="text-titulo-panel text-texto-primario">Líneas</h2>
             <div className="flex flex-col divide-y divide-borde-default">
               <div className="hidden grid-cols-[1fr_90px_90px_60px_100px] gap-esp3 pb-esp2 text-xs text-texto-terciario md:grid">
@@ -523,20 +523,20 @@ export default async function PaginaDocumento({
                 <p className="py-esp4 text-sm text-texto-terciario">Este documento no tiene líneas.</p>
               )}
             </div>
-          </div>
+          </Tarjeta>
 
           {(doc.notas_cliente || doc.texto_forma_pago || doc.motivo_exencion) && (
-            <div className="flex flex-col gap-esp2 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp4 text-xs text-texto-secundario">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp2 px-esp6 py-esp4 text-xs text-texto-secundario">
               {doc.texto_forma_pago && <p>Forma de pago: {doc.texto_forma_pago}</p>}
               {doc.iban_cobro && <p>IBAN: {doc.iban_cobro}</p>}
               {doc.motivo_exencion && <p>{doc.motivo_exencion}</p>}
               {doc.notas_cliente && <p>{doc.notas_cliente}</p>}
-            </div>
+            </Tarjeta>
           )}
         </div>
 
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[360px]">
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
             <h2 className="text-titulo-panel text-texto-primario">Resumen</h2>
             <Fila etiqueta="Suma de líneas" valor={euros(Number(doc.suma_lineas))} />
             {Number(doc.importe_descuento) !== 0 && (
@@ -614,10 +614,10 @@ export default async function PaginaDocumento({
                 <Fila etiqueta="Saldo neto" valor={euros(Number(doc.total) + otrasPartes[0].total)} />
               </>
             )}
-          </div>
+          </Tarjeta>
 
           {esBorrador && (
-            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
               <h2 className="text-titulo-panel text-texto-primario">Condiciones</h2>
               <CondicionesDocumento
                 documentoId={doc.id}
@@ -642,10 +642,10 @@ export default async function PaginaDocumento({
                   notasCliente: doc.notas_cliente,
                 }}
               />
-            </div>
+            </Tarjeta>
           )}
 
-          <div id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <Tarjeta disposicion="libre" relleno="ninguno" id="acciones" className="scroll-mt-esp4 flex flex-col gap-esp3 px-esp6 py-esp5">
             <h2 className="text-titulo-panel text-texto-primario">Acciones</h2>
             <AccionesDocumento
               documentoId={doc.id}
@@ -665,10 +665,10 @@ export default async function PaginaDocumento({
               }
               facturaImportada={doc.tipo === "factura" && !!doc.origen_datos}
             />
-          </div>
+          </Tarjeta>
 
           {cobrable && estadoCobro && (
-            <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
               <h2 className="text-titulo-panel text-texto-primario">Cobros</h2>
               <Cobros
                 key={`${cobros?.length ?? 0}-${estadoCobro.pendiente}`}
@@ -696,7 +696,7 @@ export default async function PaginaDocumento({
                   referencia: c.referencia,
                 }))}
               />
-            </div>
+            </Tarjeta>
           )}
         </div>
       </div>
@@ -716,7 +716,7 @@ export default async function PaginaDocumento({
           </a>
         </div>
       )}
-    </div>
+    </DetailLayout>
     </ProveedorCondiciones>
   );
 }

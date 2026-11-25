@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
-import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
 import { clasesBoton } from "@/components/ui/boton";
 import { CabeceraPagina } from "@/components/ui/cabecera-pagina";
@@ -19,7 +18,8 @@ import {
 } from "@/lib/gastos";
 import { LecturaTicketResumen } from "@/components/gastos/lectura-ticket";
 import { ControlesGasto } from "./controles";
-import { EnlaceLista } from "@/components/ui/enlace-lista";
+import { EnlaceVolver } from "@/components/shared/detail-layout";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export const dynamic = "force-dynamic";
 
@@ -58,13 +58,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
     <div className="flex max-w-3xl flex-col gap-esp5">
       <CabeceraPagina
         antes={
-          <EnlaceLista
-            href="/admin/gastos"
-            className="hidden w-fit items-center gap-esp1 text-sm text-texto-secundario hover:text-texto-primario md:flex"
-          >
-            <Icono nombre="atras" size={16} />
-            Gastos
-          </EnlaceLista>
+          <EnlaceVolver href="/admin/gastos" etiqueta="Gastos" />
         }
         titulo={
           <span className="flex flex-wrap items-center gap-esp3">
@@ -89,7 +83,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5 md:grid-cols-3">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="grid grid-cols-2 gap-esp4 px-esp5 py-esp5 md:grid-cols-3">
         <Dato etiqueta="Fecha">{fechaMedia(gasto.fecha)}</Dato>
         <Dato etiqueta="Categoría">{gasto.categorias_gasto?.nombre}</Dato>
         <Dato etiqueta="Responsable">{responsable}</Dato>
@@ -125,9 +119,9 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
             <Dato etiqueta="Notas">{gasto.notas}</Dato>
           </div>
         )}
-      </div>
+      </Tarjeta>
 
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp5">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp5 py-esp5">
         <h2 className="text-titulo-panel text-texto-primario">{deducible ? "Factura" : "Ticket"}</h2>
         {urlTicket ? (
           esPdf ? (
@@ -149,7 +143,7 @@ export default async function PaginaGasto({ params }: { params: Promise<{ id: st
           datos={gasto.datos_ticket}
           editable={gasto.estado !== "reembolsado"}
         />
-      </div>
+      </Tarjeta>
 
       <ControlesGasto
         id={gasto.id}

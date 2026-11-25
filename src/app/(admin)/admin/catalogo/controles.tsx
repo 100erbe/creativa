@@ -13,6 +13,7 @@ import type { CategoriaAdmin, ProductoAdmin } from "./catalogo-comun";
 import { FilaProducto } from "./fila-producto";
 import { ModalProducto } from "./modal-producto";
 import { ModalCategoria } from "./modal-categoria";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export type { CategoriaAdmin, ProductoAdmin };
 export type { FormatoAdmin } from "./catalogo-comun";
@@ -128,7 +129,7 @@ export function VistaCatalogo({
       </div>
 
       {/* Buscador y filtros */}
-      <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie p-esp3 md:p-esp4">
+      <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 p-esp3 md:p-esp4">
         <div className="flex flex-wrap items-center gap-esp3">
           <Autocompletar
             value={busqueda}
@@ -205,7 +206,7 @@ export function VistaCatalogo({
             );
           })}
         </div>
-      </div>
+      </Tarjeta>
 
       {/* Listado por categoría */}
       {grupos.map(({ categoria, items }) => (
@@ -231,7 +232,7 @@ export function VistaCatalogo({
             </button>
           </div>
 
-          <div className="flex flex-col divide-y divide-borde-default overflow-hidden rounded-xl border border-borde-default bg-fondo-superficie">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col divide-y divide-borde-default overflow-hidden">
             {items.map((p) => (
               <FilaProducto
                 key={`${p.id}-${p.nombre}-${p.codigo}-${p.categoriaId}-${p.unidadVenta}-${p.precioFabricacion}-${p.precioInstalacion}-${p.ivaPct}-${p.activo}-${p.permiteFabricacion}-${p.permiteInstalacion}-${p.instalableEnCampana}-${p.admiteMedidaLibre}-${p.formatos.length}`}
@@ -241,12 +242,12 @@ export function VistaCatalogo({
                 onEditarFicha={() => setModalProducto({ abierto: true, producto: p })}
               />
             ))}
-          </div>
+          </Tarjeta>
         </section>
       ))}
 
       {grupos.length === 0 && (
-        <div className="flex flex-col items-center gap-esp3 rounded-xl border border-dashed border-borde-default bg-fondo-superficie px-esp5 py-esp6 text-center">
+        <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col items-center gap-esp3 border-dashed px-esp5 py-esp6 text-center">
           <p className="text-sm text-texto-secundario">
             {busqueda || categoriaFiltroId != null
               ? "No hay productos o servicios con este filtro."
@@ -256,7 +257,7 @@ export function VistaCatalogo({
             <Icono nombre="mas" size={16} />
             Añadir producto o servicio
           </Boton>
-        </div>
+        </Tarjeta>
       )}
 
       {modalProducto.abierto && (

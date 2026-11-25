@@ -14,17 +14,32 @@ const RELLENO: Record<Relleno, string> = {
   ninguno: "",
 };
 
+const SUPERFICIE = "rounded-xl border border-borde-default bg-fondo-superficie";
+
 type Props = React.HTMLAttributes<HTMLElement> & {
   relleno?: Relleno;
   /** Elemento HTML: `section` cuando la tarjeta tiene título propio (con aria-labelledby). */
   como?: "div" | "section" | "article" | "aside";
+  /**
+   * "columna" (por defecto): columna con separación entre bloques.
+   * "libre": solo la superficie (fondo, borde, radio) y el relleno; la disposición la pone className.
+   */
+  disposicion?: "columna" | "libre";
 };
 
-export function Tarjeta({ relleno = "panel", como: Etiqueta = "div", className, children, ...props }: Props) {
+export function Tarjeta({
+  relleno = "panel",
+  como: Etiqueta = "div",
+  disposicion = "columna",
+  className,
+  children,
+  ...props
+}: Props) {
   return (
     <Etiqueta
       className={cn(
-        "flex min-w-0 flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie md:gap-esp5",
+        SUPERFICIE,
+        disposicion === "columna" && "flex min-w-0 flex-col gap-esp4 md:gap-esp5",
         RELLENO[relleno],
         className,
       )}

@@ -13,6 +13,7 @@ import type { Cabecera, SituacionCliente, Linea, ProductoCatalogo, CategoriaOpci
 import { TarjetaSituacionCliente } from "./tarjeta-situacion-cliente";
 import { ListaCompacta, TablaLineas } from "./tabla-lineas";
 import { FormularioArticulo } from "./formulario-articulo";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export type { Cabecera, SituacionCliente, ProductoCatalogo, CategoriaOpcion };
 export type { FormatoCatalogo } from "./lineas-comun";
@@ -60,7 +61,7 @@ export function PasoLineas({
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
           {/* Cliente (compacto) */}
-          <div className="flex items-center gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp5 py-esp3">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex items-center gap-esp3 px-esp5 py-esp3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-fondo-marca-sutil text-sm font-medium text-texto-marca">
               {documento.cliente.slice(0, 2).toUpperCase()}
             </div>
@@ -78,7 +79,7 @@ export function PasoLineas({
             >
               Cambiar
             </Link>
-          </div>
+          </Tarjeta>
 
           {/* Situación financiera del cliente (formato compacto en móvil/tablet). */}
           <div className="xl:hidden">
@@ -87,9 +88,9 @@ export function PasoLineas({
 
           {/* En pantallas estrechas el resumen queda abajo: lista compacta sobre el formulario. */}
           {lineas.length > 0 && (
-            <div className="rounded-xl border border-borde-default bg-fondo-superficie px-esp4 py-esp3 xl:hidden">
+            <Tarjeta disposicion="libre" relleno="ninguno" className="px-esp4 py-esp3 xl:hidden">
               <ListaCompacta lineas={lineas} />
-            </div>
+            </Tarjeta>
           )}
 
           <FormularioArticulo
@@ -106,7 +107,7 @@ export function PasoLineas({
 
         {/* Resumen + situación del cliente */}
         <div className="flex w-full shrink-0 flex-col gap-esp4 xl:w-[340px] xl:sticky xl:top-esp5 xl:self-start">
-          <div className="flex flex-col gap-esp3 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+          <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp6 py-esp5">
             <h2 className="text-titulo-panel text-texto-primario">Resumen</h2>
             {lineas.length > 0 && (
               <div className="hidden xl:block">
@@ -146,7 +147,7 @@ export function PasoLineas({
             {lineas.length === 0 && (
               <p className="text-xs text-texto-terciario">Añade al menos un artículo para continuar.</p>
             )}
-          </div>
+          </Tarjeta>
 
           <div className="hidden xl:block">
             <TarjetaSituacionCliente clienteId={documento.cliente_id} situacion={situacionCliente} />

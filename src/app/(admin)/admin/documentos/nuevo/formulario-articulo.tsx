@@ -11,6 +11,7 @@ import { desenvolver } from "@/lib/accion";
 import { UNIDAD, num, texto, normalizar, alcancesDe, calcularCantidadLocal, calcularPrecioBaseLocal, entrada, Etiqueta } from "./lineas-comun";
 import type { Alcance, Cabecera, FormatoCatalogo, ProductoCatalogo, CategoriaOpcion, Reciente } from "./lineas-comun";
 import { FormularioLineaLibre } from "./formulario-linea-libre";
+import { Tarjeta } from "@/components/ui/tarjeta";
 
 export function FormularioArticulo({
   documento,
@@ -310,7 +311,7 @@ export function FormularioArticulo({
   }
 
   return (
-    <div className="flex flex-col gap-esp4 rounded-xl border border-borde-default bg-fondo-superficie px-esp6 py-esp5">
+    <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp4 px-esp6 py-esp5">
       <div>
         <h2 className="text-titulo-panel text-texto-primario">Añadir artículo</h2>
         <p className="text-sm text-texto-secundario">
@@ -460,7 +461,7 @@ export function FormularioArticulo({
             </div>
 
             {mostrarResultados && (
-              <div className="flex max-h-96 flex-col divide-y divide-borde-default overflow-y-auto rounded-xl border border-borde-default bg-fondo-superficie shadow-sm">
+              <Tarjeta disposicion="libre" relleno="ninguno" className="flex max-h-96 flex-col divide-y divide-borde-default overflow-y-auto shadow-sm">
                 {resultados.map(([categoria, productos]) => (
                   <div key={categoria} className="flex flex-col">
                     <span className="sticky top-0 z-10 border-b border-fondo-hover bg-fondo-sutil/95 px-esp3 py-1.5 text-etiqueta uppercase text-texto-secundario backdrop-blur-sm">
@@ -547,7 +548,7 @@ export function FormularioArticulo({
                     Añadir «{busqueda.trim()}» como concepto nuevo (con opción de guardar en catálogo)
                   </button>
                 )}
-              </div>
+              </Tarjeta>
             )}
           </div>
 
@@ -786,7 +787,7 @@ export function FormularioArticulo({
           </div>
         </form>
       )}
-    </div>
+    </Tarjeta>
   );
 }
 
