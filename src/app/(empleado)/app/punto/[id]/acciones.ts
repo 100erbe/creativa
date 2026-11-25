@@ -85,6 +85,9 @@ export const subirFotoPunto = accion(async (formData: FormData) => {
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
+  // La ficha de la campaña y el panel del admin muestran el estado de los puntos.
+  revalidatePath("/admin/campanas", "layout");
+  revalidatePath("/admin/panel");
 });
 
 /**
@@ -239,6 +242,9 @@ export const marcarPuntoInstalado = accion(async (
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
+  // La ficha de la campaña y el panel del admin muestran el estado de los puntos.
+  revalidatePath("/admin/campanas", "layout");
+  revalidatePath("/admin/panel");
   return { punto: punto.estado, asignacion: asignacion.estado };
 });
 
@@ -301,6 +307,9 @@ export const reabrirPunto = accion(async (
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
+  // La ficha de la campaña y el panel del admin muestran el estado de los puntos.
+  revalidatePath("/admin/campanas", "layout");
+  revalidatePath("/admin/panel");
 });
 
 export const reportarIncidencia = accion(async (puntoId: number, notas: string) => {
@@ -340,6 +349,9 @@ export const reportarIncidencia = accion(async (puntoId: number, notas: string) 
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
+  // La ficha de la campaña y el panel del admin muestran el estado de los puntos.
+  revalidatePath("/admin/campanas", "layout");
+  revalidatePath("/admin/panel");
 });
 
 /** Cierra una tarea de retirada: el punto pasa a "retirado". */
@@ -380,4 +392,7 @@ export const marcarPuntoRetirado = accion(async (puntoId: number, asignacionId: 
 
   revalidatePath(`/app/punto/${puntoId}`);
   revalidatePath("/app/agenda");
+  // La ficha de la campaña y el panel del admin muestran el estado de los puntos.
+  revalidatePath("/admin/campanas", "layout");
+  revalidatePath("/admin/panel");
 });

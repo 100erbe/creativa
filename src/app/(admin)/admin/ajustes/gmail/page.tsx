@@ -83,8 +83,8 @@ export default async function PaginaGmail({
           </div>
         ) : (
           <p className="rounded-md border border-borde-aviso bg-fondo-aviso-sutil px-esp3 py-esp2 text-sm text-texto-primario">
-            Falta configurar el servidor: hay que definir <code>GOOGLE_CLIENT_ID</code> y{" "}
-            <code>GOOGLE_CLIENT_SECRET</code> (ver los pasos de abajo).
+            Falta configurar el servidor: hay que definir <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>{" "}
+            y <code>TOKENS_SECRET</code> (ver los pasos de abajo).
           </p>
         )}
         <p className="text-xs text-texto-terciario">
@@ -110,7 +110,7 @@ export default async function PaginaGmail({
             (añade también el de producción, p. ej. <code>https://tu-dominio/api/gmail/retorno</code>).
           </li>
           <li>
-            Copia el ID y el secreto en las variables <code>GOOGLE_CLIENT_ID</code> y <code>GOOGLE_CLIENT_SECRET</code>{" "}
+            Copia el ID y el secreto en las variables <code>GOOGLE_CLIENT_ID</code> y <code>GOOGLE_CLIENT_SECRET</code>, define <code>TOKENS_SECRET</code> (32+ caracteres aleatorios, cifra el permiso guardado){" "}
             (en <code>.env.local</code> y en Vercel) y vuelve a desplegar.
           </li>
           <li>

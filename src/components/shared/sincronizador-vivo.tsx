@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { marcarRealtimeConectado } from "@/lib/estado-realtime";
 
 const DEBOUNCE_REALTIME_MS = 400;
 const DEBOUNCE_FOCO_MS = 150;
@@ -110,7 +111,8 @@ export function SincronizadorVivo({
         );
     }
 
-    canal.subscribe();
+    // Con Realtime conectado, el sondeo de avisos (PopupAviso) se para; si se cae, vuelve.
+    canal.subscribe((estado) => marcarRealtimeConectado(estado === "SUBSCRIBED"));
 
     // Nivel A: volver a la pestaña / PWA, foco, reconexión o push del Service Worker
     const alVolverVisibilidad = () => {
@@ -139,6 +141,7 @@ export function SincronizadorVivo({
       window.removeEventListener("focus", alFoco);
       window.removeEventListener("online", alOnline);
       navigator.serviceWorker?.removeEventListener("message", alMensajeSw);
+      marcarRealtimeConectado(false);
       void supabase.removeChannel(canal);
     };
   }, [usuarioId, esAdmin, router]);

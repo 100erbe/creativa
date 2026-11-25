@@ -74,7 +74,10 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
       ? Number(resUltimo.data[0].fecha.slice(0, 4))
       : anioActual;
 
-  const SELECCION = "*, categorias_gasto(nombre), usuarios!gastos_usuario_id_fkey(nombre, apellidos)";
+  // Solo las columnas que usa la lista y el resumen fiscal (sin datos_ticket, la lectura de la IA,
+  // que pesa y solo hace falta en el panel de revisión).
+  const SELECCION =
+    "id, codigo, fecha, tipo, estado, concepto, forma_pago, total, base_imponible, cuota_iva, iva_pct, pct_deducible_iva, bien_inversion, retencion_pct, importe_retencion, proveedor, nif_proveedor, numero_factura, ticket_path, concepto_aeat, notas, categorias_gasto(nombre), usuarios!gastos_usuario_id_fkey(nombre, apellidos)";
   const res = await supabase
     .from("gastos")
     .select(SELECCION)
@@ -134,10 +137,9 @@ export default async function PaginaGastos({ searchParams }: { searchParams: Pro
   // El gasto a revisar puede ser de otro ejercicio: si no está en la lista, se pide aparte.
   const idRevisar = Number(filtros.revisar);
   const aRevisar =
-    todos.find((g) => g.id === idRevisar) ??
-    (Number.isInteger(idRevisar) && idRevisar > 0
-      ? (await supabase.from("gastos").select(SELECCION).eq("id", idRevisar).maybeSingle()).data
-      : null);
+    Number.isInteger(idRevisar) && idRevisar > 0
+      ? (await supabase.from("gastos").select(`${SELECCION}, datos_ticket`).eq("id", idRevisar).maybeSingle()).data
+      : null;
   let revision: GastoRevision | null = null;
   if (aRevisar) {
     const firma = aRevisar.ticket_path

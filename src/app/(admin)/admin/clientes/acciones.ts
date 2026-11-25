@@ -128,6 +128,10 @@ export async function guardarCliente(
 
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${destino}`);
+  // El nombre y los datos del cliente salen en documentos, cobros y el panel.
+  revalidatePath("/admin/documentos", "layout");
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/panel");
   redirect(`/admin/clientes/${destino}`);
 }
 

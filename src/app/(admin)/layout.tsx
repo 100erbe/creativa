@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { cargarCobrosAbiertos, cargarMetaDocumentosCobro } from "@/lib/cobros-abiertos";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
 import { BarraLateral } from "@/components/admin/barra-lateral";
 import { PaletaComandos } from "@/components/admin/paleta-comandos";
@@ -21,21 +21,11 @@ export default async function LayoutAdmin({
   // esta ruta se renderiza en un contexto distinto (p. ej. tests).
   if (!usuario || usuario.rol !== "admin") redirect("/entrar");
 
-  const supabase = await createClient();
-
+  // Las consultas de cobros se comparten (React.cache) con Panel, Cobros y Documentos.
   const [noLeidos, resAbiertos, resMetaDocs, avatar] = await Promise.all([
     contarNoLeidos(),
-    supabase
-      .from("v_estado_cobro")
-      .select("id, tipo, fecha, fecha_vencimiento, pendiente, estado_cobro")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .limit(5000),
-    supabase
-      .from("documentos")
-      .select("id, estado, documento_origen_id")
-      .in("tipo", ["factura", "rectificativa"])
-      .neq("estado", "borrador")
-      .limit(5000),
+    cargarCobrosAbiertos(),
+    cargarMetaDocumentosCobro(),
     urlAvatar(usuario.avatarUrl),
   ]);
 

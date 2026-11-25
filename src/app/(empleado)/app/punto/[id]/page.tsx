@@ -47,15 +47,13 @@ export default async function PaginaPunto({
 
   if (!punto) notFound();
 
-  // Genera URLs firmadas (el bucket es privado) para mostrar las fotos ya subidas.
-  const fotosConUrl = await Promise.all(
-    (fotos ?? []).map(async (f) => {
-      const { data } = await supabase.storage
-        .from("fotos-puntos")
-        .createSignedUrl(f.url_foto, 60 * 60);
-      return { ...f, url: data?.signedUrl ?? null };
-    }),
-  );
+  // URLs firmadas (el bucket es privado) para mostrar las fotos ya subidas: una sola llamada para todas.
+  const listaFotos = fotos ?? [];
+  const { data: firmadas } = listaFotos.length
+    ? await supabase.storage.from("fotos-puntos").createSignedUrls(listaFotos.map((f) => f.url_foto), 60 * 60)
+    : { data: [] };
+  const urlPorRuta = new Map((firmadas ?? []).map((s) => [s.path, s.error ? null : s.signedUrl]));
+  const fotosConUrl = listaFotos.map((f) => ({ ...f, url: urlPorRuta.get(f.url_foto) ?? null }));
 
   const otrosPuntosCampana = (otrosCampana ?? [])
     .filter((o) => o.campana_id === punto.campana_id && o.punto_id !== punto.id)

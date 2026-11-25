@@ -14,6 +14,7 @@ import { Icono } from "@/components/ui/iconos";
 import { euros, fechaMedia } from "@/lib/formato";
 import { ETIQUETA_TIPO, METODOS_COBRO } from "@/lib/documentos";
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { cargarCobrosAbiertos, cargarMetaDocumentosCobro } from "@/lib/cobros-abiertos";
 import { hoyEnEspana, SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { cn } from "@/lib/cn";
 
@@ -56,17 +57,9 @@ export default async function PaginaCobros({ searchParams }: { searchParams: Pro
   const inicioMes = `${hoyEnEspana(hoy).slice(0, 7)}-01`;
 
   const resultados = await Promise.all([
-    supabase
-      .from("v_estado_cobro")
-      .select("id, tipo, numero_completo, cliente_id, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .limit(5000),
-    supabase
-      .from("documentos")
-      .select("id, estado, documento_origen_id")
-      .in("tipo", ["factura", "rectificativa"])
-      .neq("estado", "borrador")
-      .limit(5000),
+    // Compartidas con el layout (React.cache): una sola consulta por petición.
+    cargarCobrosAbiertos(),
+    cargarMetaDocumentosCobro(),
     supabase
       .from("cobros")
       .select("id, fecha, importe, metodo, documento_id, documento:documentos!documento_id(numero_completo, tipo, cliente_razon_social, clientes(razon_social))")

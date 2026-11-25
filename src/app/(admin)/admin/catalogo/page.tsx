@@ -17,7 +17,8 @@ export default async function PaginaCatalogo({
   const { nuevo } = await searchParams;
   const supabase = await createClient();
 
-  const [resCategorias, resProductos] = await Promise.all([
+  // contarNoLeidos() va en paralelo (y comparte la consulta del layout gracias a React.cache).
+  const [resCategorias, resProductos, noLeidos] = await Promise.all([
     supabase
       .from("categorias")
       .select("id, codigo, nombre, orden")
@@ -29,6 +30,7 @@ export default async function PaginaCatalogo({
         "id, codigo, categoria_id, nombre, descripcion_factura, material, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, instalable_en_campana, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, activo, notas, categorias(nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
       )
       .order("codigo"),
+    contarNoLeidos(),
   ]);
   lanzarSiError(resCategorias, resProductos);
 
@@ -78,7 +80,7 @@ export default async function PaginaCatalogo({
       categorias={categorias}
       productos={productos}
       nuevoInicial={nuevo === "1"}
-      noLeidos={await contarNoLeidos()}
+      noLeidos={noLeidos}
     />
   );
 }

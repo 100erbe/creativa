@@ -17,6 +17,7 @@ import { euros } from "@/lib/formato";
 import { saludo } from "@/lib/saludo";
 import { ETIQUETA_TIPO } from "@/lib/documentos";
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { cargarMetaDocumentosCobro } from "@/lib/cobros-abiertos";
 import { hoyEnEspana } from "@/lib/estado-cuenta";
 import {
   campanasActivas,
@@ -49,12 +50,7 @@ export default async function PaginaPanel() {
       .from("v_estado_cobro")
       .select("id, tipo, numero_completo, cliente_razon_social, fecha, fecha_vencimiento, total, pendiente, estado_cobro")
       .limit(5000),
-    supabase
-      .from("documentos")
-      .select("id, estado, documento_origen_id")
-      .in("tipo", ["factura", "rectificativa"])
-      .neq("estado", "borrador")
-      .limit(5000),
+    cargarMetaDocumentosCobro(),
     supabase.from("cobros").select("documento_id, fecha, importe").limit(5000),
     supabase.from("campanas").select("id, estado, fecha_inicio, fecha_fin"),
     supabase.from("v_progreso_campana").select("*"),

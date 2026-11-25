@@ -1,9 +1,11 @@
 import "server-only";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { cifradoConfigurado, cifrar, descifrar } from "@/lib/cifrado";
 
 // Conexión con la cuenta de Gmail del administrador (OAuth de Google) para dejar
 // borradores con adjuntos. El refresh token vive en la tabla cuenta_gmail, que solo
-// lee el servidor con la service_role key: nunca llega al navegador.
+// lee el servidor con la service_role key: nunca llega al navegador. Además se guarda
+// cifrado (AES-256-GCM con TOKENS_SECRET, ver lib/cifrado.ts).
 //
 // Permiso pedido: gmail.compose (crear borradores). La app no lee el correo.
 
@@ -11,7 +13,7 @@ export const AMBITO_GMAIL = "https://www.googleapis.com/auth/gmail.compose";
 export const COOKIE_ESTADO_OAUTH = "gmail_oauth_estado";
 
 export function gmailConfigurado() {
-  return !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
+  return !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET && cifradoConfigurado();
 }
 
 /** Dirección a la que Google devuelve al usuario tras dar permiso. Debe estar registrada en Google Cloud. */
@@ -66,6 +68,8 @@ export async function conectarCuenta(codigo: string, origen: string, usuarioId: 
   if (!token.access_token || !token.refresh_token) {
     throw new Error(token.error_description ?? token.error ?? "Google no ha devuelto el permiso.");
   }
+  // Se cifra antes de nada: sin TOKENS_SECRET no se guarda ninguna conexión.
+  const tokenCifrado = cifrar(token.refresh_token);
   const perfil = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
     headers: { Authorization: `Bearer ${token.access_token}` },
     cache: "no-store",
@@ -79,7 +83,7 @@ export async function conectarCuenta(codigo: string, origen: string, usuarioId: 
     .upsert({
       id: 1,
       email: emailAddress,
-      refresh_token: token.refresh_token,
+      refresh_token: tokenCifrado,
       conectada_por: usuarioId,
       conectada_en: new Date().toISOString(),
     });
@@ -100,11 +104,19 @@ export async function desconectarCuenta() {
   const admin = clienteAdmin();
   const { data } = await admin.from("cuenta_gmail").select("refresh_token").eq("id", 1).maybeSingle();
   if (data?.refresh_token) {
-    await fetch("https://oauth2.googleapis.com/revoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token: data.refresh_token }),
-    }).catch(() => undefined);
+    let tokenClaro: string | null = null;
+    try {
+      tokenClaro = descifrar(data.refresh_token);
+    } catch {
+      // Sin la clave no se puede revocar en Google, pero la conexión se borra igualmente.
+    }
+    if (tokenClaro) {
+      await fetch("https://oauth2.googleapis.com/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ token: tokenClaro }),
+      }).catch(() => undefined);
+    }
   }
   const { error } = await admin.from("cuenta_gmail").delete().eq("id", 1);
   if (error) throw new Error(error.message);
@@ -122,7 +134,7 @@ export async function crearBorrador(mensajeMime: string) {
   const { data: cuenta } = await admin.from("cuenta_gmail").select("email, refresh_token").eq("id", 1).maybeSingle();
   if (!cuenta) throw new Error("No hay ninguna cuenta de Gmail conectada. Conéctala en Ajustes → Gmail.");
 
-  const token = await pedirToken({ refresh_token: cuenta.refresh_token, grant_type: "refresh_token" });
+  const token = await pedirToken({ refresh_token: descifrar(cuenta.refresh_token), grant_type: "refresh_token" });
   if (!token.access_token) throw new Error(token.error === "invalid_grant" ? RECONECTAR : `Google: ${token.error_description ?? token.error}`);
 
   // Subida «media»: el cuerpo es el mensaje RFC 822 tal cual (admite adjuntos de hasta 35 MB).

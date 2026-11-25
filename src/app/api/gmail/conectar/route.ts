@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const origen = request.nextUrl.origin;
   if (!gmailConfigurado()) {
-    return NextResponse.redirect(`${origen}/admin/ajustes/gmail?error=${encodeURIComponent("Faltan GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el servidor.")}`);
+    return NextResponse.redirect(`${origen}/admin/ajustes/gmail?error=${encodeURIComponent("Faltan GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET o TOKENS_SECRET en el servidor.")}`);
   }
 
   // Valor aleatorio que Google devuelve tal cual: así solo se acepta la respuesta a esta petición.

@@ -152,13 +152,20 @@ async function bloquearAcceso(id: string, bloquear: boolean) {
 
 /** Para quien olvidó su contraseña: se le fija una nueva y se le comunica. */
 export const cambiarContrasena = accion(async (id: string, password: string) => {
-  await exigirAdmin();
+  const admin = await exigirAdmin();
   const errorPassword = errorContrasena(password);
   if (errorPassword) throw new Error(errorPassword);
   const supabase = await createClient();
   const { data: persona } = await supabase.from("usuarios").select("id").eq("id", id).maybeSingle();
   if (!persona) throw new Error("No se ha encontrado a la persona.");
 
-  const { error } = await clienteAdmin().auth.admin.updateUserById(id, { password });
+  const servicio = clienteAdmin();
+  const { error } = await servicio.auth.admin.updateUserById(id, { password });
   if (error) throw new Error(error.message);
+
+  // Con la contraseña nueva se cierran sus sesiones abiertas (quien tuviera la antigua queda fuera).
+  if (id !== admin.id) {
+    const { error: errorSesiones } = await servicio.rpc("cerrar_sesiones_usuario", { p_usuario: id });
+    if (errorSesiones) throw new Error(`Contraseña cambiada, pero no se pudieron cerrar sus sesiones: ${errorSesiones.message}`);
+  }
 });

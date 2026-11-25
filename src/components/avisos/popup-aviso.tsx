@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Icono } from "@/components/ui/iconos";
 import { desenvolver } from "@/lib/accion";
 import { consultarUltimoAviso, marcarLeida } from "@/lib/push/acciones";
+import { realtimeConectado } from "@/lib/estado-realtime";
 import type { NotificacionBandeja } from "@/components/avisos/bandeja";
 
 /** Cuánto se queda visible (con texto que leer, 8 s es el mínimo cómodo) y cada cuánto se comprueba si hay avisos. */
@@ -75,7 +76,11 @@ export function PopupAviso() {
   // Línea base al entrar, sondeo, eventos Realtime y avisos del service worker.
   useEffect(() => {
     void comprobar();
-    const cadaCuanto = setInterval(() => document.visibilityState === "visible" && void comprobar(), SONDEO_MS);
+    // Sondeo de respaldo: solo si Realtime no está conectado (con Realtime los avisos llegan solos).
+    const cadaCuanto = setInterval(
+      () => document.visibilityState === "visible" && !realtimeConectado() && void comprobar(),
+      SONDEO_MS,
+    );
     const alVolver = () => document.visibilityState === "visible" && void comprobar();
     const alMensaje = (e: MessageEvent) => e.data?.tipo === "aviso-nuevo" && void comprobar();
     const alRealtime = () => void comprobar();

@@ -7,6 +7,10 @@ import { accion } from "@/lib/accion";
 
 function refrescar() {
   revalidatePath("/admin/ajustes/pagos");
+  // Formas de pago y cuentas salen en documentos, clientes y cobros.
+  revalidatePath("/admin/documentos", "layout");
+  revalidatePath("/admin/clientes", "layout");
+  revalidatePath("/admin/cobros");
 }
 
 export const guardarFormaPago = accion(

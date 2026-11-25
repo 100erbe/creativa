@@ -14,6 +14,7 @@ import {
   validezVencida,
 } from "@/lib/documentos";
 import { resumirCobrosPendientes } from "@/lib/cobros-pendientes";
+import { cargarCobrosAbiertos, cargarMetaDocumentosCobro } from "@/lib/cobros-abiertos";
 import { SALDO_MINIMO } from "@/lib/estado-cuenta";
 import { LimpiarBorradores } from "./limpiar-borradores";
 import { BarraFiltrosDocumentos, type FiltrosDocumentos } from "./barra-filtros";
@@ -97,18 +98,10 @@ export default async function PaginaDocumentos({
   const supabase = await createClient();
   const hoy = new Date();
 
+  // Compartidas con el layout (React.cache): una sola consulta por petición.
   const [{ data: abiertosCobro }, { data: metaDocs }] = await Promise.all([
-    supabase
-      .from("v_estado_cobro")
-      .select("id, tipo, fecha, fecha_vencimiento, pendiente, estado_cobro")
-      .in("estado_cobro", ["pendiente", "parcial", "vencida"])
-      .limit(5000),
-    supabase
-      .from("documentos")
-      .select("id, estado, documento_origen_id")
-      .in("tipo", ["factura", "rectificativa"])
-      .neq("estado", "borrador")
-      .limit(5000),
+    cargarCobrosAbiertos(),
+    cargarMetaDocumentosCobro(),
   ]);
   const resumenCobro = resumirCobrosPendientes(abiertosCobro ?? [], metaDocs ?? [], hoy);
   const cobroAbiertoPorId = new Map(resumenCobro.conSaldo.map((d) => [d.id, d]));

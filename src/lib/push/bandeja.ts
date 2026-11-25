@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { NotificacionBandeja } from "@/components/avisos/bandeja";
 
@@ -30,12 +31,12 @@ export async function cargarBandeja(limite = 30): Promise<NotificacionBandeja[]>
   }));
 }
 
-/** Cuántos avisos tiene sin leer (para el contador de la barra). */
-export async function contarNoLeidos(): Promise<number> {
+/** Cuántos avisos tiene sin leer (para el contador de la barra). Una sola consulta por petición. */
+export const contarNoLeidos = cache(async function contarNoLeidos(): Promise<number> {
   const supabase = await createClient();
   const { count } = await supabase
     .from("notificaciones")
     .select("id", { count: "exact", head: true })
     .is("leida_en", null);
   return count ?? 0;
-}
+});

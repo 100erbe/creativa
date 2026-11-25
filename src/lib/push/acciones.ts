@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { exigirAdmin } from "@/lib/supabase/exigir-admin";
 import { obtenerUsuarioActual } from "@/lib/supabase/usuario";
+import { revalidatePath } from "next/cache";
 import { accion } from "@/lib/accion";
 import { endpointPermitido, enviarPush, type ResultadoEnvio } from "./enviar";
 
@@ -93,6 +94,11 @@ export const enviarPruebaA = accion(async (usuarioId: string): Promise<Resultado
   );
 });
 
+/** El contador de avisos sin leer vive en los layouts del admin y de la app. */
+function refrescarContador(rol: string) {
+  revalidatePath(rol === "admin" ? "/admin" : "/app", "layout");
+}
+
 /** Marca como leídos todos los avisos de la persona (al abrir la bandeja). */
 export const marcarLeidas = accion(async () => {
   const usuario = await obtenerUsuarioActual();
@@ -104,6 +110,7 @@ export const marcarLeidas = accion(async () => {
     .eq("usuario_id", usuario.id)
     .is("leida_en", null);
   if (error) throw new Error(error.message);
+  refrescarContador(usuario.rol);
 });
 
 /** Marca como leído un solo aviso (al abrirlo desde el popup). */
@@ -118,6 +125,7 @@ export const marcarLeida = accion(async (id: number) => {
     .eq("usuario_id", usuario.id)
     .is("leida_en", null);
   if (error) throw new Error(error.message);
+  refrescarContador(usuario.rol);
 });
 
 /** El último aviso recibido (leído o no) y cuántos hay sin leer, para el popup de escritorio. */

@@ -61,6 +61,8 @@ export const guardarEmpresa = accion(async (datos: DatosEmpresa) => {
 
   revalidatePath("/admin/ajustes/empresa");
   revalidatePath("/admin/clientes");
-  revalidatePath("/admin/documentos");
+  revalidatePath("/admin/documentos", "layout");
   revalidatePath("/admin/gastos");
+  revalidatePath("/admin/cobros");
+  revalidatePath("/admin/panel");
 });

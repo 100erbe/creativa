@@ -71,15 +71,78 @@ export default async function PaginaDocumento({
 
   if (!doc) notFound();
 
-  const origen = doc.documento_origen_id
-    ? (
-        await supabase
+  const esBorrador = doc.estado === "borrador";
+  // Facturas y rectificativas emitidas llevan cobros (en la rectificativa, devoluciones o compensaciones).
+  const cobrable = (doc.tipo === "factura" || doc.tipo === "rectificativa") && !esBorrador;
+  const esRectificativa = doc.tipo === "rectificativa";
+
+  // Factura ↔ rectificativas: estado de cobro de la otra parte, para el saldo neto y la compensación.
+  const idsRectificativas = (derivados ?? []).filter((d) => d.tipo === "rectificativa" && d.numero_completo).map((d) => d.id);
+  const relacionadas = cobrable
+    ? esRectificativa
+      ? doc.documento_origen_id
+        ? [doc.documento_origen_id]
+        : []
+      : idsRectificativas
+    : [];
+
+  // Todo lo que solo depende del documento se pide a la vez (antes eran 6 esperas seguidas).
+  const [
+    { data: origen },
+    { data: campanaVinculada },
+    [{ data: formasPago }, { data: empresaBorrador }],
+    // Destinatarios del email: contactos marcados como "recibe las facturas" + el email de facturación.
+    [{ data: contactosFactura }, { data: empresa }],
+    [{ data: estadoCobro }, { data: cobros }],
+    { data: estadosRelacionados },
+  ] = await Promise.all([
+    doc.documento_origen_id
+      ? supabase
           .from("documentos")
           .select("id, tipo, numero_completo, total, origen_datos")
           .eq("id", doc.documento_origen_id)
           .maybeSingle()
-      ).data
-    : null;
+      : Promise.resolve({ data: null }),
+    doc.campana_id
+      ? supabase
+          .from("v_progreso_campana")
+          .select("campana_id, campana, puntos_totales")
+          .eq("campana_id", doc.campana_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    esBorrador
+      ? Promise.all([
+          supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre"),
+          supabase.from("empresa").select("vencimiento_defecto_dias, vencimiento_defecto_dia_mes").eq("id", 1).maybeSingle(),
+        ])
+      : Promise.resolve([{ data: [] }, { data: null }] as const),
+    esBorrador
+      ? Promise.resolve([{ data: [] }, { data: null }] as const)
+      : Promise.all([
+          supabase.from("contactos_cliente").select("email").eq("cliente_id", doc.cliente_id).eq("recibe_facturas", true),
+          supabase.from("empresa").select("nombre_comercial").limit(1).maybeSingle(),
+        ]),
+    cobrable
+      ? Promise.all([
+          supabase
+            .from("v_estado_cobro")
+            .select("cobrado, pendiente, estado_cobro")
+            .eq("id", documentoId)
+            .maybeSingle(),
+          supabase
+            .from("cobros")
+            .select("id, fecha, importe, metodo, referencia")
+            .eq("documento_id", documentoId)
+            .order("fecha"),
+        ])
+      : Promise.resolve([{ data: null }, { data: [] }] as const),
+    relacionadas.length > 0
+      ? supabase
+          .from("v_estado_cobro")
+          .select("id, numero_completo, total, pendiente")
+          .in("id", relacionadas)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   // Rectificativa en borrador: lo ya rectificado de la factura por otras rectificativas emitidas y lo que queda.
   // Al emitir, la base de datos rechaza la que supere lo que queda (ver emitir_documento).
@@ -111,66 +174,6 @@ export default async function PaginaDocumento({
         })()
       : null;
 
-  const campanaVinculada = doc.campana_id
-    ? (
-        await supabase
-          .from("v_progreso_campana")
-          .select("campana_id, campana, puntos_totales")
-          .eq("campana_id", doc.campana_id)
-          .maybeSingle()
-      ).data
-    : null;
-
-  const esBorrador = doc.estado === "borrador";
-  const [{ data: formasPago }, { data: empresaBorrador }] = esBorrador
-    ? await Promise.all([
-        supabase.from("formas_pago").select("id, nombre, dias_vencimiento, plazos_dias").order("nombre"),
-        supabase.from("empresa").select("vencimiento_defecto_dias, vencimiento_defecto_dia_mes").eq("id", 1).maybeSingle(),
-      ])
-    : [{ data: [] }, { data: null }];
-  // Facturas y rectificativas emitidas llevan cobros (en la rectificativa, devoluciones o compensaciones).
-  const cobrable = (doc.tipo === "factura" || doc.tipo === "rectificativa") && !esBorrador;
-  const esRectificativa = doc.tipo === "rectificativa";
-
-  // Destinatarios del email: contactos marcados como "recibe las facturas" + el email de facturación.
-  const [{ data: contactosFactura }, { data: empresa }] = esBorrador
-    ? [{ data: [] }, { data: null }]
-    : await Promise.all([
-        supabase.from("contactos_cliente").select("email").eq("cliente_id", doc.cliente_id).eq("recibe_facturas", true),
-        supabase.from("empresa").select("nombre_comercial").limit(1).maybeSingle(),
-      ]);
-
-  const [{ data: estadoCobro }, { data: cobros }] = cobrable
-    ? await Promise.all([
-        supabase
-          .from("v_estado_cobro")
-          .select("cobrado, pendiente, estado_cobro")
-          .eq("id", documentoId)
-          .maybeSingle(),
-        supabase
-          .from("cobros")
-          .select("id, fecha, importe, metodo, referencia")
-          .eq("documento_id", documentoId)
-          .order("fecha"),
-      ])
-    : [{ data: null }, { data: [] }];
-
-  // Factura ↔ rectificativas: estado de cobro de la otra parte, para el saldo neto y la compensación.
-  const idsRectificativas = (derivados ?? []).filter((d) => d.tipo === "rectificativa" && d.numero_completo).map((d) => d.id);
-  const relacionadas = cobrable
-    ? esRectificativa
-      ? doc.documento_origen_id
-        ? [doc.documento_origen_id]
-        : []
-      : idsRectificativas
-    : [];
-  const { data: estadosRelacionados } =
-    relacionadas.length > 0
-      ? await supabase
-          .from("v_estado_cobro")
-          .select("id, numero_completo, total, pendiente")
-          .in("id", relacionadas)
-      : { data: [] };
   const otrasPartes = (estadosRelacionados ?? []).flatMap((r) => (r.id == null ? [] : [{ ...r, id: r.id }])).map((r) => ({
     id: r.id,
     numero: r.numero_completo ?? "",
@@ -619,7 +622,7 @@ export default async function PaginaDocumento({
               <CondicionesDocumento
                 documentoId={doc.id}
                 tipo={doc.tipo}
-                formasPago={formasPago ?? []}
+                formasPago={[...(formasPago ?? [])]}
                 vencimientoCliente={reglaVencimiento(cliente?.dias_vencimiento, cliente?.vencimiento_dia_mes)}
                 vencimientoGeneral={
                   reglaVencimiento(
