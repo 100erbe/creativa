@@ -30,6 +30,10 @@ import {
 } from "@/lib/series-panel";
 import { cn } from "@/lib/cn";
 import { PanelCampanas, PanelDocumentosRecientes, type CampanaResumen, type DocumentoReciente } from "./paneles";
+import { TarjetaMargenMes } from "./tarjeta-margen-mes";
+import { agregarMargen } from "@/lib/margen";
+import { esMargenPrevisto, esMargenReal } from "@/lib/margen-cliente";
+import { MESES } from "@/lib/margen-global";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +70,14 @@ export default async function PaginaPanel() {
       .select("id", { count: "exact", head: true })
       .eq("estado", "borrador")
       .lt("fecha", sumarDiasIso(hoy, -DIAS_BORRADOR_ANTIGUO)),
+    // Margen bruto del mes en curso (solo admin por RLS).
+    supabase
+      .from("v_margen_lineas")
+      .select("tipo, estado, base_neta, coste_total")
+      .in("tipo", ["factura", "rectificativa", "presupuesto"])
+      .gte("fecha", `${hoy.slice(0, 7)}-01`)
+      .lte("fecha", hoy)
+      .limit(5000),
   ]);
   lanzarSiError(...resultados);
   const [
@@ -77,7 +89,9 @@ export default async function PaginaPanel() {
     { data: recientes },
     { count: porRevisar },
     { count: borradoresAntiguos },
+    { data: lineasMargenMes },
   ] = resultados;
+  const margenMes = lineasMargenMes ?? [];
 
   // ── Cobros (mismo criterio que /admin/cobros y que el estado de cuenta) ───────────────
   const metaPorId = new Map((metaDocs ?? []).map((d) => [d.id, d]));
@@ -316,6 +330,20 @@ export default async function PaginaPanel() {
           }}
         />
       </div>
+
+      <TarjetaMargenMes
+        mes={`${MESES[Number(hoy.slice(5, 7)) - 1]} ${hoy.slice(0, 4)}`}
+        real={agregarMargen(
+          margenMes
+            .filter((l) => esMargenReal(l.tipo ?? "", l.estado ?? ""))
+            .map((l) => ({ base: Number(l.base_neta ?? 0), coste: l.coste_total == null ? null : Number(l.coste_total) })),
+        )}
+        previsto={agregarMargen(
+          margenMes
+            .filter((l) => esMargenPrevisto(l.tipo ?? "", l.estado ?? ""))
+            .map((l) => ({ base: Number(l.base_neta ?? 0), coste: l.coste_total == null ? null : Number(l.coste_total) })),
+        )}
+      />
 
       <div className="flex flex-col gap-esp5 xl:flex-row">
         {/* Cobros y vencimientos */}

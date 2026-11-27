@@ -20,6 +20,9 @@ import { ProductosVendidos, type ProductoVendidoItem } from "./productos-vendido
 import { DocumentosRecientes } from "./documentos-recientes";
 import { DetailLayout } from "@/components/shared/detail-layout";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { RentabilidadCliente } from "./rentabilidad-cliente";
+import type { FilaMargen } from "@/lib/margen-cliente";
+import { hoyEnEspana } from "@/lib/redondeo";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +62,8 @@ export default async function PaginaCliente({
     { data: reclamaciones },
     { data: facturasConLineas },
     { data: empresa },
+    { data: margenLineas },
+    { data: productosCatalogo },
   ] = await Promise.all([
     cliente.grupo_id
       ? supabase.from("grupos_empresariales").select("nombre").eq("id", cliente.grupo_id).maybeSingle()
@@ -119,7 +124,32 @@ export default async function PaginaCliente({
       .order("fecha", { ascending: false })
       .order("id", { ascending: false }),
     supabase.from("empresa").select("vencimiento_defecto_dias, vencimiento_defecto_dia_mes").eq("id", 1).maybeSingle(),
+    // Margen bruto (solo admin por RLS): facturas, rectificativas y presupuestos del cliente.
+    supabase
+      .from("v_margen_lineas")
+      .select("documento_id, tipo, estado, fecha, producto_id, descripcion, cantidad, unidad, base_neta, coste_total")
+      .eq("cliente_id", clienteId)
+      .in("tipo", ["factura", "rectificativa", "presupuesto"]),
+    supabase.from("productos").select("id, nombre"),
   ]);
+  const filasMargen: FilaMargen[] = (margenLineas ?? []).flatMap((l) =>
+    l.documento_id != null && l.tipo != null && l.estado != null && l.fecha != null
+      ? [
+          {
+            documento_id: l.documento_id,
+            tipo: l.tipo,
+            estado: l.estado,
+            fecha: l.fecha,
+            producto_id: l.producto_id,
+            descripcion: l.descripcion ?? "",
+            cantidad: Number(l.cantidad ?? 0),
+            unidad: l.unidad ?? "ud",
+            base_neta: Number(l.base_neta ?? 0),
+            coste_total: l.coste_total == null ? null : Number(l.coste_total),
+          },
+        ]
+      : [],
+  );
   const productosVendidos: ProductoVendidoItem[] = (facturasConLineas ?? []).flatMap((doc) =>
     [...(doc.lineas_documento ?? [])]
       .filter((l) => Number(l.importe) > 0)
@@ -309,6 +339,15 @@ export default async function PaginaCliente({
 
       <div className="flex flex-col gap-esp6 xl:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-esp4">
+          {filasMargen.length > 0 && (
+            <RentabilidadCliente
+              filas={filasMargen}
+              numeros={(documentos ?? []).map((d) => [d.id, d.numero_completo] as [number, string | null])}
+              nombresProducto={(productosCatalogo ?? []).map((p) => [p.id, p.nombre] as [number, string])}
+              anioActual={Number(hoyEnEspana(hoy).slice(0, 4))}
+            />
+          )}
+
           <DocumentosRecientes
             documentos={(documentos ?? []).map((d) => ({ ...d, total: Number(d.total) }))}
           />

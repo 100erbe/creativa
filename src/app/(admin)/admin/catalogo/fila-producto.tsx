@@ -4,15 +4,17 @@ import { useState } from "react";
 import { Boton } from "@/components/ui/boton";
 import { Icono } from "@/components/ui/iconos";
 import { Insignia } from "@/components/ui/insignia";
+import { InsigniaMargen } from "@/components/ui/insignia-margen";
 import { CAMPO } from "@/components/ui/panel-busqueda";
 import { confirmar } from "@/components/ui/dialogos";
 import { cn } from "@/lib/cn";
 import { desenvolver } from "@/lib/accion";
 import { euros } from "@/lib/formato";
+import { calcularMargen } from "@/lib/margen";
 import { useAccion } from "@/lib/use-accion";
 import { Ocultable, eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { eliminarFormato, guardarFormato, guardarProducto } from "./acciones";
-import { UNIDAD_CORTA, IVAS, aNumero, aTexto, etiquetaMini } from "./catalogo-comun";
+import { UNIDAD_CORTA, IVAS, aNumero, aTexto, etiquetaMini, faltaCoste } from "./catalogo-comun";
 import type { FormatoAdmin, ProductoAdmin } from "./catalogo-comun";
 
 export function FilaProducto({
@@ -51,6 +53,7 @@ export function FilaProducto({
                 {p.nombre}
               </p>
               {!p.activo && <Insignia tono="neutro">Inactivo</Insignia>}
+              {p.activo && faltaCoste(p) && <Insignia tono="aviso">Sin coste</Insignia>}
               {p.admiteMedidaLibre && (
                 <span className="rounded bg-fondo-marca-sutil px-1.5 py-0.5 text-micro font-medium text-texto-marca">
                   A medida
@@ -197,7 +200,7 @@ export function FilaProducto({
           <div className="flex flex-col gap-esp2">
             <div className="flex flex-wrap items-center justify-between gap-esp2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-texto-terciario">
-                Formatos y medidas ({p.formatos.length}) · vacío = usa precio del producto
+                Formatos y medidas ({p.formatos.length}) · vacío = usa precio y coste del producto
               </h3>
               {!nuevoFormato && (
                 <Boton
@@ -218,18 +221,20 @@ export function FilaProducto({
                 unidad={unidad}
                 permiteFab={p.permiteFabricacion}
                 permiteInst={p.permiteInstalacion}
+                producto={p}
                 onCerrar={() => setNuevoFormato(false)}
               />
             )}
 
             {p.formatos.map((f) => (
-              <Ocultable key={`${f.id}-${f.codigo}-${f.nombre}-${f.anchoCm}-${f.altoCm}-${f.precioFabricacion}-${f.precioInstalacion}-${f.alias.join(",")}-${f.activo}`} clave={`formato:${f.id}`}>
+              <Ocultable key={`${f.id}-${f.codigo}-${f.nombre}-${f.anchoCm}-${f.altoCm}-${f.precioFabricacion}-${f.precioInstalacion}-${f.costeFabricacion}-${f.alias.join(",")}-${f.activo}`} clave={`formato:${f.id}`}>
                 <FormularioFormato
                   productoId={p.id}
                   formato={f}
                   unidad={unidad}
                   permiteFab={p.permiteFabricacion}
                   permiteInst={p.permiteInstalacion}
+                  producto={p}
                 />
               </Ocultable>
             ))}
@@ -257,6 +262,7 @@ function FormularioFormato({
   unidad,
   permiteFab,
   permiteInst,
+  producto,
   onCerrar,
 }: {
   productoId: number;
@@ -264,6 +270,8 @@ function FormularioFormato({
   unidad: string;
   permiteFab: boolean;
   permiteInst: boolean;
+  /** Para heredar precio/coste de fabricación del producto al calcular el margen. */
+  producto: ProductoAdmin;
   onCerrar?: () => void;
 }) {
   const { router, pendiente, error, setError, ejecutar } = useAccion({ refrescar: true });
@@ -275,10 +283,18 @@ function FormularioFormato({
   const [alto, setAlto] = useState(aTexto(f?.altoCm ?? null));
   const [fab, setFab] = useState(aTexto(f?.precioFabricacion ?? null));
   const [inst, setInst] = useState(aTexto(f?.precioInstalacion ?? null));
+  const [coste, setCoste] = useState(aTexto(f?.costeFabricacion ?? null));
   const [alias, setAlias] = useState(f?.alias.join(", ") ?? "");
   const [activo, setActivo] = useState(f?.activo ?? true);
 
+  // Margen de fabricación del formato (precio y coste propios o, si faltan, los del producto).
+  const margenFormato = (precioFmt: number | null, costeFmt: number | null) =>
+    permiteFab
+      ? calcularMargen(precioFmt ?? producto.precioFabricacion, costeFmt ?? producto.costeFabricacion)
+      : null;
+
   if (f && !editando) {
+    const margen = margenFormato(f.precioFabricacion, f.costeFabricacion);
     return (
       <div className="flex flex-wrap items-center gap-esp3 rounded-md border border-borde-default bg-fondo-superficie px-esp3 py-esp2">
         <div className="min-w-0 flex-1">
@@ -300,6 +316,17 @@ function FormularioFormato({
               Fab. {f.precioFabricacion != null ? euros(f.precioFabricacion) : "base"}
             </span>
           )}
+          {permiteFab && (
+            <span className="rounded bg-fondo-sutil px-2 py-0.5">
+              Coste{" "}
+              {f.costeFabricacion != null
+                ? euros(f.costeFabricacion)
+                : producto.costeFabricacion != null
+                  ? "base"
+                  : "—"}
+            </span>
+          )}
+          {margen && <InsigniaMargen pct={margen.pct} />}
           {permiteInst && (
             <span className="rounded bg-fondo-sutil px-2 py-0.5">
               Inst. {f.precioInstalacion != null ? euros(f.precioInstalacion) : "base"}
@@ -330,10 +357,12 @@ function FormularioFormato({
         const nAlto = aNumero(alto);
         const nFab = permiteFab ? aNumero(fab) : null;
         const nInst = permiteInst ? aNumero(inst) : null;
+        const nCoste = permiteFab ? aNumero(coste) : null;
         if (nAncho != null && !Number.isFinite(nAncho)) return setError("Ancho no válido.");
         if (nAlto != null && !Number.isFinite(nAlto)) return setError("Alto no válido.");
         if (nFab != null && !Number.isFinite(nFab)) return setError("Precio de fabricación no válido.");
         if (nInst != null && !Number.isFinite(nInst)) return setError("Precio de instalación no válido.");
+        if (nCoste != null && (!Number.isFinite(nCoste) || nCoste < 0)) return setError("Coste de fabricación no válido.");
 
         ejecutar(async () => {
           await desenvolver(
@@ -345,6 +374,7 @@ function FormularioFormato({
               altoCm: nAlto,
               precioFabricacion: nFab,
               precioInstalacion: nInst,
+              costeFabricacion: nCoste,
               alias,
               activo,
             }),
@@ -385,7 +415,7 @@ function FormularioFormato({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-esp2 sm:grid-cols-[1fr_1fr_1.5fr_auto]">
+      <div className="grid grid-cols-2 gap-esp2 sm:grid-cols-[1fr_1fr_1fr_1.5fr_auto]">
         {permiteFab && (
           <label className={etiquetaMini}>
             Fab. (€/{unidad})
@@ -394,6 +424,18 @@ function FormularioFormato({
               onChange={(e) => setFab(e.target.value)}
               inputMode="decimal"
               placeholder="Base producto"
+              className={CAMPO}
+            />
+          </label>
+        )}
+        {permiteFab && (
+          <label className={etiquetaMini}>
+            Coste fab. (€/{unidad})
+            <input
+              value={coste}
+              onChange={(e) => setCoste(e.target.value)}
+              inputMode="decimal"
+              placeholder="Coste producto"
               className={CAMPO}
             />
           </label>
@@ -425,6 +467,20 @@ function FormularioFormato({
         </label>
       </div>
 
+      {(() => {
+        const nFab = aNumero(fab);
+        const nCoste = aNumero(coste);
+        const m = margenFormato(
+          nFab != null && Number.isFinite(nFab) ? nFab : null,
+          nCoste != null && Number.isFinite(nCoste) ? nCoste : null,
+        );
+        return m ? (
+          <p className="flex items-center gap-esp2 text-xs text-texto-secundario" aria-live="polite">
+            <InsigniaMargen pct={m.pct} />
+            Margen de fabricación: beneficio {euros(m.beneficio)} por {unidad}
+          </p>
+        ) : null;
+      })()}
       {error && <p className="text-xs text-texto-peligro">{error}</p>}
       <div className="flex flex-wrap items-center gap-esp2">
         <Boton type="submit" tamano="s" cargando={pendiente}>

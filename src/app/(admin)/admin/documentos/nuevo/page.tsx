@@ -43,7 +43,7 @@ export default async function PaginaNuevoDocumento({
   const { data: doc } = await supabase
     .from("documentos")
     .select(
-      "id, tipo, estado, cliente_id, documento_origen_id, suma_lineas, base_imponible, cuota_iva, total, campana_id, clientes(razon_social, nombre_comercial, descuento_habitual)",
+      "id, tipo, estado, cliente_id, documento_origen_id, suma_lineas, descuento_global_pct, base_imponible, cuota_iva, total, campana_id, clientes(razon_social, nombre_comercial, descuento_habitual)",
     )
     .eq("id", documentoId)
     .maybeSingle();
@@ -70,6 +70,7 @@ export default async function PaginaNuevoDocumento({
     cliente: cliente?.nombre_comercial || cliente?.razon_social || "Cliente",
     descuento_habitual: Number(cliente?.descuento_habitual ?? 0),
     suma_lineas: Number(doc.suma_lineas),
+    descuento_global_pct: Number(doc.descuento_global_pct ?? 0),
     base_imponible: Number(doc.base_imponible),
     cuota_iva: Number(doc.cuota_iva),
     total: Number(doc.total),
@@ -148,13 +149,13 @@ export default async function PaginaNuevoDocumento({
   ] = await Promise.all([
     supabase
       .from("lineas_documento")
-      .select("id, descripcion, artista, piezas, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, importe")
+      .select("id, descripcion, artista, piezas, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, importe, coste_unitario")
       .eq("documento_id", documentoId)
       .order("orden"),
     supabase
       .from("productos")
       .select(
-        "id, codigo, nombre, descripcion_factura, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, categorias(id, nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
+        "id, codigo, nombre, descripcion_factura, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, precio_fabricacion, precio_instalacion, coste_fabricacion, coste_instalacion, pedido_minimo, iva_pct, categorias(id, nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, coste_fabricacion, alias, activo)",
       )
       .eq("activo", true)
       .order("nombre"),
@@ -211,6 +212,8 @@ export default async function PaginaNuevoDocumento({
         instalacion: p.permite_instalacion,
         precioFabricacion: p.precio_fabricacion == null ? null : Number(p.precio_fabricacion),
         precioInstalacion: p.precio_instalacion == null ? null : Number(p.precio_instalacion),
+        costeFabricacion: p.coste_fabricacion == null ? null : Number(p.coste_fabricacion),
+        costeInstalacion: p.coste_instalacion == null ? null : Number(p.coste_instalacion),
         pedidoMinimo: p.pedido_minimo == null ? null : Number(p.pedido_minimo),
         ivaPct: Number(p.iva_pct),
         categoriaId: cat?.id ?? null,
@@ -226,6 +229,7 @@ export default async function PaginaNuevoDocumento({
             alto: f.alto_cm == null ? null : Number(f.alto_cm),
             precioFabricacion: f.precio_fabricacion == null ? null : Number(f.precio_fabricacion),
             precioInstalacion: f.precio_instalacion == null ? null : Number(f.precio_instalacion),
+            costeFabricacion: f.coste_fabricacion == null ? null : Number(f.coste_fabricacion),
             alias: f.alias ?? [],
           }))
           .sort((a, b) => (a.ancho ?? 99999) - (b.ancho ?? 99999) || a.nombre.localeCompare(b.nombre)),
@@ -248,6 +252,7 @@ export default async function PaginaNuevoDocumento({
         recargo_acabados: Number(l.recargo_acabados),
         descuento_pct: Number(l.descuento_pct),
         importe: Number(l.importe),
+        coste_unitario: l.coste_unitario == null ? null : Number(l.coste_unitario),
       }))}
       catalogo={catalogo}
       categorias={categorias ?? []}

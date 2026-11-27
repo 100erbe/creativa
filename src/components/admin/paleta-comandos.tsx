@@ -215,6 +215,15 @@ const COMANDOS: Comando[] = [
     palabrasClave: "iva 303 impuestos libro",
   },
   {
+    id: "nav-rentabilidad",
+    grupo: "Navegación",
+    etiqueta: "Rentabilidad",
+    descripcion: "Margen bruto por mes, cliente y producto",
+    href: "/admin/rentabilidad",
+    icono: "rentabilidad",
+    palabrasClave: "margen beneficio coste ganancia",
+  },
+  {
     id: "nav-avisos",
     grupo: "Navegación",
     etiqueta: "Avisos al equipo",

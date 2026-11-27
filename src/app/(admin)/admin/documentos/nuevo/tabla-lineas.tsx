@@ -12,6 +12,9 @@ import { UNIDAD, num, texto } from "./lineas-comun";
 import type { Linea } from "./lineas-comun";
 import { eliminarOptimista, useSinOcultos } from "@/lib/eliminacion-optimista";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { InsigniaMargen } from "@/components/ui/insignia-margen";
+import { margenLinea } from "@/lib/margen";
+import { useMargenesVisibles } from "@/lib/margenes-visibles";
 
 /** Lista dinámica y compacta de lo ya añadido; se actualiza con cada router.refresh(). */
 export function ListaCompacta({ lineas }: { lineas: Linea[] }) {
@@ -44,8 +47,17 @@ export function ListaCompacta({ lineas }: { lineas: Linea[] }) {
 //  Formulario para añadir un artículo del catálogo (inserción rápida)
 // ---------------------------------------------------------------------
 
-export function TablaLineas({ documentoId, lineas: lineasServidor }: { documentoId: number; lineas: Linea[] }) {
+export function TablaLineas({
+  documentoId,
+  lineas: lineasServidor,
+  descuentoGlobalPct = 0,
+}: {
+  documentoId: number;
+  lineas: Linea[];
+  descuentoGlobalPct?: number;
+}) {
   const lineas = useSinOcultos(lineasServidor, (l) => `linea:${l.id}`);
+  const margenesVisibles = useMargenesVisibles();
   return (
     <Tarjeta disposicion="libre" relleno="ninguno" className="flex flex-col gap-esp3 px-esp4 py-esp4 md:overflow-x-auto md:px-esp6 md:py-esp5">
       <div>
@@ -64,7 +76,13 @@ export function TablaLineas({ documentoId, lineas: lineasServidor }: { documento
       </div>
       <div className="flex flex-col divide-y divide-borde-default md:min-w-[620px]">
         {lineas.map((l) => (
-          <FilaLinea key={`${l.id}-${l.piezas}-${l.precio_unitario}-${l.descuento_pct}-${l.descripcion}-${l.artista ?? ""}`} documentoId={documentoId} linea={l} />
+          <FilaLinea
+            key={`${l.id}-${l.piezas}-${l.precio_unitario}-${l.descuento_pct}-${l.descripcion}-${l.artista ?? ""}-${l.coste_unitario ?? ""}`}
+            documentoId={documentoId}
+            linea={l}
+            descuentoGlobalPct={descuentoGlobalPct}
+            margenesVisibles={margenesVisibles}
+          />
         ))}
         {lineas.length === 0 && (
           <p className="py-esp4 text-sm text-texto-terciario">Todavía no has añadido ningún artículo.</p>
@@ -74,7 +92,17 @@ export function TablaLineas({ documentoId, lineas: lineasServidor }: { documento
   );
 }
 
-function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }) {
+function FilaLinea({
+  documentoId,
+  linea,
+  descuentoGlobalPct,
+  margenesVisibles,
+}: {
+  documentoId: number;
+  linea: Linea;
+  descuentoGlobalPct: number;
+  margenesVisibles: boolean;
+}) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +111,8 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
   const [precio, setPrecio] = useState(texto(linea.precio_unitario, 4));
   const [descuento, setDescuento] = useState(texto(linea.descuento_pct));
   const [artista, setArtista] = useState(linea.artista ?? "");
+  const [coste, setCoste] = useState(linea.coste_unitario == null ? "" : texto(linea.coste_unitario, 4));
+  const margen = margenLinea(linea, descuentoGlobalPct);
 
   function guardar(cambios: Parameters<typeof actualizarLinea>[2]) {
     setError(null);
@@ -208,6 +238,46 @@ function FilaLinea({ documentoId, linea }: { documentoId: number; linea: Linea }
           <Icono nombre="eliminar" size={16} />
         </button>
       </div>
+      {margenesVisibles && (
+        <div className="mt-esp1 flex flex-wrap items-center gap-x-esp3 gap-y-1 rounded-md bg-fondo-sutil/70 px-esp2 py-1 text-xs text-texto-secundario">
+          <label className="flex items-center gap-esp1">
+            Coste {UNIDAD[linea.unidad] ? `€/${UNIDAD[linea.unidad]}` : "€"}
+            <input
+              value={coste}
+              onChange={(e) => setCoste(e.target.value)}
+              onBlur={() => {
+                const original = linea.coste_unitario;
+                if (coste.trim() === "") {
+                  if (original != null) guardar({ coste_unitario: null });
+                  return;
+                }
+                const n = num(coste);
+                if (!Number.isFinite(n) || n < 0) {
+                  return setCoste(original == null ? "" : texto(original, 4));
+                }
+                if (original == null || Math.abs(n - original) >= 0.00005) guardar({ coste_unitario: n });
+              }}
+              onKeyDown={alPulsarEnter}
+              inputMode="decimal"
+              enterKeyHint="done"
+              placeholder="Sin coste"
+              aria-label="Coste interno unitario"
+              className="h-9 w-24 rounded-md border border-borde-campo bg-fondo-superficie px-esp2 text-right text-sm text-texto-primario outline-none placeholder:text-texto-terciario focus:border-borde-foco md:h-7 md:text-xs"
+            />
+          </label>
+          {margen ? (
+            <>
+              <span className="tabular-nums">Coste {euros(margen.coste)}</span>
+              <span className="tabular-nums">
+                Beneficio <strong className="font-medium text-texto-primario">{euros(margen.beneficio)}</strong>
+              </span>
+              <InsigniaMargen pct={margen.pct} />
+            </>
+          ) : (
+            <InsigniaMargen pct={null} />
+          )}
+        </div>
+      )}
       {error && <p className="px-esp2 text-xs text-texto-peligro">{error}</p>}
     </div>
   );

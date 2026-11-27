@@ -30,6 +30,8 @@ import {
 import { lanzarSiError } from "@/lib/supabase/consulta";
 import { DetailLayout } from "@/components/shared/detail-layout";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { BloqueMargen } from "@/components/ui/bloque-margen";
+import { resumirMargen } from "@/lib/margen";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +61,7 @@ export default async function PaginaDocumento({
       .maybeSingle(),
     supabase
       .from("lineas_documento")
-      .select("id, descripcion, artista, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe")
+      .select("id, descripcion, artista, cantidad, unidad, precio_unitario, recargo_acabados, descuento_pct, iva_pct, importe, coste_unitario")
       .eq("documento_id", documentoId)
       .order("orden"),
     supabase
@@ -560,6 +562,20 @@ export default async function PaginaDocumento({
                 {euros(Number(doc.total))}
               </span>
             </div>
+            {/* Margen bruto: solo en pantalla (la impresión/PDF no lo lleva nunca) */}
+            {filasLineas.length > 0 && doc.tipo !== "recibo" && (
+              <BloqueMargen
+                resumen={resumirMargen(
+                  filasLineas.map((l) => ({
+                    importe: Number(l.importe),
+                    cantidad: Number(l.cantidad),
+                    coste_unitario: l.coste_unitario == null ? null : Number(l.coste_unitario),
+                  })),
+                  Number(doc.descuento_global_pct),
+                )}
+                previsto={doc.tipo === "presupuesto"}
+              />
+            )}
             {estadoCobro && (
               <>
                 <Fila

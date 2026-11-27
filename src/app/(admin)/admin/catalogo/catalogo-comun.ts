@@ -15,6 +15,8 @@ export type FormatoAdmin = {
   altoCm: number | null;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  /** Coste interno de fabricación propio del formato (null = el del producto). */
+  costeFabricacion: number | null;
   alias: string[];
   activo: boolean;
 };
@@ -35,6 +37,9 @@ export type ProductoAdmin = {
   instalableEnCampana: boolean;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  /** Coste interno aproximado (€/unidad de venta). Nunca visible para el cliente. */
+  costeFabricacion: number | null;
+  costeInstalacion: number | null;
   pedidoMinimo: number | null;
   ivaPct: number;
   activo: boolean;
@@ -63,6 +68,20 @@ export const UNIDADES_OPCIONES = [
 ];
 
 export const IVAS = [21, 10, 4, 0];
+
+/**
+ * ¿Le falta coste interno a alguna parte que se puede vender? (para el aviso «Sin coste»)
+ * Fabricación: vale el coste del producto o, si no lo tiene, que todos los formatos activos tengan el suyo.
+ */
+export function faltaCoste(p: ProductoAdmin) {
+  const activos = p.formatos.filter((f) => f.activo);
+  const fabOk =
+    !p.permiteFabricacion ||
+    p.costeFabricacion != null ||
+    (activos.length > 0 && activos.every((f) => f.costeFabricacion != null));
+  const instOk = !p.permiteInstalacion || p.costeInstalacion != null;
+  return !(fabOk && instOk);
+}
 
 /** "12,5" → 12.5; vacío → null; texto inválido → NaN */
 export function aNumero(v: string): number | null {

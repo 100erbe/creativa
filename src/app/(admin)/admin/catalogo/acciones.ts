@@ -17,6 +17,12 @@ function precioValido(v: number | null, nombre: string) {
   }
 }
 
+function costeValido(v: number | null | undefined, nombre: string) {
+  if (v != null && (!Number.isFinite(v) || v < 0)) {
+    throw new Error(`El coste de ${nombre} no es válido.`);
+  }
+}
+
 function aSlugCodigo(texto: string, maxLen = 8) {
   return texto
     .normalize("NFD")
@@ -137,6 +143,8 @@ export type DatosProducto = {
   instalableEnCampana?: boolean;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  costeFabricacion?: number | null;
+  costeInstalacion?: number | null;
   pedidoMinimo: number | null;
   ivaPct: number;
   activo: boolean;
@@ -162,6 +170,8 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
   }
   precioValido(d.precioFabricacion, "fabricación");
   precioValido(d.precioInstalacion, "instalación");
+  costeValido(d.costeFabricacion, "fabricación");
+  costeValido(d.costeInstalacion, "instalación");
   if (d.pedidoMinimo != null && (!Number.isFinite(d.pedidoMinimo) || d.pedidoMinimo <= 0)) {
     throw new Error("El pedido mínimo debe ser mayor que 0.");
   }
@@ -200,6 +210,9 @@ export const guardarProducto = accion(async (id: number | null, d: DatosProducto
     instalable_en_campana: instalableEnCampana,
     precio_fabricacion: d.precioFabricacion,
     precio_instalacion: d.precioInstalacion,
+    // undefined = no tocar (guardados rápidos que no envían costes)
+    ...(d.costeFabricacion !== undefined ? { coste_fabricacion: d.costeFabricacion } : {}),
+    ...(d.costeInstalacion !== undefined ? { coste_instalacion: d.costeInstalacion } : {}),
     pedido_minimo: pedidoMinimo,
     iva_pct: d.ivaPct,
     activo: d.activo,
@@ -281,6 +294,7 @@ export type DatosFormato = {
   altoCm: number | null;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  costeFabricacion?: number | null;
   alias?: string;
   activo: boolean;
 };
@@ -301,6 +315,7 @@ export const guardarFormato = accion(async (id: number | null, d: DatosFormato) 
   }
   precioValido(d.precioFabricacion, "fabricación");
   precioValido(d.precioInstalacion, "instalación");
+  costeValido(d.costeFabricacion, "fabricación");
 
   const aliasLista = (d.alias ?? "")
     .split(",")
@@ -315,6 +330,7 @@ export const guardarFormato = accion(async (id: number | null, d: DatosFormato) 
     alto_cm: d.altoCm,
     precio_fabricacion: d.precioFabricacion,
     precio_instalacion: d.precioInstalacion,
+    ...(d.costeFabricacion !== undefined ? { coste_fabricacion: d.costeFabricacion } : {}),
     alias,
     activo: d.activo,
   };

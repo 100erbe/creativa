@@ -14,6 +14,8 @@ import { TarjetaSituacionCliente } from "./tarjeta-situacion-cliente";
 import { ListaCompacta, TablaLineas } from "./tabla-lineas";
 import { FormularioArticulo } from "./formulario-articulo";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { BloqueMargen } from "@/components/ui/bloque-margen";
+import { resumirMargen } from "@/lib/margen";
 
 export type { Cabecera, SituacionCliente, ProductoCatalogo, CategoriaOpcion };
 export type { FormatoCatalogo } from "./lineas-comun";
@@ -102,7 +104,7 @@ export function PasoLineas({
             onAnadido={() => router.refresh()}
           />
 
-          <TablaLineas documentoId={documento.id} lineas={lineas} />
+          <TablaLineas documentoId={documento.id} lineas={lineas} descuentoGlobalPct={documento.descuento_global_pct} />
         </div>
 
         {/* Resumen + situación del cliente */}
@@ -124,6 +126,12 @@ export function PasoLineas({
                 {euros(documento.total)}
               </span>
             </div>
+            {lineas.length > 0 && (
+              <BloqueMargen
+                resumen={resumirMargen(lineas, documento.descuento_global_pct)}
+                previsto={documento.tipo === "presupuesto"}
+              />
+            )}
             <BarraAccion className="md:mt-esp2">
               <div className="min-w-0 md:hidden">
                 <p className="text-xs text-texto-terciario">Total</p>

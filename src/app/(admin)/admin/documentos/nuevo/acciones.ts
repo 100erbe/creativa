@@ -177,12 +177,20 @@ export const previsualizarPrecio = accion(async (args: ArgsLinea & { clienteId: 
  */
 export const anadirLinea = accion(async (
   documentoId: number,
-  args: ArgsLinea & { precio: number | null; descuento: number; descripcion?: string; artista?: string },
+  args: ArgsLinea & {
+    precio: number | null;
+    descuento: number;
+    descripcion?: string;
+    artista?: string;
+    /** undefined = el coste del catálogo (lo copia la BD); número o null = escrito a mano. */
+    coste?: number | null;
+  },
 ) => {
   await exigirAdmin();
   validarNumeros(args.piezas, args.precio, args.descuento);
+  validarCoste(args.coste);
   const supabase = await createClient();
-  const { error } = await supabase.rpc("anadir_linea", {
+  const { data: lineaId, error } = await supabase.rpc("anadir_linea", {
     p_documento: documentoId,
     p_producto: args.productoId,
     p_formato: args.formatoId,
@@ -196,6 +204,14 @@ export const anadirLinea = accion(async (
     p_artista: args.artista?.trim() || null,
   });
   if (error) throw new Error(error.message);
+  if (args.coste !== undefined && lineaId != null) {
+    const { error: errorCoste } = await supabase
+      .from("lineas_documento")
+      .update({ coste_unitario: args.coste })
+      .eq("id", lineaId)
+      .eq("documento_id", documentoId);
+    if (errorCoste) throw new Error(errorCoste.message);
+  }
   refrescar(documentoId);
 });
 
@@ -211,6 +227,8 @@ export const anadirLineaLibre = accion(
       precio: number;
       descuento: number;
       iva: number;
+      /** Coste interno € por unidad (null o undefined = sin coste). */
+      coste?: number | null;
       guardarEnCatalogo?: boolean;
       categoriaId?: number;
       alcanceCatalogo?: Alcance;
@@ -223,6 +241,8 @@ export const anadirLineaLibre = accion(
     if (!IVAS_PERMITIDOS.includes(args.iva)) throw new Error("IVA no válido.");
     validarNumeros(args.piezas, args.precio, args.descuento);
     if (!Number.isFinite(args.precio)) throw new Error("Indica el precio.");
+    validarCoste(args.coste);
+    const coste = args.coste ?? null;
     if (args.guardarEnCatalogo && (!args.categoriaId || !Number.isInteger(args.categoriaId) || args.categoriaId <= 0)) {
       throw new Error("Elige una categoría para guardar el artículo en el catálogo.");
     }
@@ -248,13 +268,16 @@ export const anadirLineaLibre = accion(
           permiteInstalacion: alcance !== "fabricacion",
           precioFabricacion: alcance === "instalacion" ? null : args.precio,
           precioInstalacion: alcance === "instalacion" ? args.precio : null,
+          // El coste va a la misma parte que el precio («ambos»: todo en fabricación, instalación 0).
+          costeFabricacion: alcance === "instalacion" ? null : coste,
+          costeInstalacion: alcance === "instalacion" ? coste : alcance === "fabricacion_instalacion" && coste != null ? 0 : null,
           pedidoMinimo: null,
           ivaPct: args.iva,
           activo: true,
         }),
       );
 
-      const { error: errorRpc } = await supabase.rpc("anadir_linea", {
+      const { data: lineaId, error: errorRpc } = await supabase.rpc("anadir_linea", {
         p_documento: documentoId,
         p_producto: nuevoProductoId,
         p_formato: null,
@@ -268,6 +291,15 @@ export const anadirLineaLibre = accion(
         p_artista: args.artista?.trim() || null,
       });
       if (errorRpc) throw new Error(errorRpc.message);
+      if (lineaId != null) {
+        // El coste escrito manda sobre el que la BD ha copiado del catálogo recién creado.
+        const { error: errorCoste } = await supabase
+          .from("lineas_documento")
+          .update({ coste_unitario: coste })
+          .eq("id", lineaId)
+          .eq("documento_id", documentoId);
+        if (errorCoste) throw new Error(errorCoste.message);
+      }
       refrescar(documentoId);
       return;
     }
@@ -290,6 +322,7 @@ export const anadirLineaLibre = accion(
       precio_unitario: args.precio,
       descuento_pct: args.descuento,
       iva_pct: args.iva,
+      coste_unitario: coste,
     });
     if (error) throw new Error(error.message);
     refrescar(documentoId);
@@ -306,10 +339,13 @@ export const actualizarLinea = accion(async (
     descuento_pct?: number;
     descripcion?: string;
     artista?: string | null;
+    /** Coste interno € por unidad (null = sin coste). */
+    coste_unitario?: number | null;
   },
 ) => {
   await exigirAdmin();
   validarNumeros(cambios.piezas, cambios.precio_unitario, cambios.descuento_pct);
+  validarCoste(cambios.coste_unitario);
   if (cambios.descripcion !== undefined && !cambios.descripcion.trim()) {
     throw new Error("El concepto no puede quedar vacío.");
   }
@@ -322,6 +358,12 @@ export const actualizarLinea = accion(async (
   if (error) throw new Error(error.message);
   refrescar(documentoId);
 });
+
+function validarCoste(coste?: number | null) {
+  if (coste != null && (!Number.isFinite(coste) || coste < 0)) {
+    throw new Error("El coste no es válido.");
+  }
+}
 
 function validarNumeros(piezas?: number, precio?: number | null, descuento?: number) {
   if (piezas !== undefined && (!Number.isFinite(piezas) || piezas === 0)) {

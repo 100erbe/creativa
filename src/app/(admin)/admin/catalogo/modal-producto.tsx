@@ -10,6 +10,9 @@ import { useAccion } from "@/lib/use-accion";
 import { eliminarOptimista } from "@/lib/eliminacion-optimista";
 import { eliminarProducto, guardarProducto } from "./acciones";
 import { atraparFoco } from "@/lib/trampa-foco";
+import { euros } from "@/lib/formato";
+import { calcularMargen } from "@/lib/margen";
+import { InsigniaMargen } from "@/components/ui/insignia-margen";
 import { UNIDAD_CORTA, UNIDADES_OPCIONES, IVAS, aNumero, aTexto, etiquetaMini } from "./catalogo-comun";
 import type { CategoriaAdmin, ProductoAdmin } from "./catalogo-comun";
 
@@ -43,6 +46,8 @@ export function ModalProducto({
   const [admiteMedidaLibre, setAdmiteMedidaLibre] = useState(p?.admiteMedidaLibre ?? false);
   const [precioFab, setPrecioFab] = useState(aTexto(p?.precioFabricacion ?? null));
   const [precioInst, setPrecioInst] = useState(aTexto(p?.precioInstalacion ?? null));
+  const [costeFab, setCosteFab] = useState(aTexto(p?.costeFabricacion ?? null));
+  const [costeInst, setCosteInst] = useState(aTexto(p?.costeInstalacion ?? null));
   const [pedidoMinimo, setPedidoMinimo] = useState(aTexto(p?.pedidoMinimo ?? null));
   const [ivaPct, setIvaPct] = useState(String(p?.ivaPct ?? 21));
   const [descripcionFactura, setDescripcionFactura] = useState(p?.descripcionFactura ?? "");
@@ -51,6 +56,7 @@ export function ModalProducto({
   const [activo, setActivo] = useState(p?.activo ?? true);
 
   const esSuperficie = unidadVenta === "m2" || unidadVenta === "ml";
+  const unidadCorta = UNIDAD_CORTA[unidadVenta] ?? unidadVenta;
 
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
@@ -76,6 +82,10 @@ export function ModalProducto({
           if (nFab != null && !Number.isFinite(nFab)) return setError("El precio de fabricación no es válido.");
           if (nInst != null && !Number.isFinite(nInst)) return setError("El precio de instalación no es válido.");
           if (nMin != null && !Number.isFinite(nMin)) return setError("El pedido mínimo no es válido.");
+          const cFab = permiteFabricacion ? aNumero(costeFab) : null;
+          const cInst = permiteInstalacion ? aNumero(costeInst) : null;
+          if (cFab != null && (!Number.isFinite(cFab) || cFab < 0)) return setError("El coste de fabricación no es válido.");
+          if (cInst != null && (!Number.isFinite(cInst) || cInst < 0)) return setError("El coste de instalación no es válido.");
 
           ejecutar(async () => {
             await desenvolver(
@@ -92,6 +102,8 @@ export function ModalProducto({
                 instalableEnCampana,
                 precioFabricacion: nFab,
                 precioInstalacion: nInst,
+                costeFabricacion: cFab,
+                costeInstalacion: cInst,
                 pedidoMinimo: nMin,
                 ivaPct: Number(ivaPct),
                 activo,
@@ -289,6 +301,36 @@ export function ModalProducto({
           )}
         </div>
 
+        {/* Coste interno: solo para el margen bruto, nunca visible para el cliente */}
+        <div className="flex flex-col gap-esp3 rounded-lg border border-borde-default bg-fondo-sutil/60 p-esp3">
+          <div className="flex flex-col gap-0.5">
+            <p className="flex items-center gap-esp2 text-xs font-semibold uppercase tracking-wide text-texto-terciario">
+              Coste interno y margen
+            </p>
+            <p className="text-xs text-texto-terciario">
+              Coste aproximado (material, accesorios y mano de obra). Solo lo ves tú: no aparece en documentos, PDF ni emails.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-esp3 sm:grid-cols-2">
+            <CampoCoste
+              etiqueta={`Coste fabricación (€/${unidadCorta})`}
+              valor={costeFab}
+              onCambio={setCosteFab}
+              precio={permiteFabricacion ? aNumero(precioFab) : null}
+              disabled={!permiteFabricacion}
+              placeholder={p?.formatos.length ? "Vacío = según formato" : "Ej. 12,00"}
+            />
+            <CampoCoste
+              etiqueta={`Coste instalación (€/${unidadCorta})`}
+              valor={costeInst}
+              onCambio={setCosteInst}
+              precio={permiteInstalacion ? aNumero(precioInst) : null}
+              disabled={!permiteInstalacion}
+              placeholder="Ej. 3,00"
+            />
+          </div>
+        </div>
+
         {/* Textos y control */}
         <div className="flex flex-col gap-esp3">
           <label className={etiquetaMini}>
@@ -361,6 +403,50 @@ export function ModalProducto({
           </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Campo de coste con el margen resultante frente al precio base (si ambos están definidos). */
+function CampoCoste({
+  etiqueta,
+  valor,
+  onCambio,
+  precio,
+  disabled,
+  placeholder,
+}: {
+  etiqueta: string;
+  valor: string;
+  onCambio: (v: string) => void;
+  precio: number | null;
+  disabled: boolean;
+  placeholder: string;
+}) {
+  const coste = aNumero(valor);
+  const margen =
+    !disabled && precio != null && Number.isFinite(precio) && coste != null && Number.isFinite(coste)
+      ? calcularMargen(precio, coste)
+      : null;
+  return (
+    <div className="flex flex-col gap-1">
+      <label className={etiquetaMini}>
+        {etiqueta}
+        <input
+          value={valor}
+          onChange={(e) => onCambio(e.target.value)}
+          disabled={disabled}
+          inputMode="decimal"
+          placeholder={placeholder}
+          className={CAMPO}
+        />
+      </label>
+      {margen && (
+        <p className="flex items-center gap-esp2 text-xs text-texto-secundario" aria-live="polite">
+          <InsigniaMargen pct={margen.pct} />
+          Beneficio {euros(margen.beneficio)} por unidad
+        </p>
+      )}
     </div>
   );
 }

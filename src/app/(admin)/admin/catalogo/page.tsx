@@ -27,7 +27,7 @@ export default async function PaginaCatalogo({
     supabase
       .from("productos")
       .select(
-        "id, codigo, categoria_id, nombre, descripcion_factura, material, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, instalable_en_campana, precio_fabricacion, precio_instalacion, pedido_minimo, iva_pct, activo, notas, categorias(nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, alias, activo)",
+        "id, codigo, categoria_id, nombre, descripcion_factura, material, unidad_venta, admite_medida_libre, permite_fabricacion, permite_instalacion, instalable_en_campana, precio_fabricacion, precio_instalacion, coste_fabricacion, coste_instalacion, pedido_minimo, iva_pct, activo, notas, categorias(nombre, orden), formatos(id, codigo, nombre, ancho_cm, alto_cm, precio_fabricacion, precio_instalacion, coste_fabricacion, alias, activo)",
       )
       .order("codigo"),
     contarNoLeidos(),
@@ -54,6 +54,8 @@ export default async function PaginaCatalogo({
         instalableEnCampana: p.instalable_en_campana,
         precioFabricacion: p.precio_fabricacion == null ? null : Number(p.precio_fabricacion),
         precioInstalacion: p.precio_instalacion == null ? null : Number(p.precio_instalacion),
+        costeFabricacion: p.coste_fabricacion == null ? null : Number(p.coste_fabricacion),
+        costeInstalacion: p.coste_instalacion == null ? null : Number(p.coste_instalacion),
         pedidoMinimo: p.pedido_minimo == null ? null : Number(p.pedido_minimo),
         ivaPct: Number(p.iva_pct),
         activo: p.activo,
@@ -67,6 +69,7 @@ export default async function PaginaCatalogo({
             altoCm: f.alto_cm == null ? null : Number(f.alto_cm),
             precioFabricacion: f.precio_fabricacion == null ? null : Number(f.precio_fabricacion),
             precioInstalacion: f.precio_instalacion == null ? null : Number(f.precio_instalacion),
+            costeFabricacion: f.coste_fabricacion == null ? null : Number(f.coste_fabricacion),
             alias: f.alias ?? [],
             activo: f.activo,
           }))

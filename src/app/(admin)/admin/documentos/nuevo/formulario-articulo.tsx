@@ -12,6 +12,9 @@ import { UNIDAD, num, texto, normalizar, alcancesDe, calcularCantidadLocal, calc
 import type { Alcance, Cabecera, FormatoCatalogo, ProductoCatalogo, CategoriaOpcion, Reciente } from "./lineas-comun";
 import { FormularioLineaLibre } from "./formulario-linea-libre";
 import { Tarjeta } from "@/components/ui/tarjeta";
+import { InsigniaMargen } from "@/components/ui/insignia-margen";
+import { baseNetaLinea, calcularMargen, costeUnitarioCatalogo } from "@/lib/margen";
+import { useMargenesVisibles } from "@/lib/margenes-visibles";
 
 export function FormularioArticulo({
   documento,
@@ -39,6 +42,10 @@ export function FormularioArticulo({
   const [alto, setAlto] = useState("");
   const [precio, setPrecio] = useState("");
   const [precioManual, setPrecioManual] = useState(false);
+  // Coste interno: se copia del catálogo; si se toca a mano se guarda el escrito.
+  const [coste, setCoste] = useState("");
+  const [costeManual, setCosteManual] = useState(false);
+  const margenesVisibles = useMargenesVisibles();
   const [descuento, setDescuento] = useState(texto(documento.descuento_habitual));
   const [descripcion, setDescripcion] = useState("");
   const [artista, setArtista] = useState("");
@@ -84,6 +91,11 @@ export function FormularioArticulo({
 
   const mostrarResultados = busqueda.trim() !== "" || categoriaFiltro !== null || listaAbierta;
 
+  function costeCatalogoTexto(p: ProductoCatalogo, fId: number | null, alc: Alcance) {
+    const c = costeUnitarioCatalogo(p, p.formatos.find((f) => f.id === fId) ?? null, alc);
+    return c == null ? "" : texto(c, 4);
+  }
+
   function elegirProducto(
     p: ProductoCatalogo,
     opciones?: { formatoId?: number | null; alcance?: string; precio?: number; descuento?: number },
@@ -114,6 +126,9 @@ export function FormularioArticulo({
       setPrecioManual(false);
     }
 
+    setCoste(costeCatalogoTexto(p, nextFormatoId, nextAlcance));
+    setCosteManual(false);
+
     setDescuento(texto(opciones?.descuento ?? documento.descuento_habitual));
     setBusqueda("");
     setListaAbierta(false);
@@ -137,6 +152,7 @@ export function FormularioArticulo({
       const base = calcularPrecioBaseLocal(producto, id, alcance);
       if (base.definido) setPrecio(texto(base.precio, 4));
     }
+    if (producto && !costeManual) setCoste(costeCatalogoTexto(producto, id, alcance));
   }
 
   function elegirAlcance(next: Alcance) {
@@ -145,6 +161,7 @@ export function FormularioArticulo({
       const base = calcularPrecioBaseLocal(producto, formatoId, next);
       if (base.definido) setPrecio(texto(base.precio, 4));
     }
+    if (producto && !costeManual) setCoste(costeCatalogoTexto(producto, formatoId, next));
   }
 
   function alPulsarEnterEnBusqueda() {
@@ -255,6 +272,13 @@ export function FormularioArticulo({
       ? Math.round(cantidad * nPrecio * (1 - nDescuento / 100) * 100) / 100
       : null;
   const distintoDeTarifa = tarifa != null && Number.isFinite(nPrecio) && Math.abs(nPrecio - tarifa.precio) > 0.00005;
+  const nCoste = coste.trim() === "" ? null : num(coste);
+  const costeLinea =
+    nCoste != null && Number.isFinite(nCoste) && Number.isFinite(cantidad) ? Math.round(cantidad * nCoste * 100) / 100 : null;
+  const margen =
+    importe != null && costeLinea != null
+      ? calcularMargen(baseNetaLinea(importe, documento.descuento_global_pct), costeLinea)
+      : null;
 
   function anadir() {
     if (!producto) return;
@@ -263,6 +287,7 @@ export function FormularioArticulo({
     if (!Number.isFinite(nPrecio) || nPrecio < 0) return setError("Indica un precio unitario válido.");
     if (!Number.isFinite(nDescuento) || nDescuento < 0 || nDescuento > 100)
       return setError("El descuento va de 0 a 100 %.");
+    if (nCoste != null && (!Number.isFinite(nCoste) || nCoste < 0)) return setError("Indica un coste válido o déjalo vacío.");
     const medidas = conMedidas && Number.isFinite(nAncho) && Number.isFinite(nAlto);
     if (conMedidas && Number.isFinite(nAncho) !== Number.isFinite(nAlto))
       return setError("Indica ancho y alto, o deja los dos vacíos.");
@@ -282,6 +307,8 @@ export function FormularioArticulo({
             descuento: nDescuento,
             descripcion,
             artista,
+            // Sin tocar, la BD copia el coste del catálogo; tocado a mano, se guarda el escrito (vacío = sin coste).
+            ...(costeManual ? { coste: nCoste } : {}),
           }),
         );
         setProductoId(null);
@@ -725,6 +752,50 @@ export function FormularioArticulo({
               )}
             </div>
           </div>
+
+          {margenesVisibles && (
+            <div className="flex flex-wrap items-end gap-esp3 rounded-lg border border-dashed border-borde-default bg-fondo-sutil/60 p-esp3">
+              <Etiqueta texto={`Coste interno (€/${UNIDAD[producto.unidad] ?? producto.unidad})`} className="w-40">
+                <input
+                  value={coste}
+                  onChange={(e) => {
+                    setCoste(e.target.value);
+                    setCosteManual(true);
+                  }}
+                  inputMode="decimal"
+                  placeholder="Sin coste"
+                  className={cn(entrada, costeManual && "border-borde-aviso bg-fondo-aviso-sutil")}
+                />
+              </Etiqueta>
+              <div className="flex min-h-11 flex-1 flex-col justify-center gap-1 text-xs text-texto-secundario" aria-live="polite">
+                {margen ? (
+                  <span className="flex flex-wrap items-center gap-esp2">
+                    <InsigniaMargen pct={margen.pct} />
+                    <span>
+                      Beneficio <strong className="text-texto-primario">{euros(margen.beneficio)}</strong> · coste{" "}
+                      {euros(costeLinea ?? 0)}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-texto-terciario">
+                    {nCoste == null ? "Sin coste en el catálogo: escríbelo para ver el margen." : "—"}
+                  </span>
+                )}
+                {costeManual && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoste(costeCatalogoTexto(producto, formatoId, alcance));
+                      setCosteManual(false);
+                    }}
+                    className="w-fit font-medium text-texto-marca"
+                  >
+                    Coste modificado · volver al del catálogo
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <Etiqueta texto="Artista / referencia (opcional)" grupo>
             {artistas.length > 0 && (

@@ -9,6 +9,9 @@ import { anadirLineaLibre } from "./acciones";
 import { desenvolver } from "@/lib/accion";
 import { UNIDAD, num, texto, normalizar, entrada, Etiqueta, IVAS } from "./lineas-comun";
 import type { Alcance, Cabecera, CategoriaOpcion } from "./lineas-comun";
+import { InsigniaMargen } from "@/components/ui/insignia-margen";
+import { baseNetaLinea, calcularMargen } from "@/lib/margen";
+import { useMargenesVisibles } from "@/lib/margenes-visibles";
 
 export function FormularioLineaLibre({
   documento,
@@ -35,6 +38,8 @@ export function FormularioLineaLibre({
   const [precio, setPrecio] = useState("");
   const [descuento, setDescuento] = useState(texto(documento.descuento_habitual));
   const [iva, setIva] = useState("21");
+  const [coste, setCoste] = useState("");
+  const margenesVisibles = useMargenesVisibles();
   const [guardarEnCatalogo, setGuardarEnCatalogo] = useState(false);
   const [categoriaId, setCategoriaId] = useState(catPorDefecto ? String(catPorDefecto) : "");
   const [alcanceCatalogo, setAlcanceCatalogo] = useState<Alcance>("instalacion");
@@ -48,6 +53,15 @@ export function FormularioLineaLibre({
     Number.isFinite(nCantidad) && Number.isFinite(nPrecio) && Number.isFinite(nDescuento)
       ? Math.round(nCantidad * nPrecio * (1 - nDescuento / 100) * 100) / 100
       : null;
+  const nCoste = coste.trim() === "" ? null : num(coste);
+  const costeLinea =
+    nCoste != null && Number.isFinite(nCoste) && Number.isFinite(nCantidad)
+      ? Math.round(nCantidad * nCoste * 100) / 100
+      : null;
+  const margen =
+    importe != null && costeLinea != null
+      ? calcularMargen(baseNetaLinea(importe, documento.descuento_global_pct), costeLinea)
+      : null;
 
   function anadir() {
     setError(null);
@@ -56,6 +70,7 @@ export function FormularioLineaLibre({
     if (!Number.isFinite(nPrecio) || nPrecio < 0) return setError("Indica el precio unitario.");
     if (!Number.isFinite(nDescuento) || nDescuento < 0 || nDescuento > 100) return setError("El descuento va de 0 a 100 %.");
     if (guardarEnCatalogo && !categoriaId) return setError("Elige una categoría para guardarlo en el catálogo.");
+    if (nCoste != null && (!Number.isFinite(nCoste) || nCoste < 0)) return setError("Indica un coste válido o déjalo vacío.");
 
     iniciar(async () => {
       try {
@@ -68,6 +83,7 @@ export function FormularioLineaLibre({
             precio: nPrecio,
             descuento: nDescuento,
             iva: Number(iva),
+            coste: nCoste,
             guardarEnCatalogo,
             categoriaId: guardarEnCatalogo ? Number(categoriaId) : undefined,
             alcanceCatalogo: guardarEnCatalogo ? alcanceCatalogo : undefined,
@@ -140,6 +156,33 @@ export function FormularioLineaLibre({
           </select>
         </Etiqueta>
       </div>
+
+      {margenesVisibles && (
+        <div className="flex flex-wrap items-end gap-esp3 rounded-lg border border-dashed border-borde-default bg-fondo-sutil/60 p-esp3">
+          <Etiqueta texto="Coste interno unitario (€)" className="w-40">
+            <input
+              value={coste}
+              onChange={(e) => setCoste(e.target.value)}
+              inputMode="decimal"
+              placeholder="Sin coste"
+              className={entrada}
+            />
+          </Etiqueta>
+          <div className="flex min-h-11 flex-1 items-center text-xs text-texto-secundario" aria-live="polite">
+            {margen ? (
+              <span className="flex flex-wrap items-center gap-esp2">
+                <InsigniaMargen pct={margen.pct} />
+                <span>
+                  Beneficio <strong className="text-texto-primario">{euros(margen.beneficio)}</strong> · coste{" "}
+                  {euros(costeLinea ?? 0)}
+                </span>
+              </span>
+            ) : (
+              <span className="text-texto-terciario">Opcional: un coste aproximado para ver el margen.</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {categorias.length > 0 && (
         <div className="flex flex-col gap-esp3 rounded-md border border-borde-default bg-fondo-sutil/60 p-esp3">

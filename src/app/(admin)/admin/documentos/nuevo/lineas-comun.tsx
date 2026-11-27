@@ -12,6 +12,7 @@ export type Cabecera = {
   cliente: string;
   descuento_habitual: number;
   suma_lineas: number;
+  descuento_global_pct: number;
   base_imponible: number;
   cuota_iva: number;
   total: number;
@@ -40,6 +41,8 @@ export type Linea = {
   recargo_acabados: number;
   descuento_pct: number;
   importe: number;
+  /** Coste interno € por unidad (null = sin coste). Nunca visible para el cliente. */
+  coste_unitario: number | null;
 };
 
 export type FormatoCatalogo = {
@@ -50,6 +53,7 @@ export type FormatoCatalogo = {
   alto: number | null;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  costeFabricacion: number | null;
   alias: string[];
 };
 
@@ -64,6 +68,8 @@ export type ProductoCatalogo = {
   instalacion: boolean;
   precioFabricacion: number | null;
   precioInstalacion: number | null;
+  costeFabricacion: number | null;
+  costeInstalacion: number | null;
   pedidoMinimo: number | null;
   ivaPct: number;
   categoriaId: number | null;

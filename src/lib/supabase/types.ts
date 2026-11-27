@@ -1259,6 +1259,7 @@ export type Database = {
           codigo: string
           id: number
           nombre: string
+          coste_fabricacion: number | null
           precio_fabricacion: number | null
           precio_instalacion: number | null
           producto_id: number
@@ -1272,6 +1273,7 @@ export type Database = {
           codigo: string
           id?: number
           nombre: string
+          coste_fabricacion?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           producto_id: number
@@ -1285,6 +1287,7 @@ export type Database = {
           codigo?: string
           id?: number
           nombre?: string
+          coste_fabricacion?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           producto_id?: number
@@ -1425,6 +1428,7 @@ export type Database = {
           minimo_por_pieza: number | null
           orden: number
           piezas: number
+          coste_unitario: number | null
           precio_fabricacion: number | null
           precio_instalacion: number | null
           precio_unitario: number
@@ -1450,6 +1454,7 @@ export type Database = {
           minimo_por_pieza?: number | null
           orden?: number
           piezas?: number
+          coste_unitario?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           precio_unitario: number
@@ -1475,6 +1480,7 @@ export type Database = {
           minimo_por_pieza?: number | null
           orden?: number
           piezas?: number
+          coste_unitario?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           precio_unitario?: number
@@ -1703,6 +1709,8 @@ export type Database = {
           pedido_minimo: number | null
           permite_fabricacion: boolean
           permite_instalacion: boolean
+          coste_fabricacion: number | null
+          coste_instalacion: number | null
           precio_fabricacion: number | null
           precio_instalacion: number | null
           unidad_venta: Database["public"]["Enums"]["unidad_venta"]
@@ -1722,6 +1730,8 @@ export type Database = {
           pedido_minimo?: number | null
           permite_fabricacion?: boolean
           permite_instalacion?: boolean
+          coste_fabricacion?: number | null
+          coste_instalacion?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           unidad_venta: Database["public"]["Enums"]["unidad_venta"]
@@ -1741,6 +1751,8 @@ export type Database = {
           pedido_minimo?: number | null
           permite_fabricacion?: boolean
           permite_instalacion?: boolean
+          coste_fabricacion?: number | null
+          coste_instalacion?: number | null
           precio_fabricacion?: number | null
           precio_instalacion?: number | null
           unidad_venta?: Database["public"]["Enums"]["unidad_venta"]
@@ -2209,6 +2221,44 @@ export type Database = {
           serie: string | null
           tipo: Database["public"]["Enums"]["tipo_documento"] | null
           total: number | null
+        }
+        Relationships: []
+      }
+      v_margen_lineas: {
+        Row: {
+          base_neta: number | null
+          beneficio: number | null
+          cantidad: number | null
+          cliente_id: number | null
+          coste_total: number | null
+          coste_unitario: number | null
+          descripcion: string | null
+          documento_id: number | null
+          estado: Database["public"]["Enums"]["estado_documento"] | null
+          fecha: string | null
+          formato_id: number | null
+          linea_id: number | null
+          producto_id: number | null
+          tipo: Database["public"]["Enums"]["tipo_documento"] | null
+          unidad: Database["public"]["Enums"]["unidad_venta"] | null
+        }
+        Relationships: []
+      }
+      v_margen_documentos: {
+        Row: {
+          base_con_coste: number | null
+          base_imponible: number | null
+          base_sin_coste: number | null
+          beneficio: number | null
+          cliente_id: number | null
+          coste_total: number | null
+          documento_id: number | null
+          estado: Database["public"]["Enums"]["estado_documento"] | null
+          fecha: string | null
+          lineas: number | null
+          lineas_sin_coste: number | null
+          margen_pct: number | null
+          tipo: Database["public"]["Enums"]["tipo_documento"] | null
         }
         Relationships: []
       }

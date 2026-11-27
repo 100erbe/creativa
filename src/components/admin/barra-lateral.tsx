@@ -41,6 +41,7 @@ const SECCIONES: { titulo?: string; enlaces: EnlaceNav[] }[] = [
       { href: "/admin/cobros", etiqueta: "Cobros", icono: "cobros", badgeKey: "vencidas90" },
       { href: "/admin/gastos", etiqueta: "Gastos", icono: "gastos" },
       { href: "/admin/contabilidad", etiqueta: "Contabilidad", icono: "contabilidad" },
+      { href: "/admin/rentabilidad", etiqueta: "Rentabilidad", icono: "rentabilidad" },
     ],
   },
 ];
@@ -85,6 +86,9 @@ function resolverCabeceraAdmin(pathname: string): ConfigCabeceraMovil {
   }
   if (pathname === "/admin/contabilidad") {
     return { modo: "volver", titulo: "Contabilidad", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
+  }
+  if (pathname === "/admin/rentabilidad") {
+    return { modo: "volver", titulo: "Rentabilidad", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
   }
   if (pathname === "/admin/ajustes") {
     return { modo: "volver", titulo: "Ajustes", hrefVolver: "/admin/panel", usarHistorial: true, revelarTituloAlScroll: true, mostrarBusqueda: true, mostrarAvisos: true };
